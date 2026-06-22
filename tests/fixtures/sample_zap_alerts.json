@@ -1,0 +1,41 @@
+{
+  "alerts": [
+    {
+      "pluginId": "40012",
+      "alertRef": "40012-1",
+      "alert": "Cross Site Scripting (Reflected)",
+      "name": "Cross Site Scripting (Reflected)",
+      "riskcode": "3",
+      "risk": "High",
+      "confidence": "Medium",
+      "url": "https://app.lab.example.com/search?q=test",
+      "method": "GET",
+      "param": "q",
+      "attack": "<script>alert(1)</script>",
+      "evidence": "<script>alert(1)</script>",
+      "cweid": "79",
+      "wascid": "8",
+      "description": "Reflected cross-site scripting was identified in the q parameter.",
+      "solution": "Validate input and contextually encode user-supplied data on output.",
+      "reference": "https://owasp.org/www-community/attacks/xss/"
+    },
+    {
+      "pluginId": "10096",
+      "alertRef": "10096",
+      "alert": "Timestamp Disclosure - Unix",
+      "name": "Timestamp Disclosure - Unix",
+      "riskcode": "0",
+      "risk": "Informational",
+      "confidence": "Low",
+      "url": "https://app.lab.example.com/",
+      "method": "GET",
+      "param": "",
+      "evidence": "1700000000",
+      "cweid": "200",
+      "wascid": "13",
+      "description": "A timestamp was disclosed by the application/web server.",
+      "solution": "Manually confirm that the timestamp data is not sensitive.",
+      "reference": ""
+    }
+  ]
+}
