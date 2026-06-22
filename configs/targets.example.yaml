@@ -1,0 +1,62 @@
+# vulnpipe example target/scope configuration.
+#
+# Copy to configs/targets.yaml (gitignored) and edit. Secrets are referenced by
+# environment-variable NAME and resolved at scan time -- never put credentials or
+# API keys in this file. Non-secret values may use ${ENV_VAR} / ${ENV_VAR:-default}
+# substitution.
+#
+# A scan only runs with `vulnpipe scan --config <file> --authorized`, and every
+# target below must fall inside `scope`.
+
+# Authorization allowlist. Nothing outside this is ever scanned.
+scope:
+  hosts:
+    - "10.0.0.0/24"          # IPs and CIDRs (network scope)
+    - "192.168.56.0/24"
+    - "*.lab.example.com"    # wildcard hostname (also matches lab.example.com)
+  urls:
+    - "https://app.lab.example.com"   # full http(s) URL prefixes (web scope)
+
+targets:
+  # Network-only target: an in-scope CIDR handed straight to Nmap.
+  - name: internal-net
+    host: "10.0.0.0/24"
+
+  # Web + host target with authenticated ZAP scanning.
+  - name: web-app
+    host: "10.0.0.10"
+    urls:
+      - "https://app.lab.example.com"
+    auth:
+      type: form
+      login_url: "https://app.lab.example.com/login"
+      username_field: "email"
+      password_field: "password"
+      username_env: "APP_USERNAME"   # value read from $APP_USERNAME at scan time
+      password_env: "APP_PASSWORD"   # value read from $APP_PASSWORD at scan time
+      logged_in_indicator: "Log out"
+      logged_out_indicator: "Login"
+
+# --- Scanner / pipeline settings (all optional; defaults shown) ---------------
+
+nmap:
+  timing_template: 4          # nmap -T0..-T5
+  top_ports: 1000
+  scripts: ["vulners"]        # CVE-tagging NSE script(s)
+  timeout_seconds: 1800
+
+zap:
+  api_url: "http://localhost:8080"
+  api_key_env: "ZAP_API_KEY"
+  spider_max_duration_minutes: 5
+  active_scan_timeout_seconds: 3600
+  max_concurrency: 1          # ZAP active scans are heavy; keep this low
+
+enrichment:
+  nvd_enabled: true
+  nvd_api_key_env: "NVD_API_KEY"
+  epss_enabled: true
+  cache_dir: ".cache"
+
+run:
+  max_workers: 10             # bounded thread pool for the network layer

@@ -1,0 +1,19 @@
+# Example false-positive allowlist (consumed by processing/false_positive.py).
+#
+# Entries suppress known-benign findings. Prefer fingerprints (most precise);
+# plugin/host rules are coarser. The minimum confidence threshold drops noisy
+# low-confidence findings before reporting.
+
+min_confidence: low        # one of: false_positive, low, medium, high, confirmed
+
+# Suppress specific findings by their stable fingerprint.
+fingerprints:
+  - "0000000000000000000000000000000000000000000000000000000000000000"
+
+# Suppress by scanner plugin / alert id (optionally scoped to a host).
+plugins:
+  - id: "10096"            # e.g. ZAP "Timestamp Disclosure"
+    host: "10.0.0.10"
+
+# Suppress everything for a host (use sparingly).
+hosts: []

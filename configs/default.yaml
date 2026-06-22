@@ -1,0 +1,31 @@
+# Base scanner/pipeline defaults.
+#
+# This file documents the default settings only. It is NOT a standalone run
+# config (it intentionally omits `scope` and `targets`, which are required and
+# live in a targets file such as configs/targets.example.yaml).
+
+nmap:
+  enabled: true
+  binary: "nmap"
+  timing_template: 4
+  top_ports: 1000
+  scripts: ["vulners"]
+  timeout_seconds: 1800
+  extra_args: []
+
+zap:
+  enabled: true
+  api_url: "http://localhost:8080"
+  api_key_env: "ZAP_API_KEY"
+  spider_max_duration_minutes: 5
+  active_scan_timeout_seconds: 3600
+  max_concurrency: 1
+
+enrichment:
+  nvd_enabled: true
+  nvd_api_key_env: "NVD_API_KEY"
+  epss_enabled: true
+  cache_dir: ".cache"
+
+run:
+  max_workers: 10
