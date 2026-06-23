@@ -15,8 +15,15 @@ from vulnpipe.scanners import nmap_scanner
 from vulnpipe.scanners.nmap_scanner import (
     SOURCE,
     NmapScanner,
+    _confidence_from_conf,
+    _cve_confidence,
+    _CveHit,
+    _decode,
     _harvest_cves,
     _harvest_from_text,
+    _parse_bool,
+    _service_summary,
+    _truncate,
     build_nmap_command,
     parse_nmap_xml,
     select_network_targets,
@@ -329,3 +336,121 @@ def test_scan_no_in_scope_targets_skips_subprocess(monkeypatch: pytest.MonkeyPat
         targets=[Target(urls=["https://app.lab.example.com"])],
     )
     assert NmapScanner(cfg).scan() == []
+
+
+# --------------------------------------------------------------------------- #
+# Value helpers and the host-level script path
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (True, True),
+        (False, False),
+        ("true", True),
+        ("YES", True),
+        ("1", True),
+        ("false", False),
+        ("no", False),
+        ("0", False),
+        ("maybe", None),
+        (None, None),
+    ],
+)
+def test_parse_bool(value: object, expected: bool | None) -> None:
+    assert _parse_bool(value) is expected
+
+
+@pytest.mark.parametrize(
+    ("conf", "expected"),
+    [
+        (10, Confidence.CONFIRMED),
+        (9, Confidence.CONFIRMED),
+        (8, Confidence.HIGH),
+        (7, Confidence.HIGH),
+        (6, Confidence.MEDIUM),
+        (4, Confidence.MEDIUM),
+        (3, Confidence.LOW),
+        (1, Confidence.LOW),
+        (0, None),
+        (None, None),
+        ("not-a-number", None),
+    ],
+)
+def test_confidence_from_conf(conf: object, expected: Confidence | None) -> None:
+    assert _confidence_from_conf(conf) is expected
+
+
+@pytest.mark.parametrize(
+    ("name", "product", "version", "expected"),
+    [
+        ("ssh", "OpenSSH", "7.4", "ssh (OpenSSH 7.4)"),
+        ("ssh", None, None, "ssh"),
+        (None, "OpenSSH", "7.4", "OpenSSH 7.4"),
+        ("https", "nginx", None, "https (nginx)"),
+        (None, None, None, None),
+    ],
+)
+def test_service_summary(
+    name: str | None, product: str | None, version: str | None, expected: str | None
+) -> None:
+    assert _service_summary(name, product, version) == expected
+
+
+def test_truncate() -> None:
+    assert _truncate(None) is None
+    assert _truncate("   ") is None
+    assert _truncate("short") == "short"
+    truncated = _truncate("x" * 600, limit=500)
+    assert truncated is not None
+    assert truncated.endswith("...")
+    assert len(truncated) == 503
+
+
+def test_decode() -> None:
+    assert _decode(b"hello") == "hello"
+    assert _decode("hi") == "hi"
+    assert _decode(b"") is None
+    assert _decode(None) is None
+
+
+def test_cve_confidence_levels() -> None:
+    assert _cve_confidence(_CveHit(cve="CVE-1", state="VULNERABLE")) is Confidence.HIGH
+    assert _cve_confidence(_CveHit(cve="CVE-1", cvss=7.5)) is Confidence.MEDIUM
+    assert _cve_confidence(_CveHit(cve="CVE-1")) is Confidence.LOW
+
+
+_HOST_SCRIPT_XML = """<?xml version="1.0"?>
+<nmaprun scanner="nmap" args="nmap" start="0" version="7.94" xmloutputversion="1.05">
+  <host starttime="0" endtime="0">
+    <status state="up" reason="syn-ack"/>
+    <address addr="10.0.0.7" addrtype="ipv4"/>
+    <hostnames></hostnames>
+    <ports>
+      <port protocol="tcp" portid="445">
+        <state state="open" reason="syn-ack"/>
+        <service name="microsoft-ds" method="probed" conf="10"/>
+      </port>
+    </ports>
+    <hostscript>
+      <script id="smb-vuln-ms17-010" output="VULNERABLE: Remote Code Execution (MS17-010)">
+        <table key="CVE-2017-0143">
+          <elem key="title">Remote Code Execution vulnerability in SMBv1</elem>
+          <elem key="state">VULNERABLE</elem>
+        </table>
+      </script>
+    </hostscript>
+  </host>
+</nmaprun>"""
+
+
+def test_parse_host_level_script_findings() -> None:
+    findings = parse_nmap_xml(_HOST_SCRIPT_XML, scope_hosts=["10.0.0.0/24"])
+    # One open-service finding (445) plus one host-level CVE finding (no port).
+    assert {f.port for f in findings} == {445, None}
+    cve = next(f for f in findings if f.cve_ids)
+    assert cve.cve_ids == ("CVE-2017-0143",)
+    assert cve.port is None
+    assert cve.plugin_id == "smb-vuln-ms17-010"
+    assert cve.confidence is Confidence.HIGH  # state VULNERABLE -> actively confirmed
+    assert cve.severity is Severity.INFORMATIONAL  # no CVSS -> unknown, not guessed
+    assert cve.description == "Remote Code Execution vulnerability in SMBv1"
