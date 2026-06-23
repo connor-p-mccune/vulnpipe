@@ -82,11 +82,11 @@ warn_unused_configs = true
 show_error_codes = true
 pretty = true
 
-# When the scanner/enrichment stages are implemented, add ignore_missing_imports
-# overrides for the untyped third-party libs they import, e.g.:
-#   [[tool.mypy.overrides]]
-#   module = ["libnmap.*", "zapv2.*", "cvss.*", "diskcache.*"]
-#   ignore_missing_imports = true
+# Untyped third-party scanner/enrichment libraries. Add each module here as the
+# stage that imports it lands (e.g. zapv2.*, cvss.*, diskcache.* in later phases).
+[[tool.mypy.overrides]]
+module = ["libnmap.*"]
+ignore_missing_imports = true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
