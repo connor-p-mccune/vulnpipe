@@ -2,10 +2,12 @@
 
 import pytest
 
+from vulnpipe.core.models import Confidence, Severity
 from vulnpipe.processing.normalizer import (
     clean_cves,
     clean_text,
     clean_tuple,
+    make_finding,
     normalize_cve,
     parse_cvss,
 )
@@ -73,3 +75,73 @@ def test_clean_cves_filters_and_dedupes() -> None:
 )
 def test_parse_cvss(value: float | int | str | None, expected: float | None) -> None:
     assert parse_cvss(value) == expected
+
+
+def test_make_finding_derives_severity_from_cvss() -> None:
+    finding = make_finding(source="nmap", host="10.0.0.5", title="CVE-2019-16905", cvss_score="7.8")
+    assert finding.severity is Severity.HIGH
+    assert finding.cvss_score == 7.8
+
+
+def test_make_finding_defaults_severity_informational_without_cvss() -> None:
+    # No CVSS and no explicit severity -> unknown, never guessed.
+    finding = make_finding(source="nmap", host="10.0.0.5", title="Open port 22/tcp")
+    assert finding.severity is Severity.INFORMATIONAL
+    assert finding.cvss_score is None
+
+
+def test_make_finding_respects_explicit_severity() -> None:
+    finding = make_finding(
+        source="zap",
+        host="app.example.com",
+        title="Reflected XSS",
+        severity=Severity.MEDIUM,
+        cvss_score="9.0",  # explicit severity wins over the derived one
+    )
+    assert finding.severity is Severity.MEDIUM
+
+
+def test_make_finding_cleans_fields() -> None:
+    finding = make_finding(
+        source="nmap",
+        host="10.0.0.5",
+        title="  Open   port   22/tcp  ",
+        plugin_id="  vulners  ",
+        description="  see details  ",
+        references=["https://a", "https://a", " ", None],
+        cve_ids=["cve-2019-16905", "garbage", "CVE-2019-16905"],
+        cwe_ids=["79", "79"],
+        confidence=Confidence.MEDIUM,
+    )
+    assert finding.title == "Open port 22/tcp"  # collapsed
+    assert finding.plugin_id == "vulners"
+    assert finding.description == "see details"
+    assert finding.references == ("https://a",)
+    assert finding.cve_ids == ("CVE-2019-16905",)
+    assert finding.cwe_ids == ("79",)
+    assert finding.confidence is Confidence.MEDIUM
+
+
+def test_make_finding_rejects_empty_title() -> None:
+    with pytest.raises(ValueError, match="title must be non-empty"):
+        make_finding(source="nmap", host="10.0.0.5", title="   ")
+
+
+def test_make_finding_out_of_range_cvss_becomes_unknown() -> None:
+    finding = make_finding(source="nmap", host="10.0.0.5", title="CVE-2019-16905", cvss_score="99")
+    assert finding.cvss_score is None
+    assert finding.severity is Severity.INFORMATIONAL
+
+
+def test_make_finding_fingerprint_is_stable() -> None:
+    kwargs = {"source": "nmap", "host": "10.0.0.5", "title": "Open port 22/tcp", "port": 22}
+    first = make_finding(**kwargs)  # type: ignore[arg-type]
+    second = make_finding(**kwargs)  # type: ignore[arg-type]
+    assert first.fingerprint == second.fingerprint
+    # Title whitespace differences must not change the fingerprint.
+    spaced = make_finding(source="nmap", host="10.0.0.5", title="Open   port 22/tcp", port=22)
+    assert spaced.fingerprint == first.fingerprint
+
+
+def test_make_finding_metadata_defaults_to_empty_dict() -> None:
+    assert make_finding(source="nmap", host="10.0.0.5", title="x").metadata == {}

@@ -14,6 +14,9 @@ value.
 
 import re
 from collections.abc import Iterable
+from typing import Any
+
+from vulnpipe.core.models import Confidence, Finding, Severity
 
 _CVE_RE = re.compile(r"CVE-\d{4}-\d{4,}", re.IGNORECASE)
 
@@ -86,10 +89,70 @@ def parse_cvss(value: float | int | str | None) -> float | None:
     return score
 
 
+def make_finding(
+    *,
+    source: str,
+    host: str,
+    title: str,
+    severity: Severity | None = None,
+    port: int | None = None,
+    protocol: str | None = None,
+    plugin_id: str | None = None,
+    confidence: Confidence | None = None,
+    description: str | None = None,
+    solution: str | None = None,
+    evidence: str | None = None,
+    references: Iterable[str | None] = (),
+    cve_ids: Iterable[str | None] = (),
+    cwe_ids: Iterable[str | None] = (),
+    cvss_score: float | int | str | None = None,
+    cvss_vector: str | None = None,
+    epss_score: float | None = None,
+    epss_percentile: float | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> Finding:
+    """Assemble a cleaned, frozen :class:`Finding` -- the one construction path.
+
+    Every scanner routes through here so field conventions stay uniform: text is
+    trimmed, list fields are de-duplicated, CVE ids are validated, and the CVSS
+    score is parsed. When ``severity`` is not given it is derived from the parsed
+    CVSS score (falling back to ``INFORMATIONAL`` when no score is available), so
+    a severity is never invented out of thin air.
+    """
+    display_title = " ".join(title.split())
+    if not display_title:
+        raise ValueError("Finding title must be non-empty")
+    score = parse_cvss(cvss_score)
+    if severity is None:
+        severity = Severity.from_cvss_score(score) if score is not None else Severity.INFORMATIONAL
+    return Finding(
+        source=source,
+        host=host,
+        title=display_title,
+        severity=severity,
+        port=port,
+        protocol=protocol,
+        plugin_id=clean_text(plugin_id),
+        confidence=confidence,
+        description=clean_text(description),
+        solution=clean_text(solution),
+        evidence=clean_text(evidence),
+        references=clean_tuple(references),
+        cve_ids=clean_cves(cve_ids),
+        cwe_ids=clean_tuple(cwe_ids),
+        cvss_score=score,
+        cvss_vector=clean_text(cvss_vector),
+        epss_score=epss_score,
+        epss_percentile=epss_percentile,
+        metadata=metadata if metadata is not None else {},
+    )
+
+
 __all__ = [
     "clean_cves",
     "clean_text",
     "clean_tuple",
+    "make_finding",
     "normalize_cve",
     "parse_cvss",
 ]
