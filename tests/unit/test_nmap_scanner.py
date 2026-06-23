@@ -4,14 +4,29 @@ Parser-level tests (XML -> findings) and the subprocess-mocked scan() test live
 alongside these; no test in this module runs the real nmap binary.
 """
 
+import subprocess
+from pathlib import Path
+
 import pytest
 
 from vulnpipe.core.config import Config, NmapConfig, OutOfScopeError, Scope, Target
+from vulnpipe.core.models import Confidence, Finding, Severity
+from vulnpipe.scanners import nmap_scanner
 from vulnpipe.scanners.nmap_scanner import (
     SOURCE,
+    NmapScanner,
+    _harvest_cves,
+    _harvest_from_text,
     build_nmap_command,
+    parse_nmap_xml,
     select_network_targets,
 )
+
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
+
+
+def _load(name: str) -> str:
+    return (FIXTURES / name).read_text(encoding="utf-8")
 
 
 def _config(
@@ -92,3 +107,225 @@ def test_select_network_targets_rejects_out_of_scope_host() -> None:
 
 def test_source_constant() -> None:
     assert SOURCE == "nmap"
+
+
+# --------------------------------------------------------------------------- #
+# Parsing the captured fixtures into findings
+# --------------------------------------------------------------------------- #
+def _by_cve(findings: list[Finding]) -> dict[str, Finding]:
+    return {f.cve_ids[0]: f for f in findings if f.cve_ids}
+
+
+def test_parse_vulners_fixture_shape_and_ordering() -> None:
+    findings = parse_nmap_xml(_load("nmap_vulners.xml"), scope_hosts=["10.0.0.0/24"])
+    assert len(findings) == 9
+    # Deterministic ordering: by host, then port (open-service finding before CVEs).
+    assert [(f.host, f.port) for f in findings] == [
+        ("10.0.0.5", 22),
+        ("10.0.0.5", 22),
+        ("10.0.0.5", 22),
+        ("10.0.0.5", 80),
+        ("10.0.0.5", 80),
+        ("10.0.0.5", 80),
+        ("10.0.0.6", 443),
+        ("10.0.0.6", 443),
+        ("10.0.0.6", 3306),
+    ]
+    assert {f.source for f in findings} == {"nmap"}
+    # Fingerprints are unique and stable across re-parses.
+    assert len({f.fingerprint for f in findings}) == len(findings)
+    again = parse_nmap_xml(_load("nmap_vulners.xml"), scope_hosts=["10.0.0.0/24"])
+    assert [f.fingerprint for f in findings] == [f.fingerprint for f in again]
+
+
+def test_parse_vulners_cve_findings() -> None:
+    cves = _by_cve(parse_nmap_xml(_load("nmap_vulners.xml"), scope_hosts=["10.0.0.0/24"]))
+    assert set(cves) == {
+        "CVE-2016-10009",
+        "CVE-2018-15473",
+        "CVE-2021-41773",
+        "CVE-2021-42013",
+        "CVE-2021-23017",
+    }
+    # Severity is derived from the scanner-supplied CVSS score.
+    assert cves["CVE-2021-42013"].severity is Severity.CRITICAL
+    assert cves["CVE-2021-42013"].cvss_score == 9.8
+    assert cves["CVE-2016-10009"].severity is Severity.HIGH
+    assert cves["CVE-2018-15473"].severity is Severity.MEDIUM
+    assert cves["CVE-2021-23017"].cvss_score == 7.7
+
+    critical = cves["CVE-2021-42013"]
+    assert critical.plugin_id == "vulners"
+    assert critical.cve_ids == ("CVE-2021-42013",)
+    assert critical.port == 80 and critical.protocol == "tcp"
+    assert critical.confidence is Confidence.MEDIUM
+    assert critical.metadata["product"] == "Apache httpd"
+    assert critical.metadata["nmap_script"] == "vulners"
+    assert critical.metadata["is_exploit"] is True
+
+
+def test_parse_vulners_open_service_findings() -> None:
+    findings = parse_nmap_xml(_load("nmap_vulners.xml"), scope_hosts=["10.0.0.0/24"])
+    open_ports = [f for f in findings if f.plugin_id is None]
+    assert {f.port for f in open_ports} == {22, 80, 443, 3306}
+    for finding in open_ports:
+        assert finding.severity is Severity.INFORMATIONAL
+        assert finding.title.startswith("Open port")
+        assert finding.cve_ids == ()
+    # A service with no vuln scripts still yields its inventory finding.
+    mysql = next(f for f in open_ports if f.port == 3306)
+    assert mysql.metadata["product"] == "MySQL"
+    assert mysql.metadata["os"] == "Linux 5.0 - 5.4"
+    assert mysql.confidence is Confidence.CONFIRMED
+
+
+def test_parse_basic_fixture_services_only() -> None:
+    findings = parse_nmap_xml(_load("sample_nmap.xml"), scope_hosts=["10.0.0.0/24"])
+    assert len(findings) == 2
+    assert all(f.severity is Severity.INFORMATIONAL for f in findings)
+    assert all(f.cve_ids == () for f in findings)
+    ssh = next(f for f in findings if f.port == 22)
+    assert ssh.metadata["product"] == "OpenSSH"
+    assert ssh.metadata["os"] == "Linux 5.0 - 5.4"
+    assert ssh.metadata["hostname"] == "host.lab.example.com"
+
+
+def test_parse_drops_out_of_scope_hosts() -> None:
+    assert parse_nmap_xml(_load("nmap_vulners.xml"), scope_hosts=["192.168.0.0/16"]) == []
+
+
+def test_parse_without_scope_includes_all_hosts() -> None:
+    assert len(parse_nmap_xml(_load("nmap_vulners.xml"))) == 9
+
+
+@pytest.mark.parametrize("xml", ["", "   ", "<foo/>", "<nmaprun><host", "not xml at all"])
+def test_parse_bad_xml_returns_empty(xml: str) -> None:
+    assert parse_nmap_xml(xml) == []
+
+
+# --------------------------------------------------------------------------- #
+# CVE harvesting from NSE element structures
+# --------------------------------------------------------------------------- #
+def test_harvest_cves_vulners_list_shape() -> None:
+    elements = {
+        "cpe:/a:openbsd:openssh:7.4": {
+            None: [
+                {"type": "cve", "id": "CVE-2016-10009", "cvss": "7.5", "is_exploit": "true"},
+                {"type": "cve", "id": "CVE-2018-15473", "cvss": "5.3", "is_exploit": "false"},
+            ]
+        }
+    }
+    hits = _harvest_cves(elements)
+    assert set(hits) == {"CVE-2016-10009", "CVE-2018-15473"}
+    assert hits["CVE-2016-10009"].cvss == 7.5
+    assert hits["CVE-2016-10009"].is_exploit is True
+    assert hits["CVE-2018-15473"].cvss == 5.3
+
+
+def test_harvest_cves_single_dict_shape() -> None:
+    elements = {"cpe:/a:nginx:nginx:1.18.0": {None: {"id": "CVE-2021-23017", "cvss": "7.7"}}}
+    hits = _harvest_cves(elements)
+    assert set(hits) == {"CVE-2021-23017"}
+    assert hits["CVE-2021-23017"].cvss == 7.7
+
+
+def test_harvest_cves_vuln_category_keyed_shape() -> None:
+    elements = {"CVE-2014-0160": {"title": "Heartbleed", "state": "VULNERABLE"}}
+    hits = _harvest_cves(elements)
+    assert set(hits) == {"CVE-2014-0160"}
+    assert hits["CVE-2014-0160"].state == "VULNERABLE"
+    assert hits["CVE-2014-0160"].title == "Heartbleed"
+    assert hits["CVE-2014-0160"].cvss is None
+
+
+def test_harvest_cves_ignores_non_cve_ids() -> None:
+    assert _harvest_cves({"id": "not-a-cve", "cvss": "5.0"}) == {}
+
+
+def test_harvest_from_text_backfills_and_dedupes() -> None:
+    hits = _harvest_cves(None)
+    _harvest_from_text("see CVE-2019-1234, CVE-2019-1234 and some junk", hits)
+    assert set(hits) == {"CVE-2019-1234"}
+
+
+def test_harvest_from_text_does_not_override_structured_score() -> None:
+    hits = _harvest_cves({"id": "CVE-2016-10009", "cvss": "7.5"})
+    _harvest_from_text("CVE-2016-10009 mentioned again", hits)
+    assert hits["CVE-2016-10009"].cvss == 7.5  # structured score preserved
+
+
+# --------------------------------------------------------------------------- #
+# NmapScanner.scan() with the subprocess mocked (no real nmap)
+# --------------------------------------------------------------------------- #
+class _FakeCompleted:
+    def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+def _patch_run(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    result: _FakeCompleted | None = None,
+    exc: BaseException | None = None,
+) -> dict[str, list[str]]:
+    calls: dict[str, list[str]] = {}
+
+    def fake_run(command: list[str], **kwargs: object) -> _FakeCompleted:
+        calls["command"] = list(command)
+        if exc is not None:
+            raise exc
+        assert result is not None
+        return result
+
+    monkeypatch.setattr(nmap_scanner.subprocess, "run", fake_run)
+    return calls
+
+
+def test_scan_parses_mocked_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = _patch_run(monkeypatch, result=_FakeCompleted(0, _load("nmap_vulners.xml")))
+    findings = NmapScanner(_config()).scan()
+    assert len(findings) == 9
+    assert calls["command"][0] == "nmap"
+    assert "-oX" in calls["command"]
+
+
+def test_scan_missing_binary_returns_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_run(monkeypatch, exc=FileNotFoundError())
+    assert NmapScanner(_config()).scan() == []
+
+
+def test_scan_timeout_returns_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_run(monkeypatch, exc=subprocess.TimeoutExpired(cmd=["nmap"], timeout=1))
+    assert NmapScanner(_config()).scan() == []
+
+
+def test_scan_parses_partial_output_on_nonzero_exit(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_run(monkeypatch, result=_FakeCompleted(1, _load("nmap_vulners.xml"), "a warning"))
+    assert len(NmapScanner(_config()).scan()) == 9
+
+
+def test_scan_empty_output_on_nonzero_exit_returns_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_run(monkeypatch, result=_FakeCompleted(2, "", "boom"))
+    assert NmapScanner(_config()).scan() == []
+
+
+def test_scan_disabled_skips_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
+    def boom(*args: object, **kwargs: object) -> object:
+        raise AssertionError("subprocess.run must not run when nmap is disabled")
+
+    monkeypatch.setattr(nmap_scanner.subprocess, "run", boom)
+    assert NmapScanner(_config(nmap=NmapConfig(enabled=False))).scan() == []
+
+
+def test_scan_no_in_scope_targets_skips_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
+    def boom(*args: object, **kwargs: object) -> object:
+        raise AssertionError("subprocess.run must not run with no network targets")
+
+    monkeypatch.setattr(nmap_scanner.subprocess, "run", boom)
+    cfg = _config(
+        scope=Scope(urls=["https://app.lab.example.com"]),
+        targets=[Target(urls=["https://app.lab.example.com"])],
+    )
+    assert NmapScanner(cfg).scan() == []
