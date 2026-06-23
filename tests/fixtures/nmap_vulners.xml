@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<!-- Synthetic capture for parsing tests only (lab/RFC1918 + example.com).
+     Models an "nmap -sV -O" service/OS scan run with the vulners NSE script
+     over 10.0.0.0/24. CVE ids and approximate CVSS scores are real,
+     product-appropriate pairings so the vulners parsing path is exercised
+     against realistic data. -->
+<nmaprun scanner="nmap" args="nmap -sV -O --script vulners -oX - 10.0.0.0/24" start="0" startstr="" version="7.94" xmloutputversion="1.05">
+  <host starttime="0" endtime="0">
+    <status state="up" reason="syn-ack" reason_ttl="64"/>
+    <address addr="10.0.0.5" addrtype="ipv4"/>
+    <hostnames>
+      <hostname name="host.lab.example.com" type="PTR"/>
+    </hostnames>
+    <ports>
+      <port protocol="tcp" portid="22">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="ssh" product="OpenSSH" version="7.4" method="probed" conf="10">
+          <cpe>cpe:/a:openbsd:openssh:7.4</cpe>
+        </service>
+        <script id="vulners" output="&#10;  cpe:/a:openbsd:openssh:7.4:&#10;    CVE-2016-10009  7.5  https://vulners.com/cve/CVE-2016-10009  *EXPLOIT*&#10;    CVE-2018-15473  5.3  https://vulners.com/cve/CVE-2018-15473">
+          <table key="cpe:/a:openbsd:openssh:7.4">
+            <table>
+              <elem key="type">cve</elem>
+              <elem key="id">CVE-2016-10009</elem>
+              <elem key="cvss">7.5</elem>
+              <elem key="is_exploit">true</elem>
+            </table>
+            <table>
+              <elem key="type">cve</elem>
+              <elem key="id">CVE-2018-15473</elem>
+              <elem key="cvss">5.3</elem>
+              <elem key="is_exploit">false</elem>
+            </table>
+          </table>
+        </script>
+      </port>
+      <port protocol="tcp" portid="80">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="http" product="Apache httpd" version="2.4.49" method="probed" conf="10">
+          <cpe>cpe:/a:apache:http_server:2.4.49</cpe>
+        </service>
+        <script id="vulners" output="&#10;  cpe:/a:apache:http_server:2.4.49:&#10;    CVE-2021-42013  9.8  https://vulners.com/cve/CVE-2021-42013&#10;    CVE-2021-41773  7.5  https://vulners.com/cve/CVE-2021-41773">
+          <table key="cpe:/a:apache:http_server:2.4.49">
+            <table>
+              <elem key="type">cve</elem>
+              <elem key="id">CVE-2021-42013</elem>
+              <elem key="cvss">9.8</elem>
+              <elem key="is_exploit">true</elem>
+            </table>
+            <table>
+              <elem key="type">cve</elem>
+              <elem key="id">CVE-2021-41773</elem>
+              <elem key="cvss">7.5</elem>
+              <elem key="is_exploit">true</elem>
+            </table>
+          </table>
+        </script>
+      </port>
+    </ports>
+    <os>
+      <osmatch name="Linux 5.0 - 5.4" accuracy="96" line="62024">
+        <osclass type="general purpose" vendor="Linux" osfamily="Linux" osgen="5.X" accuracy="96">
+          <cpe>cpe:/o:linux:linux_kernel:5</cpe>
+        </osclass>
+      </osmatch>
+    </os>
+  </host>
+  <host starttime="0" endtime="0">
+    <status state="up" reason="syn-ack" reason_ttl="64"/>
+    <address addr="10.0.0.6" addrtype="ipv4"/>
+    <hostnames>
+    </hostnames>
+    <ports>
+      <port protocol="tcp" portid="443">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="https" product="nginx" version="1.18.0" method="probed" conf="10" tunnel="ssl">
+          <cpe>cpe:/a:nginx:nginx:1.18.0</cpe>
+        </service>
+        <script id="vulners" output="&#10;  cpe:/a:nginx:nginx:1.18.0:&#10;    CVE-2021-23017  7.7  https://vulners.com/cve/CVE-2021-23017">
+          <table key="cpe:/a:nginx:nginx:1.18.0">
+            <table>
+              <elem key="type">cve</elem>
+              <elem key="id">CVE-2021-23017</elem>
+              <elem key="cvss">7.7</elem>
+              <elem key="is_exploit">false</elem>
+            </table>
+          </table>
+        </script>
+      </port>
+      <port protocol="tcp" portid="3306">
+        <state state="open" reason="syn-ack" reason_ttl="64"/>
+        <service name="mysql" product="MySQL" version="8.0.27" method="probed" conf="10">
+          <cpe>cpe:/a:mysql:mysql:8.0.27</cpe>
+        </service>
+      </port>
+    </ports>
+    <os>
+      <osmatch name="Linux 5.0 - 5.4" accuracy="94" line="62024">
+        <osclass type="general purpose" vendor="Linux" osfamily="Linux" osgen="5.X" accuracy="94">
+          <cpe>cpe:/o:linux:linux_kernel:5</cpe>
+        </osclass>
+      </osmatch>
+    </os>
+  </host>
+  <runstats>
+    <finished time="0" timestr="" elapsed="42.00" summary="Nmap done" exit="success"/>
+    <hosts up="2" down="0" total="2"/>
+  </runstats>
+</nmaprun>
