@@ -19,7 +19,11 @@
       </port>
     </ports>
     <os>
-      <osmatch name="Linux 5.x" accuracy="95"/>
+      <osmatch name="Linux 5.0 - 5.4" accuracy="95" line="62024">
+        <osclass type="general purpose" vendor="Linux" osfamily="Linux" osgen="5.X" accuracy="95">
+          <cpe>cpe:/o:linux:linux_kernel:5</cpe>
+        </osclass>
+      </osmatch>
     </os>
   </host>
   <runstats>
