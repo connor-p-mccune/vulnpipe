@@ -83,9 +83,9 @@ show_error_codes = true
 pretty = true
 
 # Untyped third-party scanner/enrichment libraries. Add each module here as the
-# stage that imports it lands (e.g. zapv2.*, cvss.*, diskcache.* in later phases).
+# stage that imports it lands (e.g. cvss.*, diskcache.* in later phases).
 [[tool.mypy.overrides]]
-module = ["libnmap.*"]
+module = ["libnmap.*", "zapv2.*"]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]
