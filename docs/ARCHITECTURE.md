@@ -113,6 +113,33 @@ warning and an unauthenticated scan rather than aborting the target. Resolved
 credentials live only on the transient context during a scan — never logged,
 serialized, or written back into the config model.
 
+## CI integration
+
+After reporting, the CI stage (`ci/`) turns findings into a build verdict.
+
+- **Baseline** (`baseline.py`) records the accepted findings keyed by fingerprint,
+  with a small metadata snapshot (source, host, port, title, severity) per entry —
+  enough to recognize a finding across runs and to describe one that later resolves.
+  The on-disk form is deterministic (entries in fingerprint order, no timestamp), so
+  `save_baseline` → `load_baseline` round-trips exactly. Build one with
+  `build_baseline`; extend an existing one with `merge_baseline`.
+- **Differ** (`differ.py`) classifies the current findings against a baseline by
+  fingerprint: **new** (absent from the baseline), **persisting** (present), and
+  **resolved** (in the baseline but gone from the scan). `new` / `persisting` keep the
+  prioritized order; `resolved` follows the baseline order, so the diff is deterministic.
+- **Gate** (`gate.py`) fails the build when any **new** finding meets or exceeds a
+  configured severity (High by default). Persisting (baselined) findings are exempt —
+  that is the whole point of a baseline. The verdict is exposed as a process
+  `exit_code` so a CI job exits non-zero exactly when a regression is introduced.
+- **JUnit** (`junit.py`) renders the verdict as JUnit XML: every current finding is a
+  `<testcase>` and each gate-triggering finding a `<failure>`, with all content
+  XML-escaped. Together with the SARIF report (reused from `reporting/`) this feeds CI
+  dashboards and the GitHub Security tab.
+
+`.github/workflows/security-scan.yml` is an example workflow: it runs an authorized
+scan, uploads the SARIF to code scanning, and fails the job on a new High/Critical
+finding while still publishing the JSON / SARIF / JUnit artifacts.
+
 ## Extension points
 
 - **New scanner:** subclass `BaseScanner`, implement `scan() -> list[Finding]`,
