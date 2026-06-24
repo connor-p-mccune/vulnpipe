@@ -140,3 +140,10 @@ def test_empty_report() -> None:
 def test_report_to_findings_rejects_malformed(payload: dict[str, Any]) -> None:
     with pytest.raises(ValueError, match="finding"):
         report_to_findings(payload)
+
+
+def test_load_findings_rejects_scalar_json(tmp_path: Path) -> None:
+    path = tmp_path / "scalar.json"
+    path.write_text("42", encoding="utf-8")
+    with pytest.raises(ValueError, match="object or a list"):
+        load_findings(path)

@@ -138,6 +138,41 @@ def test_render_is_deterministic_and_valid_json() -> None:
     assert json.loads(first)["version"] == SARIF_VERSION
 
 
+def test_rule_id_slugs_title_when_no_plugin_id() -> None:
+    findings = [
+        make_finding(source="nmap", host="h", title="Weak TLS Configuration"),
+        make_finding(source="nmap", host="h2", title="!!!"),
+    ]
+    rule_ids = [r["ruleId"] for r in build_sarif(findings)["runs"][0]["results"]]
+    assert rule_ids[0] == "nmap/weak-tls-configuration"
+    assert rule_ids[1] == "nmap/finding"  # unsluggable title falls back
+
+
+def test_optional_description_and_epss_are_emitted() -> None:
+    finding = make_finding(
+        source="nmap",
+        host="10.0.0.1",
+        title="Heartbleed",
+        plugin_id="vulners",
+        description="Memory disclosure in OpenSSL.",
+        cvss_score=7.5,
+        epss_score=0.6,
+    )
+    run = build_sarif([finding])["runs"][0]
+    assert run["tool"]["driver"]["rules"][0]["fullDescription"]["text"].startswith("Memory")
+    assert run["results"][0]["properties"]["epssScore"] == 0.6
+
+
+def test_duplicate_rule_keeps_higher_security_severity_when_later_is_lower() -> None:
+    findings = [
+        make_finding(source="zap", host="a", title="X", plugin_id="1", cvss_score=9.0),
+        make_finding(source="zap", host="b", title="X", plugin_id="1", cvss_score=5.0),
+    ]
+    rules = build_sarif(findings)["runs"][0]["tool"]["driver"]["rules"]
+    assert len(rules) == 1
+    assert rules[0]["properties"]["security-severity"] == "9.0"  # not lowered
+
+
 def test_empty_findings_produce_valid_empty_run() -> None:
     doc = build_sarif([])
     run = doc["runs"][0]
