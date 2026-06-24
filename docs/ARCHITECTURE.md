@@ -140,6 +140,35 @@ After reporting, the CI stage (`ci/`) turns findings into a build verdict.
 scan, uploads the SARIF to code scanning, and fails the job on a new High/Critical
 finding while still publishing the JSON / SARIF / JUnit artifacts.
 
+## Orchestration & CLI
+
+The orchestrator (`core/orchestrator.py`) runs the whole pipeline and returns the
+prioritized findings plus the diff and gate verdict (`run_pipeline` →
+`PipelineResult`); rendering and persisting reports is the CLI's job. It enforces the
+authorization and scope hard rules before any scanner runs — defense in depth, in
+addition to the CLI's own gate.
+
+Stages and concurrency: the network layer runs Nmap once over the in-scope range
+(Nmap handles a 200+ host range natively, so it needs no application-level fan-out).
+The HTTP/HTTPS services it discovers are turned into URLs (`derive_web_targets`) and,
+together with URLs declared in config, handed to the web layer. The web layer is
+fanned out across a **bounded thread pool** (`run.max_workers`), with ZAP active-scan
+concurrency **capped separately** (`zap.max_concurrency`) via a semaphore, because
+active scans are resource-heavy. The combined findings then flow through enrich →
+dedup → false-positive filter → prioritize → diff → gate. Scanners are resolved by
+name through the registry and never special-cased; the per-layer scan callables are
+injectable so the pipeline is testable without real tools.
+
+The CLI (`cli/main.py`, Typer) exposes four commands:
+
+- `scan` — the authorization gate: it requires `--authorized` plus an in-scope scope
+  file, runs the pipeline, writes the canonical JSON report (and optional SARIF / HTML
+  / JUnit), and exits non-zero when the gate trips on a newly introduced severe
+  finding. Reports are written *before* the gate exit, so CI can still upload them.
+- `report` — render a findings JSON to JSON / HTML / SARIF on stdout.
+- `diff` — classify a findings JSON against a baseline (text or JSON output).
+- `baseline` — create or update a baseline from a findings JSON.
+
 ## Extension points
 
 - **New scanner:** subclass `BaseScanner`, implement `scan() -> list[Finding]`,
