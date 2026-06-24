@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="360" viewBox="0 0 760 360" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" xml:space="preserve">
+  <rect x="0.5" y="0.5" width="759" height="359" rx="10" fill="#282a36" stroke="#1b1c24"/>
+  <rect x="0.5" y="0.5" width="759" height="40" rx="10" fill="#21222c"/>
+  <rect x="0.5" y="30" width="759" height="11" fill="#21222c"/>
+  <circle cx="24" cy="20" r="6" fill="#ff5555"/>
+  <circle cx="44" cy="20" r="6" fill="#f1fa8c"/>
+  <circle cx="64" cy="20" r="6" fill="#50fa7b"/>
+  <text x="380" y="25" text-anchor="middle" font-size="13" fill="#6272a4">vulnpipe</text>
+  <g font-size="15">
+    <text x="24" y="74" fill="#f8f8f2"><tspan fill="#50fa7b">$</tspan> vulnpipe scan --config configs/targets.yaml --authorized</text>
+    <text x="24" y="101" fill="#6272a4">authorization confirmed; scanning 2 target(s) in scope</text>
+    <text x="24" y="128" fill="#f8f8f2">findings: 15   critical=1 high=5 medium=2 low=2 info=5</text>
+    <text x="24" y="159" fill="#ff5555">CRIT  9.8  nmap  CVE-2021-42013       10.0.0.5</text>
+    <text x="24" y="186" fill="#ffb86c">HIGH  7.5  nmap  CVE-2021-41773       10.0.0.5</text>
+    <text x="24" y="213" fill="#ffb86c">HIGH   -   zap   SQL Injection        app.lab.example.com</text>
+    <text x="24" y="240" fill="#f1fa8c">MED   5.3  nmap  CVE-2018-15473       10.0.0.5</text>
+    <text x="24" y="267" fill="#6272a4">...  (8 more)</text>
+    <text x="24" y="300" fill="#ff5555" font-weight="bold">gate failed: 6 new finding(s) at or above high</text>
+    <text x="24" y="331" fill="#50fa7b">$ <tspan fill="#f8f8f2">▏</tspan></text>
+  </g>
+</svg>

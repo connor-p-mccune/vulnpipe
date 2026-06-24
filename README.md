@@ -8,6 +8,10 @@
 [![Lint: ruff](https://img.shields.io/badge/lint-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 [![mypy: strict](https://img.shields.io/badge/mypy-strict-blue.svg)](https://mypy-lang.org/)
 
+<p align="center">
+  <img src="assets/demo.svg" alt="vulnpipe scanning two in-scope targets, prioritizing 15 findings, and failing the CI gate on new high/critical findings" width="760">
+</p>
+
 > Modular network + web vulnerability scanning pipeline. It orchestrates
 > [Nmap](https://nmap.org/) (network layer) and [OWASP ZAP](https://www.zaproxy.org/)
 > (web layer), normalizes every result into one schema, enriches it with
