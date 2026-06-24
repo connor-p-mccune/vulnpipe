@@ -169,6 +169,32 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
 - `diff` — classify a findings JSON against a baseline (text or JSON output).
 - `baseline` — create or update a baseline from a findings JSON.
 
+## Docker packaging
+
+`docker/` ships a one-command lab run: `docker compose up --build` brings up an
+OWASP ZAP daemon and the scanner on a shared network and runs an authorized scan
+end-to-end.
+
+- **Image** (`docker/Dockerfile`) is multi-stage: a builder installs vulnpipe and
+  its dependencies into an isolated virtualenv, and a slim runtime stage copies just
+  that venv and adds the `nmap` binary (plus `curl` for the readiness wait). It runs
+  as an unprivileged `scanner` user; without `NET_RAW`, nmap uses TCP connect scans.
+- **Compose** (`docker/docker-compose.yml`) defines two services — `zap`
+  (`ghcr.io/zaproxy/zaproxy:stable`, run as a daemon with its API reachable from the
+  network) and `scanner` — on a shared `vulnpipe` bridge network. The scanner reaches
+  ZAP at `http://zap:8080`; the example config resolves that from `${ZAP_API_URL}`,
+  which compose sets. Reports land in the `vulnpipe-results` volume.
+- **Entrypoint** (`docker/entrypoint.sh`) polls the ZAP API until it answers before a
+  `scan` runs (other subcommands skip the wait), so the scan never starts against a
+  daemon that is not ready yet.
+
+Required environment (via the shell or a gitignored `.env`; see `.env.example`):
+`ZAP_API_KEY` (must match the daemon), `ZAP_API_URL` (optional; defaults to
+`localhost`, compose sets `http://zap:8080`), `NVD_API_KEY` (optional, raises NVD
+rate limits), and any auth credentials referenced by the targets file
+(`APP_USERNAME` / `APP_PASSWORD`, `API_BEARER_TOKEN`). Secrets are referenced by
+name and never committed.
+
 ## Extension points
 
 - **New scanner:** subclass `BaseScanner`, implement `scan() -> list[Finding]`,
