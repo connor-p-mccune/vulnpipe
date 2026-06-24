@@ -31,12 +31,15 @@ import logging
 import re
 import time
 from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
 
 from zapv2 import ZAPv2
 
+from vulnpipe.auth.auth_contexts import apply_auth_context, build_auth_context
 from vulnpipe.core.config import (
+    AuthConfig,
     Config,
     OutOfScopeError,
     Scope,
@@ -99,17 +102,25 @@ _SCHEME_DEFAULT_PORT: dict[str, int] = {"http": 80, "https": 443}
 # --------------------------------------------------------------------------- #
 # Target selection
 # --------------------------------------------------------------------------- #
-def select_web_targets(config: Config) -> list[str]:
-    """Return the de-duplicated, in-scope web URLs to hand to ZAP.
+@dataclass(frozen=True)
+class WebTarget:
+    """An in-scope web URL together with the auth config it should be scanned under."""
 
-    Only the ``urls`` of each :class:`~vulnpipe.core.config.Target` are web
-    targets; host-only (network) targets belong to the nmap stage and are ignored
-    here. (Web services discovered by the nmap stage are fed in by the
-    orchestrator in a later phase.) Enforces the authorization scope as a hard
-    rule: a configured URL outside the allowlist raises
+    url: str
+    auth: AuthConfig | None = None
+
+
+def select_web_targets_with_auth(config: Config) -> list[WebTarget]:
+    """Return the de-duplicated, in-scope web targets (URL + auth) to hand to ZAP.
+
+    Only the ``urls`` of each :class:`~vulnpipe.core.config.Target` are web targets;
+    host-only (network) targets belong to the nmap stage and are ignored here. Each
+    URL carries its target's ``auth`` block so the scanner can authenticate. URLs are
+    de-duplicated keeping the first occurrence (and its auth). Enforces the
+    authorization scope as a hard rule: a configured URL outside the allowlist raises
     :class:`~vulnpipe.core.config.OutOfScopeError` and no scan is attempted.
     """
-    selected: list[str] = []
+    selected: list[WebTarget] = []
     seen: set[str] = set()
     for target in config.targets:
         for url in target.urls:
@@ -119,8 +130,17 @@ def select_web_targets(config: Config) -> list[str]:
                 )
             if url not in seen:
                 seen.add(url)
-                selected.append(url)
+                selected.append(WebTarget(url=url, auth=target.auth))
     return selected
+
+
+def select_web_targets(config: Config) -> list[str]:
+    """Return the de-duplicated, in-scope web URLs to hand to ZAP.
+
+    A thin view over :func:`select_web_targets_with_auth` for callers that only need
+    the URLs (the same scope enforcement and de-duplication apply).
+    """
+    return [target.url for target in select_web_targets_with_auth(config)]
 
 
 # --------------------------------------------------------------------------- #
@@ -370,6 +390,19 @@ def _poll_until_complete(poll_fn: Callable[[], Any], *, timeout: float, label: s
         time.sleep(_POLL_INTERVAL_SECONDS)
 
 
+@dataclass(frozen=True)
+class _ScanContext:
+    """The ZAP context (and authenticated user, if any) a URL is scanned under.
+
+    ``user_id`` is set only for credentialed auth schemes; when present the spider
+    and active scan run *as that user* so they stay authenticated.
+    """
+
+    name: str | None
+    context_id: str | None
+    user_id: str | None
+
+
 @register
 class ZapScanner(BaseScanner):
     """Drive a running ZAP daemon over in-scope web URLs and return findings.
@@ -378,6 +411,11 @@ class ZapScanner(BaseScanner):
     daemon that cannot be reached, or a spider/active-scan/alert call that fails
     for one URL, yields an empty (or partial) finding list so a single bad target
     never aborts the run.
+
+    When a target defines an ``auth`` block, the context is configured for
+    authenticated scanning (see :mod:`vulnpipe.auth.auth_contexts`); an auth setup
+    failure degrades to a logged warning and an unauthenticated scan rather than
+    skipping the target.
     """
 
     name = SOURCE
@@ -387,7 +425,7 @@ class ZapScanner(BaseScanner):
         if not cfg.enabled:
             log_event(_log, logging.INFO, "zap scanner disabled; skipping")
             return []
-        targets = select_web_targets(self.config)
+        targets = select_web_targets_with_auth(self.config)
         if not targets:
             log_event(_log, logging.INFO, "zap has no in-scope web targets; skipping")
             return []
@@ -399,12 +437,14 @@ class ZapScanner(BaseScanner):
             return []
         raw_alerts: list[dict[str, Any]] = []
         failed = 0
-        for url in targets:
+        for target in targets:
             try:
-                raw_alerts.extend(self._scan_url(client, url, cfg))
+                raw_alerts.extend(self._scan_url(client, target, cfg))
             except Exception as exc:  # one bad URL must not abort the whole run
                 failed += 1
-                log_event(_log, logging.WARNING, "zap scan failed for url", url=url, error=str(exc))
+                log_event(
+                    _log, logging.WARNING, "zap scan failed for url", url=target.url, error=str(exc)
+                )
         findings = normalize_alerts(raw_alerts, scope=self.config.scope)
         log_event(
             _log,
@@ -416,45 +456,82 @@ class ZapScanner(BaseScanner):
         )
         return findings
 
-    def _scan_url(self, client: ZAPv2, url: str, cfg: ZapConfig) -> list[dict[str, Any]]:
-        """Run the full spider -> active-scan -> collect flow for one URL."""
-        log_event(_log, logging.INFO, "zap scanning url", url=url)
-        context_name = self._ensure_context(client, url)
-        self._run_spider(client, url, context_name, cfg)
-        self._run_active_scan(client, url, cfg)
-        return self._collect_alerts(client, url)
+    def _scan_url(self, client: ZAPv2, target: WebTarget, cfg: ZapConfig) -> list[dict[str, Any]]:
+        """Run the full spider -> active-scan -> collect flow for one web target."""
+        log_event(_log, logging.INFO, "zap scanning url", url=target.url)
+        context = self._ensure_context(client, target)
+        self._run_spider(client, target.url, context, cfg)
+        self._run_active_scan(client, target.url, context, cfg)
+        return self._collect_alerts(client, target.url)
 
-    def _ensure_context(self, client: ZAPv2, url: str) -> str | None:
-        """Create a ZAP context covering ``url``'s subtree; ``None`` on failure.
+    def _ensure_context(self, client: ZAPv2, target: WebTarget) -> _ScanContext:
+        """Create a ZAP context for ``target``'s subtree, configuring auth if defined.
 
-        Authenticated scanning attaches its session/auth configuration to this
-        context (see ``auth/auth_contexts.py``, a later phase); for now it simply
-        scopes the spider to the target subtree.
+        Returns an empty context (no name/id) if context creation fails, so the
+        scan still proceeds unauthenticated against the URL.
         """
-        host = urlparse(url).hostname or "web"
+        host = urlparse(target.url).hostname or "web"
         name = f"vulnpipe-{host}"
         try:
-            client.context.new_context(name)
-            client.context.include_in_context(name, _subtree_regex(url))
-            return name
+            context_id = str(client.context.new_context(name))
+            client.context.include_in_context(name, _subtree_regex(target.url))
         except Exception as exc:
-            log_event(_log, logging.DEBUG, "zap context setup skipped", url=url, error=str(exc))
+            log_event(
+                _log, logging.DEBUG, "zap context setup skipped", url=target.url, error=str(exc)
+            )
+            return _ScanContext(name=None, context_id=None, user_id=None)
+        user_id = self._configure_auth(client, context_id, target)
+        return _ScanContext(name=name, context_id=context_id, user_id=user_id)
+
+    def _configure_auth(self, client: ZAPv2, context_id: str, target: WebTarget) -> str | None:
+        """Apply the target's auth context to ``context_id``; ``None`` if unauthenticated.
+
+        A missing credential or any auth-setup failure degrades to a logged warning
+        and an unauthenticated scan rather than aborting the target.
+        """
+        if target.auth is None:
+            return None
+        try:
+            plan = build_auth_context(target.auth)
+            user_id = apply_auth_context(client, context_id, plan)
+            log_event(
+                _log,
+                logging.INFO,
+                "zap authenticated context configured",
+                url=target.url,
+                auth=plan.kind,
+            )
+            return user_id
+        except Exception as exc:
+            log_event(
+                _log,
+                logging.WARNING,
+                "zap auth setup failed; scanning unauthenticated",
+                url=target.url,
+                error=str(exc),
+            )
             return None
 
-    def _run_spider(
-        self, client: ZAPv2, url: str, context_name: str | None, cfg: ZapConfig
-    ) -> None:
+    def _run_spider(self, client: ZAPv2, url: str, context: _ScanContext, cfg: ZapConfig) -> None:
         """Spider ``url`` and wait, bounded by ``spider_max_duration_minutes``."""
         if cfg.spider_max_duration_minutes <= 0:
             log_event(_log, logging.INFO, "zap spider disabled; skipping", url=url)
             return
-        scan_id = client.spider.scan(url, contextname=context_name)
+        if context.user_id is not None and context.context_id is not None:
+            scan_id = client.spider.scan_as_user(context.context_id, context.user_id, url)
+        else:
+            scan_id = client.spider.scan(url, contextname=context.name)
         timeout = cfg.spider_max_duration_minutes * 60
         _poll_until_complete(lambda: client.spider.status(scan_id), timeout=timeout, label="spider")
 
-    def _run_active_scan(self, client: ZAPv2, url: str, cfg: ZapConfig) -> None:
+    def _run_active_scan(
+        self, client: ZAPv2, url: str, context: _ScanContext, cfg: ZapConfig
+    ) -> None:
         """Active-scan ``url`` and poll to completion, bounded by the config timeout."""
-        scan_id = client.ascan.scan(url)
+        if context.user_id is not None and context.context_id is not None:
+            scan_id = client.ascan.scan_as_user(url, context.context_id, context.user_id, True)
+        else:
+            scan_id = client.ascan.scan(url)
         _poll_until_complete(
             lambda: client.ascan.status(scan_id),
             timeout=cfg.active_scan_timeout_seconds,
@@ -474,8 +551,10 @@ class ZapScanner(BaseScanner):
 
 __all__ = [
     "SOURCE",
+    "WebTarget",
     "ZapScanner",
     "alert_to_finding",
     "normalize_alerts",
     "select_web_targets",
+    "select_web_targets_with_auth",
 ]
