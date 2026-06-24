@@ -49,6 +49,13 @@ dev = [
 [project.scripts]
 vulnpipe = "vulnpipe.cli.main:main"
 
+[project.urls]
+Homepage = "https://github.com/connor-p-mccune/vulnpipe"
+Repository = "https://github.com/connor-p-mccune/vulnpipe"
+Documentation = "https://github.com/connor-p-mccune/vulnpipe/blob/main/docs/ARCHITECTURE.md"
+Changelog = "https://github.com/connor-p-mccune/vulnpipe/blob/main/CHANGELOG.md"
+Issues = "https://github.com/connor-p-mccune/vulnpipe/issues"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["vulnpipe*"]
