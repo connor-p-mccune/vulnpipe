@@ -1,5 +1,33 @@
 """Pure finding transforms: normalize, dedup, false-positive filter, prioritize.
 
-Every function here is pure (findings in -> findings out) so it is trivially
-testable. Side effects (running tools, HTTP, writing files) live elsewhere.
+These stages run in order on the findings the scanners produce: normalize cleans
+and constructs findings, :func:`deduplicate` collapses repeats, then
+:func:`filter_false_positives` drops vetted noise, and :func:`prioritize` orders
+what remains. Every transform is pure (findings in -> findings out) so it is
+trivially testable; the lone side effect is :func:`load_false_positive_config`,
+kept beside the filter it configures.
 """
+
+from vulnpipe.processing.deduplicator import deduplicate, merge_findings
+from vulnpipe.processing.false_positive import (
+    FalsePositiveConfig,
+    PluginRule,
+    filter_false_positives,
+    is_false_positive,
+    load_false_positive_config,
+)
+from vulnpipe.processing.normalizer import make_finding
+from vulnpipe.processing.prioritizer import CriticalityResolver, prioritize
+
+__all__ = [
+    "CriticalityResolver",
+    "FalsePositiveConfig",
+    "PluginRule",
+    "deduplicate",
+    "filter_false_positives",
+    "is_false_positive",
+    "load_false_positive_config",
+    "make_finding",
+    "merge_findings",
+    "prioritize",
+]
