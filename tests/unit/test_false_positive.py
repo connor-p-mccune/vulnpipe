@@ -94,3 +94,10 @@ def test_load_empty_file_is_empty_allowlist(tmp_path: Path) -> None:
     path.write_text("", encoding="utf-8")
     allowlist = load_false_positive_config(path)
     assert allowlist == FalsePositiveConfig()
+
+
+def test_load_rejects_non_mapping_root(tmp_path: Path) -> None:
+    path = tmp_path / "list.yaml"
+    path.write_text("- not\n- a mapping\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="must be a mapping"):
+        load_false_positive_config(path)
