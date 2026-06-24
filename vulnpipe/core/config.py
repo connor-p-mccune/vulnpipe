@@ -26,6 +26,8 @@ from urllib.parse import urlparse
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
+from vulnpipe.core.models import AssetCriticality
+
 IPNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
 
 _HOSTNAME_RE = re.compile(r"^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9._-]{0,251}[A-Za-z0-9])?$")
@@ -235,6 +237,44 @@ class RunConfig(BaseModel):
     max_workers: int = Field(default=10, ge=1)
 
 
+class AssetRule(BaseModel):
+    """A criticality assigned to every host matching a host / CIDR / wildcard pattern."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    host: str
+    criticality: AssetCriticality
+
+    @field_validator("host")
+    @classmethod
+    def _check_host(cls, value: str) -> str:
+        candidate = value[2:] if value.startswith("*.") else value
+        if not _is_host_or_cidr(candidate):
+            raise ValueError(f"Invalid asset host entry: {value!r}")
+        return value
+
+
+class PrioritizationConfig(BaseModel):
+    """Asset-criticality inputs to finding prioritization.
+
+    ``assets`` maps host patterns to a criticality; the first matching rule wins, so
+    list more specific entries first. A host matching no rule falls back to
+    ``default_criticality``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    default_criticality: AssetCriticality = AssetCriticality.MEDIUM
+    assets: list[AssetRule] = Field(default_factory=list)
+
+    def criticality_for(self, host: str) -> AssetCriticality:
+        """Resolve the criticality for ``host`` using the first matching asset rule."""
+        for rule in self.assets:
+            if host_in_scope(host, [rule.host]):
+                return rule.criticality
+        return self.default_criticality
+
+
 class Config(BaseModel):
     """Top-level pipeline configuration loaded from the YAML target file."""
 
@@ -246,6 +286,7 @@ class Config(BaseModel):
     zap: ZapConfig = Field(default_factory=ZapConfig)
     enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
     run: RunConfig = Field(default_factory=RunConfig)
+    prioritization: PrioritizationConfig = Field(default_factory=PrioritizationConfig)
 
 
 # --------------------------------------------------------------------------- #
@@ -392,6 +433,7 @@ def ensure_authorized(*, authorized: bool, scope: Scope) -> None:
 
 
 __all__ = [
+    "AssetRule",
     "AuthConfig",
     "AuthorizationError",
     "Config",
@@ -401,6 +443,7 @@ __all__ = [
     "HeaderAuth",
     "NmapConfig",
     "OutOfScopeError",
+    "PrioritizationConfig",
     "RunConfig",
     "Scope",
     "ScriptAuth",

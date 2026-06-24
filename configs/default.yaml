@@ -29,3 +29,7 @@ enrichment:
 
 run:
   max_workers: 10
+
+prioritization:
+  default_criticality: medium     # one of: low, medium, high, critical
+  assets: []                      # e.g. [{ host: "10.0.0.10", criticality: critical }]

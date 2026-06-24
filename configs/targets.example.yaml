@@ -60,3 +60,15 @@ enrichment:
 
 run:
   max_workers: 10             # bounded thread pool for the network layer
+
+# --- Prioritization (optional) ------------------------------------------------
+# Rank findings on more business-critical assets higher. The first matching rule
+# wins, so list more specific entries first; a host matching no rule uses
+# `default_criticality`.
+prioritization:
+  default_criticality: medium   # one of: low, medium, high, critical
+  assets:
+    - host: "10.0.0.10"         # the web-app host is business-critical
+      criticality: critical
+    - host: "10.0.0.0/24"       # the rest of the internal range
+      criticality: high
