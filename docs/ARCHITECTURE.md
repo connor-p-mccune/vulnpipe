@@ -62,12 +62,64 @@ processing produce new findings via `model_copy`, leaving the fingerprint intact
 `Severity` and `Confidence` are ordered enums (`.rank`). `Severity.from_cvss_score`
 applies the FIRST CVSS v3 qualitative bands.
 
+## Reporting
+
+Reporters (`reporting/`) each subclass `BaseReporter` and turn `list[Finding]` into
+a serialized string. All three are **deterministic for fixed input** — findings are
+emitted in the order given (the prioritized order), enum/severity ordering is fixed,
+and no wall-clock timestamp is embedded — so report output and snapshot tests are
+stable across runs. Shared, pure view-model helpers (`reporting/summary.py`) compute
+the severity/host counts once so the formats cannot drift.
+
+- **JSON** (`json_reporter.py`) is the canonical, lossless artifact: an envelope of
+  `schema_version`, tool identity, a summary, and every finding serialized with its
+  fingerprint. It round-trips — `build_report` → JSON → `report_to_findings`
+  reproduces the findings exactly (the computed fingerprint is stripped before
+  re-validation and recomputed identically) — so the HTML/SARIF renderers and the CI
+  differ read it back rather than re-running scanners.
+- **HTML** (`html_reporter.py` + Jinja2 templates) renders a summary with severity
+  counts, an inline SVG severity chart (bar geometry computed by a pure, tested
+  helper), a per-host breakdown, and a client-side sortable findings table.
+  Autoescaping is on, so scanner evidence such as a reflected `<script>` payload is
+  shown as inert text, never live markup.
+- **SARIF** (`sarif_reporter.py`) emits SARIF 2.1.0 for the GitHub Security tab: one
+  rule per distinct check, severity mapped to `level`, the finding fingerprint under
+  `partialFingerprints` for stable cross-run tracking, and a `security-severity`
+  ranking hint (the real CVSS score when known, otherwise the severity band floor —
+  never written back onto the finding).
+
+`get_reporter(fmt)` resolves a format name to a reporter; the `report` CLI command
+loads a findings JSON and renders it to any format on stdout.
+
+## Authenticated scanning
+
+Authenticated scans are the biggest false-positive reducer — without a session ZAP
+reports spurious 401/redirect findings. `auth/auth_contexts.py` supports three ZAP
+schemes (form, header/JWT bearer, script) and is split like the rest of the codebase:
+
+- `build_auth_context(auth)` is **pure** (config in, resolved context out). It pulls
+  credentials from the environment via `resolve_secret`, so a missing credential is a
+  clear error and no secret is ever read from the config file. This is what "builds
+  from config" with no live ZAP.
+- `apply_auth_context(client, context_id, ctx)` performs the ZAP API calls — auth
+  method, cookie-based session management, logged-in/out indicators, and (for the
+  credentialed schemes) an enabled ZAP user. Header/bearer auth needs no user: the
+  token is injected on every request via a Replacer rule.
+
+The ZAP scanner wires this in per target: `select_web_targets_with_auth` carries each
+URL's `auth` block, and when one is present the spider and active scan run *as the
+authenticated user* (`scan_as_user`). An auth-setup failure degrades to a logged
+warning and an unauthenticated scan rather than aborting the target. Resolved
+credentials live only on the transient context during a scan — never logged,
+serialized, or written back into the config model.
+
 ## Extension points
 
 - **New scanner:** subclass `BaseScanner`, implement `scan() -> list[Finding]`,
   and register it via `scanners/registry.py`. Do not special-case scanners in the
   orchestrator.
-- **New reporter:** subclass `BaseReporter` and implement `render()`.
+- **New reporter:** subclass `BaseReporter`, implement `render()`, and register it in
+  `reporting/__init__.py` so `get_reporter` can resolve it.
 
 ## Hard rules (non-negotiable)
 
