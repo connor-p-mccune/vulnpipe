@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from vulnpipe.core.models import (
+    AssetCriticality,
     Confidence,
     Finding,
     Host,
@@ -46,6 +47,12 @@ def test_from_cvss_score_out_of_range(score: float) -> None:
 def test_confidence_rank_ordering() -> None:
     assert Confidence.FALSE_POSITIVE.rank < Confidence.LOW.rank
     assert Confidence.HIGH.rank < Confidence.CONFIRMED.rank
+
+
+def test_asset_criticality_rank_ordering() -> None:
+    assert AssetCriticality.LOW.rank < AssetCriticality.MEDIUM.rank
+    assert AssetCriticality.MEDIUM.rank < AssetCriticality.HIGH.rank
+    assert AssetCriticality.HIGH.rank < AssetCriticality.CRITICAL.rank
 
 
 def test_normalize_title_collapses_and_lowercases() -> None:
