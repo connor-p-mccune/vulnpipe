@@ -1,0 +1,112 @@
+# Example vulnpipe CI workflow: run an authorized scan, publish the SARIF report
+# to GitHub code scanning, and fail the build when a *new* High/Critical finding
+# is introduced relative to the stored baseline.
+#
+# This is a template. Before enabling it you must:
+#   * provide an in-scope, authorized `configs/targets.yaml` (gitignored) -- e.g.
+#     materialize it from a secret in a step, or commit a vetted scope file;
+#   * run the scan from a runner that can reach the in-scope targets (a private
+#     lab network usually means a self-hosted runner);
+#   * set the NVD_API_KEY and ZAP_API_KEY repository secrets.
+#
+# Scanning is gated on an explicit authorization acknowledgement (`--authorized`)
+# plus the scope allowlist in the config -- nothing outside scope is ever scanned.
+
+name: Security scan
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 3 * * 1" # weekly, Mondays at 03:00 UTC
+
+permissions:
+  contents: read
+  security-events: write # required to upload SARIF to the Security tab
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    env:
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+      ZAP_API_KEY: ${{ secrets.ZAP_API_KEY }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install vulnpipe
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Install nmap
+        run: sudo apt-get update && sudo apt-get install -y nmap
+
+      - name: Start the OWASP ZAP daemon
+        run: |
+          docker run -d --name zap -u zap -p 8080:8080 \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap.sh -daemon -host 0.0.0.0 -port 8080 \
+            -config api.key="${ZAP_API_KEY}" \
+            -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true
+          # Wait for the API to answer before scanning.
+          for _ in $(seq 1 30); do
+            if curl -fsS "http://localhost:8080/JSON/core/view/version/?apikey=${ZAP_API_KEY}" >/dev/null; then
+              echo "ZAP is up"; exit 0
+            fi
+            sleep 2
+          done
+          echo "ZAP did not become ready in time" >&2; exit 1
+
+      - name: Restore the findings baseline
+        uses: actions/cache@v4
+        with:
+          path: baseline.json
+          # A fresh key each run, restored from the most recent prior key, so the
+          # baseline carries forward across runs and is re-saved post-job.
+          key: vulnpipe-baseline-${{ github.run_id }}
+          restore-keys: |
+            vulnpipe-baseline-
+
+      - name: Run the scan, gate, and report
+        run: |
+          BASELINE_ARG=""
+          if [ -f baseline.json ]; then BASELINE_ARG="--baseline baseline.json"; fi
+          vulnpipe scan \
+            --config configs/targets.yaml \
+            --authorized \
+            --output results \
+            --sarif results/vulnpipe.sarif \
+            --junit results/junit.xml \
+            --gate-severity high \
+            $BASELINE_ARG
+
+      - name: Upload the SARIF report to code scanning
+        if: ${{ always() && hashFiles('results/vulnpipe.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results/vulnpipe.sarif
+          category: vulnpipe
+
+      - name: Publish the JUnit gate report
+        if: ${{ always() && hashFiles('results/junit.xml') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulnpipe-junit
+          path: results/junit.xml
+
+      - name: Upload scan artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vulnpipe-results
+          path: results/
+          if-no-files-found: ignore
