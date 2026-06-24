@@ -1,0 +1,29 @@
+# Keep the build context small and free of host-only / secret files. The image
+# only needs pyproject.toml, README.md, the vulnpipe package, configs/, and
+# docker/entrypoint.sh -- everything else is excluded.
+.git
+.gitignore
+.github
+.venv
+venv
+env
+**/__pycache__
+*.py[cod]
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.coverage
+.coverage.*
+htmlcov
+coverage.xml
+*.egg-info
+build
+dist
+results
+*.sarif
+baseline.json
+
+# Never ship local secrets into the build context.
+.env
+.env.*
+!.env.example
