@@ -95,6 +95,71 @@ def test_derive_web_targets_filters_out_of_scope_host() -> None:
     assert orchestrator.derive_web_targets(findings, SCOPE) == []
 
 
+def test_derive_web_targets_skips_portless_findings() -> None:
+    portless = make_finding(source="nmap", host="10.0.0.10", title="CVE-2021-1", plugin_id="vuln")
+    assert orchestrator.derive_web_targets([portless], SCOPE) == []
+
+
+# --------------------------------------------------------------------------- #
+# Web-target collection and the default scan stages
+# --------------------------------------------------------------------------- #
+def test_collect_web_targets_declared_wins_over_discovered() -> None:
+    cfg = Config(
+        scope=SCOPE,
+        targets=[Target(urls=["https://app.lab.example.com"])],
+    )
+    # The declared URL also appears as discovered; the declared target (with its
+    # auth slot) wins, and a genuinely new discovered URL is appended.
+    collected = orchestrator._collect_web_targets(
+        cfg, ["https://app.lab.example.com", "https://10.0.0.10:443"]
+    )
+    assert [t.url for t in collected] == [
+        "https://app.lab.example.com",
+        "https://10.0.0.10:443",
+    ]
+
+
+def test_default_network_scan_uses_registered_scanner(monkeypatch: pytest.MonkeyPatch) -> None:
+    canned = [_open_port("10.0.0.10", 443, "https")]
+
+    class _FakeNmap(BaseScanner):
+        name = "nmap"
+
+        def scan(self) -> list[Finding]:
+            return canned
+
+    monkeypatch.setattr(orchestrator, "get_scanner", lambda _name: _FakeNmap)
+    assert orchestrator._default_network_scan(_config()) == canned
+
+
+def test_default_web_scan_no_targets_returns_empty() -> None:
+    cfg = Config(scope=Scope(hosts=["10.0.0.0/24"]), targets=[Target(host="10.0.0.10")])
+    assert orchestrator._default_web_scan(cfg, []) == []
+
+
+def test_enrich_empty_findings_short_circuits() -> None:
+    assert orchestrator._enrich(_config(), [], orchestrator.EnrichmentClients()) == []
+
+
+def test_enrich_builds_and_closes_clients(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _SpyClients:
+        def __init__(self) -> None:
+            self.nvd = None
+            self.epss = None
+            self.closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    spy = _SpyClients()
+    monkeypatch.setattr(orchestrator, "build_enrichment", lambda _cfg: spy)
+    finding = make_finding(source="nmap", host="10.0.0.10", title="no-cve", plugin_id="p")
+    # clients=None -> the orchestrator builds them and must close what it owns.
+    result = orchestrator._enrich(_config(), [finding], None)
+    assert result == [finding]  # no CVEs -> enrichment is a no-op
+    assert spy.closed is True
+
+
 # --------------------------------------------------------------------------- #
 # run_pipeline wiring with injected stub scanners
 # --------------------------------------------------------------------------- #
