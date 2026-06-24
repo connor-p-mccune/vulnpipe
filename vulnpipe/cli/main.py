@@ -19,6 +19,7 @@ from vulnpipe.core.config import (
     load_config,
 )
 from vulnpipe.core.logging import configure_logging, get_logger
+from vulnpipe.reporting import available_formats, get_reporter, load_findings
 
 app = typer.Typer(
     add_completion=False,
@@ -87,10 +88,20 @@ def report(
         str, typer.Option("--format", "-f", help="Report format: json, html, or sarif.")
     ] = "html",
 ) -> None:
-    """Render a findings file into a report (not yet implemented)."""
-    log.warning(
-        "report (format=%s) for %s is not yet implemented in this scaffold", fmt, input_path
-    )
+    """Render a findings JSON file into a JSON, HTML, or SARIF report on stdout."""
+    try:
+        reporter = get_reporter(fmt)
+    except KeyError as exc:
+        log.error(
+            "Unknown report format %r; choose one of: %s", fmt, ", ".join(available_formats())
+        )
+        raise typer.Exit(code=2) from exc
+    try:
+        findings = load_findings(input_path)
+    except (OSError, ValueError) as exc:
+        log.error("Failed to read findings from %s: %s", input_path, exc)
+        raise typer.Exit(code=2) from exc
+    typer.echo(reporter.render(findings), nl=False)
 
 
 @app.command()
