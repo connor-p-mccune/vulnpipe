@@ -98,3 +98,18 @@ def test_empty_scan_is_valid_empty_suite() -> None:
     assert root.attrib["tests"] == "0"
     assert root.attrib["failures"] == "0"
     assert list(root.find("testsuite")) == []
+
+
+def test_testcase_name_prefers_url_location() -> None:
+    finding = make_finding(
+        source="zap",
+        host="app.lab.example.com",
+        title="XSS",
+        severity=Severity.HIGH,
+        port=443,
+        plugin_id="40012",
+        metadata={"url": "https://app.lab.example.com/search?q=1"},
+    )
+    xml = _render([finding], [])
+    name = next(ET.fromstring(xml).iter("testcase")).attrib["name"]
+    assert "https://app.lab.example.com/search?q=1" in name
