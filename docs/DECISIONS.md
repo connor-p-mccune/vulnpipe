@@ -1,0 +1,148 @@
+# Architecture decision records
+
+Short records of the design decisions that shaped vulnpipe and the trade-offs
+behind them. They complement [`ARCHITECTURE.md`](ARCHITECTURE.md) (which describes
+*what* the system is) by capturing *why* it is that way.
+
+Format per record: **Context → Decision → Consequences** (including trade-offs).
+
+---
+
+## ADR-0001 — One normalized `Finding` model for every scanner
+
+**Context.** Nmap and ZAP describe issues completely differently (XML service/NSE
+output vs. a JSON alert with risk/confidence/CWE). Downstream stages — enrichment,
+dedup, filtering, prioritization, reporting, CI diffing — would otherwise each need
+to understand both shapes.
+
+**Decision.** Every scanner normalizes to a single `core.models.Finding`
+(`processing/normalizer.make_finding`). Nothing downstream knows which tool produced
+a finding except via `Finding.source`.
+
+**Consequences.** Each new stage is written once against one model; adding a scanner
+doesn't ripple through the pipeline. The cost is an up-front mapping layer per
+scanner and a model that must be a superset of what any scanner expresses.
+
+## ADR-0002 — A stable, content-derived fingerprint
+
+**Context.** Deduplication and cross-run CI diffing both need to decide whether two
+findings are "the same issue" — within a run and across runs months apart.
+
+**Decision.** Each finding carries
+`sha256(host | port | source | plugin_or_alert_id | normalized_title)` as a computed
+field. The title is whitespace- and case-normalized so cosmetic scanner wording
+changes don't change identity.
+
+**Consequences.** Dedup is a group-by, and the differ is a set comparison by
+fingerprint — both trivial and deterministic. The trade-off: the fingerprint inputs
+are fixed, so a finding that legitimately changes host/port/title is treated as a
+new issue (correct for diffing, but it means titles must stay stable).
+
+## ADR-0003 — Immutable findings; stages copy rather than mutate
+
+**Context.** Several stages add data (enrichment fills CVSS/EPSS; dedup merges
+detail). Shared mutable objects across a thread pool invite subtle bugs.
+
+**Decision.** `Finding` is `frozen`; stages produce new findings via `model_copy`.
+None of the enriched/merged fields feed the fingerprint, so identity survives.
+
+**Consequences.** Thread-safe by construction and easy to reason about; a finding's
+identity is invariant from creation to report. The cost is allocation churn (a new
+object per transform), which is negligible at this scale.
+
+## ADR-0004 — Pure `processing/`, side effects at the edges
+
+**Context.** Dedup, false-positive filtering, and prioritization are the most
+logic-dense parts and the most important to test exhaustively.
+
+**Decision.** `processing/` is pure functions (findings in → findings out). All side
+effects — running tools, HTTP, file writes — live in `scanners/`, `enrichment/`, and
+`reporting/`. Prioritization even takes its asset-criticality resolver as an
+argument so it never imports config loading.
+
+**Consequences.** The hardest logic is tested with plain values and no mocks, and is
+reused by the CLI and orchestrator alike. The trade-off is a little plumbing to pass
+dependencies in rather than reaching for them.
+
+## ADR-0005 — Authorization and scope are enforced hard rules, in depth
+
+**Context.** An active scanner pointed at the wrong target is a legal and ethical
+problem, not a bug to fix later.
+
+**Decision.** A scan runs only with an explicit `--authorized` acknowledgement *and*
+a non-empty scope allowlist; any out-of-scope target is a hard error. The check is
+enforced at multiple layers — the CLI gate, the orchestrator, target selection in
+each scanner, and again when normalizing results — so no single missed call opens a
+hole.
+
+**Consequences.** Redundant checks (defense in depth) over a single choke point. The
+small duplication is deliberate: safety rules should fail closed even if one path is
+refactored incorrectly.
+
+## ADR-0006 — Detection only; never fabricate
+
+**Context.** The tool wraps real scanners and enriches with external data sources
+that can be slow, rate-limited, or unavailable.
+
+**Decision.** Two firm boundaries: (1) it reports issues for remediation and never
+embeds or emits exploit payloads — the ZAP integration deliberately drops the raw
+`attack` vector while keeping evidence; (2) it never invents data — a failed NVD/EPSS
+lookup or an unparseable CVSS leaves the field `None` (unknown), never a guess.
+
+**Consequences.** Output is trustworthy and the project stays unambiguously
+defensive. The trade-off is visible "unknown" fields when enrichment is degraded —
+which is the honest result.
+
+## ADR-0007 — Nmap once over the range; bounded fan-out for the web layer
+
+**Context.** The target is 200+ hosts per run, but ZAP active scans are heavy and
+each ZAP instance is a shared, stateful daemon.
+
+**Decision.** Nmap handles CIDR ranges natively, so the network layer runs it once
+rather than fanning out per host. The web layer is fanned out across a bounded
+`ThreadPoolExecutor` (`run.max_workers`), with ZAP active-scan concurrency capped
+*separately* by a `Semaphore` (`zap.max_concurrency`).
+
+**Consequences.** Network discovery scales for free while web scanning stays within
+ZAP's capacity, tuned independently of overall parallelism. The cost is two
+concurrency knobs instead of one — intentional, because the two layers have very
+different cost profiles.
+
+## ADR-0008 — Deterministic outputs
+
+**Context.** Reports and CI diffs must be reviewable and snapshot-testable;
+nondeterminism (ordering, timestamps) makes regressions invisible in diffs.
+
+**Decision.** Reporters emit findings in the prioritized order with fixed enum
+ordering and **no embedded wall-clock timestamp**; baselines and diffs are ordered
+by fingerprint. Identical input always produces byte-identical output.
+
+**Consequences.** JSON/SARIF shapes and differ output are snapshot-tested, and the
+canonical JSON round-trips (`build_report` → JSON → findings). The trade-off is that
+"when was this scanned" lives in the surrounding CI metadata, not the report body.
+
+## ADR-0009 — Registries for scanners and reporters
+
+**Context.** New scanners and output formats should be addable without editing the
+orchestrator or the CLI.
+
+**Decision.** Scanners self-register via `scanners/registry.py` and are resolved by
+name; reporters register in `reporting/__init__.py` and resolve through
+`get_reporter`. The orchestrator never special-cases a scanner.
+
+**Consequences.** Extension is "subclass + register"; the wiring is closed to
+modification. The minor cost is a layer of indirection (name → class) instead of
+direct imports.
+
+## ADR-0010 — Secrets by environment-variable name only
+
+**Context.** Scans need credentials (ZAP/NVD keys, app logins), but this is a
+portfolio repo that must never leak a secret.
+
+**Decision.** Config references secrets by environment-variable *name*; the value is
+resolved at scan time via `resolve_secret` and never stored in the YAML or the
+in-memory config model. `.env` is gitignored; `.env.example` documents the names.
+
+**Consequences.** A committed config is always safe to share, and a missing
+credential is a clear, early error. The trade-off is one level of indirection when
+reading configs ("which env var backs this?").
