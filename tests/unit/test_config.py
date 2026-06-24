@@ -6,11 +6,13 @@ import pytest
 from pydantic import ValidationError
 
 from vulnpipe.core.config import (
+    AssetRule,
     AuthorizationError,
     Config,
     ConfigError,
     FormAuth,
     HeaderAuth,
+    PrioritizationConfig,
     ScriptAuth,
     Target,
     ensure_authorized,
@@ -18,6 +20,7 @@ from vulnpipe.core.config import (
     load_config,
     resolve_secret,
 )
+from vulnpipe.core.models import AssetCriticality
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXAMPLE_CONFIG = REPO_ROOT / "configs" / "targets.example.yaml"
@@ -144,3 +147,42 @@ def test_example_config_loads_and_is_internally_consistent() -> None:
     ensure_authorized(authorized=True, scope=cfg.scope)
     with pytest.raises(AuthorizationError):
         ensure_authorized(authorized=False, scope=cfg.scope)
+
+
+def test_prioritization_defaults_to_medium() -> None:
+    cfg = PrioritizationConfig()
+    assert cfg.default_criticality is AssetCriticality.MEDIUM
+    assert cfg.criticality_for("10.0.0.99") is AssetCriticality.MEDIUM
+
+
+def test_prioritization_first_matching_rule_wins() -> None:
+    cfg = PrioritizationConfig(
+        default_criticality=AssetCriticality.LOW,
+        assets=[
+            AssetRule(host="10.0.0.10", criticality=AssetCriticality.CRITICAL),
+            AssetRule(host="10.0.0.0/24", criticality=AssetCriticality.HIGH),
+        ],
+    )
+    assert cfg.criticality_for("10.0.0.10") is AssetCriticality.CRITICAL  # exact rule first
+    assert cfg.criticality_for("10.0.0.50") is AssetCriticality.HIGH  # falls through to the CIDR
+    assert cfg.criticality_for("192.168.0.1") is AssetCriticality.LOW  # default
+
+
+def test_prioritization_matches_wildcard_host() -> None:
+    cfg = PrioritizationConfig(
+        assets=[AssetRule(host="*.lab.example.com", criticality=AssetCriticality.HIGH)]
+    )
+    assert cfg.criticality_for("api.lab.example.com") is AssetCriticality.HIGH
+    assert cfg.criticality_for("lab.example.com") is AssetCriticality.HIGH
+    assert cfg.criticality_for("other.example.com") is AssetCriticality.MEDIUM
+
+
+def test_asset_rule_rejects_invalid_host() -> None:
+    with pytest.raises(ValidationError):
+        AssetRule(host="not a host!", criticality=AssetCriticality.HIGH)
+
+
+def test_example_config_defines_prioritization() -> None:
+    cfg = load_config(EXAMPLE_CONFIG)
+    assert cfg.prioritization.criticality_for("10.0.0.10") is AssetCriticality.CRITICAL
+    assert cfg.prioritization.criticality_for("10.0.0.50") is AssetCriticality.HIGH
