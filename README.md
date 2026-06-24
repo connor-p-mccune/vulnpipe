@@ -1,5 +1,13 @@
 # vulnpipe
 
+[![CI](https://github.com/connor-p-mccune/vulnpipe/actions/workflows/ci.yml/badge.svg)](https://github.com/connor-p-mccune/vulnpipe/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/badge/coverage-98%25-brightgreen)](https://github.com/connor-p-mccune/vulnpipe/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](pyproject.toml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Lint: ruff](https://img.shields.io/badge/lint-ruff-261230.svg)](https://github.com/astral-sh/ruff)
+[![mypy: strict](https://img.shields.io/badge/mypy-strict-blue.svg)](https://mypy-lang.org/)
+
 > Modular network + web vulnerability scanning pipeline. It orchestrates
 > [Nmap](https://nmap.org/) (network layer) and [OWASP ZAP](https://www.zaproxy.org/)
 > (web layer), normalizes every result into one schema, enriches it with
@@ -20,6 +28,7 @@ payloads.
 
 ## Contents
 
+- [See it in action](#see-it-in-action)
 - [What it is](#what-it-is)
 - [How it works](#how-it-works)
 - [Requirements](#requirements)
@@ -33,6 +42,18 @@ payloads.
 - [CLI reference](#cli-reference)
 - [Development](#development)
 - [License](#license)
+
+## See it in action
+
+- 📊 **[Live sample report](https://connor-p-mccune.github.io/vulnpipe/)** — real
+  vulnpipe HTML output rendered in your browser, no install required.
+- 🧪 **[Lab case study](docs/case-study.md)** — scanning OWASP Juice Shop end-to-end
+  in a self-contained Docker lab, from `docker compose up` to a prioritized report.
+- 🧠 **[Design decisions](docs/DECISIONS.md)** — the architecture trade-offs (stable
+  fingerprints, immutable findings, pure transforms, bounded concurrency) behind it.
+
+> Prefer a terminal demo? Generate one locally with
+> [`vhs`](https://github.com/charmbracelet/vhs): `vhs assets/demo.tape` → `assets/demo.gif`.
 
 ## What it is
 
@@ -56,10 +77,17 @@ Point vulnpipe at an authorized, in-scope range and it will:
 Stages run in order; each scanner returns `list[Finding]`, and everything
 downstream operates on that one model.
 
-```
-intake → nmap scan → zap scan → enrich (cvss/nvd/epss)
-       → normalize → dedup → false-positive filter → prioritize
-       → report (json/html/sarif) → ci diff vs baseline → gate
+```mermaid
+flowchart LR
+    intake([intake]) --> nmap[nmap scan]
+    intake --> zap[zap scan]
+    nmap --> enrich[enrich<br/>CVSS · NVD · EPSS]
+    zap --> enrich
+    enrich --> norm[normalize] --> dedup[dedup] --> fp[false-positive<br/>filter] --> prio[prioritize]
+    prio --> report[report<br/>JSON · HTML · SARIF]
+    report --> diff[CI diff<br/>vs baseline] --> gate{gate}
+    gate -->|new severe finding| fail([exit non-zero])
+    gate -->|clean| ok([exit 0])
 ```
 
 ```
@@ -113,6 +141,17 @@ vulnpipe 0.1.0
 ```
 
 ## Quickstart
+
+**Try it in 60 seconds — no scanners, no services.** Render the bundled sample
+report (real fixture-derived findings) to a self-contained HTML file:
+
+```bash
+pip install -e .
+vulnpipe report --input examples/sample-report.json --format html > report.html
+# open report.html in a browser — or see the live version linked above
+```
+
+**Run a real scan** (needs the `nmap` binary and/or a ZAP daemon — see [Requirements](#requirements)):
 
 ```bash
 # 1. Create your scope/targets file (gitignored) from the example and edit it.
