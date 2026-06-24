@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vulnpipe report</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0; padding: 0 1.5rem 3rem; color: #1b1b1b; background: #fafafa; line-height: 1.45;
+    }
+    header { padding: 1.5rem 0 1rem; border-bottom: 2px solid #e0e0e0; margin-bottom: 1.5rem; }
+    h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
+    h2 { font-size: 1.2rem; margin: 2rem 0 .75rem; }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
+    .muted { color: #6b6b6b; font-weight: normal; }
+    .badges { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0; }
+    .badge {
+      display: inline-block; padding: .15rem .55rem; border-radius: 999px;
+      font-size: .8rem; color: #fff; white-space: nowrap;
+    }
+    .sev-critical { background: #7b1fa2; }
+    .sev-high { background: #c62828; }
+    .sev-medium { background: #ef6c00; }
+    .sev-low { background: #f9a825; color: #1b1b1b; }
+    .sev-informational { background: #1565c0; }
+    .cards { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+    .card {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+      padding: .75rem 1.25rem; min-width: 8rem;
+    }
+    .card .num { font-size: 1.8rem; font-weight: 600; }
+    svg { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: .5rem; }
+    .chart-label { font-size: 13px; fill: #1b1b1b; }
+    .chart-count { font-size: 13px; fill: #1b1b1b; font-weight: 600; }
+    section.host {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+      padding: .5rem 1rem 1rem; margin-bottom: 1rem;
+    }
+    ul.host-findings { list-style: none; padding: 0; margin: .5rem 0 0; }
+    ul.host-findings li { padding: .35rem 0; border-top: 1px solid #f0f0f0; }
+    .evidence { margin: .2rem 0 0 .25rem; font-size: .85rem; color: #444; }
+    .evidence code { background: #f3f3f3; padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
+    table.findings { border-collapse: collapse; width: 100%; background: #fff; font-size: .9rem; }
+    table.findings th, table.findings td {
+      text-align: left; padding: .45rem .6rem; border-bottom: 1px solid #ececec;
+    }
+    table.findings thead th { background: #f0f0f0; cursor: pointer; user-select: none; position: sticky; top: 0; }
+    table.findings thead th::after { content: " \2195"; color: #9a9a9a; font-size: .8em; }
+    table.findings tbody tr:hover { background: #f7f7ff; }
+    .empty { padding: 2rem; text-align: center; color: #6b6b6b; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>vulnpipe vulnerability report</h1>
+    <div class="muted">vulnpipe 0.1.0 &middot; detection &amp; reporting only</div>
+  </header>
+
+  <h2>Summary</h2>
+  <div class="cards">
+    <div class="card"><div class="num">15</div><div class="muted">findings</div></div>
+    <div class="card"><div class="num">4</div><div class="muted">hosts</div></div>
+  </div>
+  <div class="badges">
+    <span class="badge sev-critical">Critical: 1</span>
+    <span class="badge sev-high">High: 5</span>
+    <span class="badge sev-medium">Medium: 2</span>
+    <span class="badge sev-low">Low: 2</span>
+    <span class="badge sev-informational">Informational: 5</span>
+  </div>
+
+  <h2>Severity breakdown</h2>
+  <svg width="488" height="150" role="img" aria-label="Findings by severity">
+    <text x="0" y="20" class="chart-label">Critical</text>
+    <rect x="120" y="4" width="64" height="22" rx="3" fill="#7b1fa2"></rect>
+    <text x="192" y="20" class="chart-count">1</text>
+    <text x="0" y="50" class="chart-label">High</text>
+    <rect x="120" y="34" width="320" height="22" rx="3" fill="#c62828"></rect>
+    <text x="448" y="50" class="chart-count">5</text>
+    <text x="0" y="80" class="chart-label">Medium</text>
+    <rect x="120" y="64" width="128" height="22" rx="3" fill="#ef6c00"></rect>
+    <text x="256" y="80" class="chart-count">2</text>
+    <text x="0" y="110" class="chart-label">Low</text>
+    <rect x="120" y="94" width="128" height="22" rx="3" fill="#f9a825"></rect>
+    <text x="256" y="110" class="chart-count">2</text>
+    <text x="0" y="140" class="chart-label">Informational</text>
+    <rect x="120" y="124" width="320" height="22" rx="3" fill="#1565c0"></rect>
+    <text x="448" y="140" class="chart-count">5</text>
+  </svg>
+
+  <h2>Per-host breakdown</h2>
+    <section class="host">
+      <h3>10.0.0.5 <span class="muted">(6 findings)</span></h3>
+      <div class="badges">
+        <span class="badge sev-critical">Critical: 1</span>
+        <span class="badge sev-high">High: 2</span>
+        <span class="badge sev-medium">Medium: 1</span>
+        <span class="badge sev-informational">Informational: 2</span>
+      </div>
+      <ul class="host-findings">
+        <li>
+          <span class="badge sev-critical">Critical</span>
+          <strong>CVE-2021-42013</strong> <span class="muted">:80</span>        </li>
+        <li>
+          <span class="badge sev-high">High</span>
+          <strong>CVE-2016-10009</strong> <span class="muted">:22</span>        </li>
+        <li>
+          <span class="badge sev-high">High</span>
+          <strong>CVE-2021-41773</strong> <span class="muted">:80</span>        </li>
+        <li>
+          <span class="badge sev-medium">Medium</span>
+          <strong>CVE-2018-15473</strong> <span class="muted">:22</span>        </li>
+        <li>
+          <span class="badge sev-informational">Informational</span>
+          <strong>Open port 22/tcp</strong> <span class="muted">:22</span>        </li>
+        <li>
+          <span class="badge sev-informational">Informational</span>
+          <strong>Open port 80/tcp</strong> <span class="muted">:80</span>        </li>
+      </ul>
+    </section>
+    <section class="host">
+      <h3>10.0.0.6 <span class="muted">(3 findings)</span></h3>
+      <div class="badges">
+        <span class="badge sev-high">High: 1</span>
+        <span class="badge sev-informational">Informational: 2</span>
+      </div>
+      <ul class="host-findings">
+        <li>
+          <span class="badge sev-high">High</span>
+          <strong>CVE-2021-23017</strong> <span class="muted">:443</span>        </li>
+        <li>
+          <span class="badge sev-informational">Informational</span>
+          <strong>Open port 3306/tcp</strong> <span class="muted">:3306</span>        </li>
+        <li>
+          <span class="badge sev-informational">Informational</span>
+          <strong>Open port 443/tcp</strong> <span class="muted">:443</span>        </li>
+      </ul>
+    </section>
+    <section class="host">
+      <h3>app.lab.example.com <span class="muted">(5 findings)</span></h3>
+      <div class="badges">
+        <span class="badge sev-high">High: 2</span>
+        <span class="badge sev-medium">Medium: 1</span>
+        <span class="badge sev-low">Low: 1</span>
+        <span class="badge sev-informational">Informational: 1</span>
+      </div>
+      <ul class="host-findings">
+        <li>
+          <span class="badge sev-high">High</span>
+          <strong>SQL Injection</strong> <span class="muted">:8443</span>        </li>
+        <li>
+          <span class="badge sev-high">High</span>
+          <strong>Cross Site Scripting (Reflected)</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>&lt;script&gt;alert(1)&lt;/script&gt;</code></div>        </li>
+        <li>
+          <span class="badge sev-medium">Medium</span>
+          <strong>Vulnerable JS Library</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>/*! jQuery v1.7.1</code></div>        </li>
+        <li>
+          <span class="badge sev-low">Low</span>
+          <strong>Application Error Disclosure</strong> <span class="muted">:80</span><div class="evidence">Evidence: <code>Internal Server Error</code></div>        </li>
+        <li>
+          <span class="badge sev-informational">Informational</span>
+          <strong>Timestamp Disclosure - Unix</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>1700000000</code></div>        </li>
+      </ul>
+    </section>
+    <section class="host">
+      <h3>vpn.corp.example.net <span class="muted">(1 finding)</span></h3>
+      <div class="badges">
+        <span class="badge sev-low">Low: 1</span>
+      </div>
+      <ul class="host-findings">
+        <li>
+          <span class="badge sev-low">Low</span>
+          <strong>Cookie without SameSite Attribute</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>Set-Cookie: session</code></div>        </li>
+      </ul>
+    </section>
+
+  <h2>All findings</h2>
+  <table class="findings" id="findings-table">
+    <thead>
+      <tr>
+        <th data-type="number">Severity</th>
+        <th data-type="text">Host</th>
+        <th data-type="number">Port</th>
+        <th data-type="text">Title</th>
+        <th data-type="text">CVEs</th>
+        <th data-type="number">CVSS</th>
+        <th data-type="number">EPSS</th>
+        <th data-type="text">Confidence</th>
+        <th data-type="text">Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-sort="4"><span class="badge sev-critical">Critical</span></td>
+        <td>10.0.0.5</td>
+        <td data-sort="80">80</td>
+        <td>CVE-2021-42013</td>
+        <td>CVE-2021-42013</td>
+        <td data-sort="9.8">9.8</td>
+        <td data-sort="-1"></td>
+        <td>medium</td>
+        <td>nmap</td>
+      </tr>
+      <tr>
+        <td data-sort="3"><span class="badge sev-high">High</span></td>
+        <td>10.0.0.6</td>
+        <td data-sort="443">443</td>
+        <td>CVE-2021-23017</td>
+        <td>CVE-2021-23017</td>
+        <td data-sort="7.7">7.7</td>
+        <td data-sort="-1"></td>
+        <td>medium</td>
+        <td>nmap</td>
+      </tr>
+      <tr>
+        <td data-sort="3"><span class="badge sev-high">High</span></td>
+        <td>10.0.0.5</td>
+        <td data-sort="22">22</td>
+        <td>CVE-2016-10009</td>
+        <td>CVE-2016-10009</td>
+        <td data-sort="7.5">7.5</td>
+        <td data-sort="-1"></td>
+        <td>medium</td>
+        <td>nmap</td>
+      </tr>
+      <tr>
+        <td data-sort="3"><span class="badge sev-high">High</span></td>
+        <td>10.0.0.5</td>
+        <td data-sort="80">80</td>
+        <td>CVE-2021-41773</td>
+        <td>CVE-2021-41773</td>
+        <td data-sort="7.5">7.5</td>
+        <td data-sort="-1"></td>
+        <td>medium</td>
+        <td>nmap</td>
+      </tr>
+      <tr>
+        <td data-sort="3"><span class="badge sev-high">High</span></td>
+        <td>app.lab.example.com</td>
+        <td data-sort="8443">8443</td>
+        <td>SQL Injection</td>
+        <td></td>
+        <td data-sort="-1"></td>
+        <td data-sort="-1"></td>
+        <td>high</td>
+        <td>zap</td>
+      </tr>
+      <tr>
+        <td data-sort="3"><span class="badge sev-high">High</span></td>
+        <td>app.lab.example.com</td>
+        <td data-sort="443">443</td>
+        <td>Cross Site Scripting (Reflected)</td>
+        <td></td>
+        <td data-sort="-1"></td>
+        <td data-sort="-1"></td>
+        <td>medium</td>
+        <td>zap</td>
+      </tr>
+      <tr>
+        <td data-sort="2"><span class="badge sev-medium">Medium</span></td>
+        <td>10.0.0.5</td>
+        <td data-sort="22">22</td>
+        <td>CVE-2018-15473</td>
+        <td>CVE-2018-15473</td>
+        <td data-sort="5.3">5.3</td>
+        <td data-sort="-1"></td>
+        <td>medium</td>
+        <td>nmap</td>
+      </tr>
+      <tr>
+        <td data-sort="2"><span class="badge sev-medium">Medium</span></td>
+        <td>app.lab.example.com</td>
+        <td data-sort="443">443</td>
+        <td>Vulnerable JS Library</td>
+        <td>CVE-2019-11358, CVE-2020-11022</td>
+        <td data-sort="-1"></td>
+        <td data-sort="-1"></td>
+        <td>high</td>
+        <td>zap</td>
+      </tr>
+      <tr>
+        <td data-sort="1"><span class="badge sev-low">Low</span></td>
+        <td>vpn.corp.example.net</td>
+        <td data-sort="443">443</td>
+        <td>Cookie without SameSite Attribute</td>
+        <td></td>
+        <td data-sort="-1"></td>
+        <td data-sort="-1"></td>
+        <td>low</td>
+        <td>zap</td>
+      </tr>
+      <tr>
+        <td data-sort="1"><span class="badge sev-low">Low</span></td>
+        <td>app.lab.example.com</td>
+        <td data-sort="80">80</td>
+        <td>Application Error Disclosure</td>
+        <td></td>
+        <td data-sort="-1"></td>
+        <td data-sort="-1"></td>
+        <td>medium</td>
+        <td>zap</td>
+      </tr>
+      <tr>
+        <td data-sort="0"><span class="badge sev-informational">Informational</span></td>
+        <td>10.0.0.6</td>
+        <td data-sort="3306">3306</td>
+        <td>Open port 3306/tcp</td>
+        <td></td>
+        <td data-sort="-1"></td>
+        <td data-sort="-1"></td>
+        <td>confirmed</td>
+        <td>nmap</td>
+      </tr>
+      <tr>
+        <td data-sort="0"><span class="badge sev-informational">Informational</span></td>
+        <td>10.0.0.5</td>
+        <td data-sort="22">22</td>
+        <td>Open port 22/tcp</td>
+        <td></td>
+        <td data-sort="-1"></td>
+        <td data-sort="-1"></td>
+        <td>confirmed</td>
+        <td>nmap</td>
+      </tr>
+      <tr>
+        <td data-sort="0"><span class="badge sev-informational">Informational</span></td>
+        <td>app.lab.example.com</td>
+        <td data-sort="443">443</td>
+        <td>Timestamp Disclosure - Unix</td>
+        <td></td>
+        <td data-sort="-1"></td>
+        <td data-sort="-1"></td>
+        <td>low</td>
+        <td>zap</td>
+      </tr>
+      <tr>
+        <td data-sort="0"><span class="badge sev-informational">Informational</span></td>
+        <td>10.0.0.5</td>
+        <td data-sort="80">80</td>
+        <td>Open port 80/tcp</td>
+        <td></td>
+        <td data-sort="-1"></td>
+        <td data-sort="-1"></td>
+        <td>confirmed</td>
+        <td>nmap</td>
+      </tr>
+      <tr>
+        <td data-sort="0"><span class="badge sev-informational">Informational</span></td>
+        <td>10.0.0.6</td>
+        <td data-sort="443">443</td>
+        <td>Open port 443/tcp</td>
+        <td></td>
+        <td data-sort="-1"></td>
+        <td data-sort="-1"></td>
+        <td>confirmed</td>
+        <td>nmap</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <script>
+    (function () {
+      var table = document.getElementById("findings-table");
+      if (!table) { return; }
+      var headers = table.tHead.rows[0].cells;
+      for (var i = 0; i < headers.length; i++) {
+        (function (column) {
+          headers[column].addEventListener("click", function () {
+            sortBy(column, headers[column].getAttribute("data-type") === "number");
+          });
+        })(i);
+      }
+      var ascending = [];
+      function cellKey(row, column, numeric) {
+        var cell = row.cells[column];
+        var raw = cell.hasAttribute("data-sort") ? cell.getAttribute("data-sort") : cell.textContent;
+        return numeric ? parseFloat(raw) : raw.toLowerCase();
+      }
+      function sortBy(column, numeric) {
+        var body = table.tBodies[0];
+        var rows = Array.prototype.slice.call(body.rows);
+        var dir = ascending[column] = !ascending[column];
+        rows.sort(function (a, b) {
+          var ka = cellKey(a, column, numeric), kb = cellKey(b, column, numeric);
+          if (ka < kb) { return dir ? -1 : 1; }
+          if (ka > kb) { return dir ? 1 : -1; }
+          return 0;
+        });
+        for (var i = 0; i < rows.length; i++) { body.appendChild(rows[i]); }
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,521 @@
+{
+  "schema_version": "1.0",
+  "tool": {
+    "name": "vulnpipe",
+    "version": "0.1.0"
+  },
+  "summary": {
+    "total": 15,
+    "hosts": 4,
+    "by_severity": {
+      "critical": 1,
+      "high": 5,
+      "medium": 2,
+      "low": 2,
+      "informational": 5
+    }
+  },
+  "findings": [
+    {
+      "source": "nmap",
+      "host": "10.0.0.5",
+      "title": "CVE-2021-42013",
+      "severity": "critical",
+      "port": 80,
+      "protocol": "tcp",
+      "plugin_id": "vulners",
+      "confidence": "medium",
+      "description": "CVE-2021-42013 reported by the Nmap vulners script for http (Apache httpd 2.4.49).",
+      "solution": null,
+      "evidence": null,
+      "references": [],
+      "cve_ids": [
+        "CVE-2021-42013"
+      ],
+      "cwe_ids": [],
+      "cvss_score": 9.8,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "hostname": "host.lab.example.com",
+        "os": "Linux 5.0 - 5.4",
+        "os_accuracy": 96,
+        "service": "http",
+        "product": "Apache httpd",
+        "version": "2.4.49",
+        "cpe": [
+          "cpe:/a:apache:http_server:2.4.49"
+        ],
+        "nmap_script": "vulners",
+        "is_exploit": true
+      },
+      "fingerprint": "741786901e8421eee27c8d50d3a4bae704b85aa3962fb01a9fcc16bb4ccdb3fc"
+    },
+    {
+      "source": "nmap",
+      "host": "10.0.0.6",
+      "title": "CVE-2021-23017",
+      "severity": "high",
+      "port": 443,
+      "protocol": "tcp",
+      "plugin_id": "vulners",
+      "confidence": "medium",
+      "description": "CVE-2021-23017 reported by the Nmap vulners script for https (nginx 1.18.0).",
+      "solution": null,
+      "evidence": null,
+      "references": [],
+      "cve_ids": [
+        "CVE-2021-23017"
+      ],
+      "cwe_ids": [],
+      "cvss_score": 7.7,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "os": "Linux 5.0 - 5.4",
+        "os_accuracy": 94,
+        "service": "https",
+        "product": "nginx",
+        "version": "1.18.0",
+        "cpe": [
+          "cpe:/a:nginx:nginx:1.18.0"
+        ],
+        "nmap_script": "vulners",
+        "is_exploit": false
+      },
+      "fingerprint": "6ef44ce5d33d4cec342a312a5b3c84c8ec0e0cd344430a969f7772ffd66d8272"
+    },
+    {
+      "source": "nmap",
+      "host": "10.0.0.5",
+      "title": "CVE-2016-10009",
+      "severity": "high",
+      "port": 22,
+      "protocol": "tcp",
+      "plugin_id": "vulners",
+      "confidence": "medium",
+      "description": "CVE-2016-10009 reported by the Nmap vulners script for ssh (OpenSSH 7.4).",
+      "solution": null,
+      "evidence": null,
+      "references": [],
+      "cve_ids": [
+        "CVE-2016-10009"
+      ],
+      "cwe_ids": [],
+      "cvss_score": 7.5,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "hostname": "host.lab.example.com",
+        "os": "Linux 5.0 - 5.4",
+        "os_accuracy": 96,
+        "service": "ssh",
+        "product": "OpenSSH",
+        "version": "7.4",
+        "cpe": [
+          "cpe:/a:openbsd:openssh:7.4"
+        ],
+        "nmap_script": "vulners",
+        "is_exploit": true
+      },
+      "fingerprint": "28117601fe8900a3a3c8e231099e3f35451701a4cd79b42e048bda07fd4c829a"
+    },
+    {
+      "source": "nmap",
+      "host": "10.0.0.5",
+      "title": "CVE-2021-41773",
+      "severity": "high",
+      "port": 80,
+      "protocol": "tcp",
+      "plugin_id": "vulners",
+      "confidence": "medium",
+      "description": "CVE-2021-41773 reported by the Nmap vulners script for http (Apache httpd 2.4.49).",
+      "solution": null,
+      "evidence": null,
+      "references": [],
+      "cve_ids": [
+        "CVE-2021-41773"
+      ],
+      "cwe_ids": [],
+      "cvss_score": 7.5,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "hostname": "host.lab.example.com",
+        "os": "Linux 5.0 - 5.4",
+        "os_accuracy": 96,
+        "service": "http",
+        "product": "Apache httpd",
+        "version": "2.4.49",
+        "cpe": [
+          "cpe:/a:apache:http_server:2.4.49"
+        ],
+        "nmap_script": "vulners",
+        "is_exploit": true
+      },
+      "fingerprint": "f37cb98d3b2212fa16226f86a9019754ab4215c1475c877e04d2956e53f7cf13"
+    },
+    {
+      "source": "zap",
+      "host": "app.lab.example.com",
+      "title": "SQL Injection",
+      "severity": "high",
+      "port": 8443,
+      "protocol": "tcp",
+      "plugin_id": "40018",
+      "confidence": "high",
+      "description": "SQL injection may be possible in the id parameter.",
+      "solution": "Use parameterized queries / prepared statements.",
+      "evidence": null,
+      "references": [
+        "https://owasp.org/www-community/attacks/SQL_Injection",
+        "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+      ],
+      "cve_ids": [],
+      "cwe_ids": [
+        "CWE-89"
+      ],
+      "cvss_score": null,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "url": "https://app.lab.example.com:8443/api/items?id=1",
+        "method": "GET",
+        "param": "id",
+        "alert_ref": "40018",
+        "wasc_id": "19",
+        "input_vector": "GET_QUERY_STRING"
+      },
+      "fingerprint": "0e096605545602affffbf5f4c5081b3e631a8ccac3eef245bfcf78aafa368eff"
+    },
+    {
+      "source": "zap",
+      "host": "app.lab.example.com",
+      "title": "Cross Site Scripting (Reflected)",
+      "severity": "high",
+      "port": 443,
+      "protocol": "tcp",
+      "plugin_id": "40012",
+      "confidence": "medium",
+      "description": "Reflected cross-site scripting was identified in the q parameter.",
+      "solution": "Validate input and contextually encode user-supplied data on output.",
+      "evidence": "<script>alert(1)</script>",
+      "references": [
+        "https://owasp.org/www-community/attacks/xss/"
+      ],
+      "cve_ids": [],
+      "cwe_ids": [
+        "CWE-79"
+      ],
+      "cvss_score": null,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "url": "https://app.lab.example.com/search?q=test",
+        "method": "GET",
+        "param": "q",
+        "alert_ref": "40012-1",
+        "wasc_id": "8",
+        "input_vector": "GET_QUERY_STRING"
+      },
+      "fingerprint": "fd10993a87c649472e1adeec1e96ca4e7c5d081628383a8cfdf52e5453a37167"
+    },
+    {
+      "source": "nmap",
+      "host": "10.0.0.5",
+      "title": "CVE-2018-15473",
+      "severity": "medium",
+      "port": 22,
+      "protocol": "tcp",
+      "plugin_id": "vulners",
+      "confidence": "medium",
+      "description": "CVE-2018-15473 reported by the Nmap vulners script for ssh (OpenSSH 7.4).",
+      "solution": null,
+      "evidence": null,
+      "references": [],
+      "cve_ids": [
+        "CVE-2018-15473"
+      ],
+      "cwe_ids": [],
+      "cvss_score": 5.3,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "hostname": "host.lab.example.com",
+        "os": "Linux 5.0 - 5.4",
+        "os_accuracy": 96,
+        "service": "ssh",
+        "product": "OpenSSH",
+        "version": "7.4",
+        "cpe": [
+          "cpe:/a:openbsd:openssh:7.4"
+        ],
+        "nmap_script": "vulners",
+        "is_exploit": false
+      },
+      "fingerprint": "bd4a889c2d91caed3a4bb547717850deb1266263069a5c8290abf3b420d616dd"
+    },
+    {
+      "source": "zap",
+      "host": "app.lab.example.com",
+      "title": "Vulnerable JS Library",
+      "severity": "medium",
+      "port": 443,
+      "protocol": "tcp",
+      "plugin_id": "10003",
+      "confidence": "high",
+      "description": "The identified library jquery, version 1.7.1, is vulnerable.",
+      "solution": "Upgrade to the latest version of jquery.",
+      "evidence": "/*! jQuery v1.7.1",
+      "references": [
+        "https://github.com/jquery/jquery/issues/2432",
+        "https://blog.jquery.com/2016/01/08/jquery-2-2-and-1-12-released/"
+      ],
+      "cve_ids": [
+        "CVE-2019-11358",
+        "CVE-2020-11022"
+      ],
+      "cwe_ids": [],
+      "cvss_score": null,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "url": "https://app.lab.example.com/static/jquery-1.7.1.min.js",
+        "method": "GET",
+        "alert_ref": "10003",
+        "wasc_id": "-1"
+      },
+      "fingerprint": "7f9050ff0a493d68a20078794b9cfc062f391ea93162bab46fdc835ba571fa05"
+    },
+    {
+      "source": "zap",
+      "host": "vpn.corp.example.net",
+      "title": "Cookie without SameSite Attribute",
+      "severity": "low",
+      "port": 443,
+      "protocol": "tcp",
+      "plugin_id": "10054",
+      "confidence": "low",
+      "description": "A cookie has been set without the SameSite attribute.",
+      "solution": "Set the SameSite attribute on sensitive cookies.",
+      "evidence": "Set-Cookie: session",
+      "references": [
+        "https://owasp.org/www-community/SameSite"
+      ],
+      "cve_ids": [],
+      "cwe_ids": [
+        "CWE-1275"
+      ],
+      "cvss_score": null,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "url": "https://vpn.corp.example.net/login",
+        "method": "POST",
+        "param": "session",
+        "alert_ref": "10054-2",
+        "wasc_id": "13"
+      },
+      "fingerprint": "710e0b5de4829b47cb6bd09eed10ef40f4d2a16569c2284e676747e5b8a31f82"
+    },
+    {
+      "source": "zap",
+      "host": "app.lab.example.com",
+      "title": "Application Error Disclosure",
+      "severity": "low",
+      "port": 80,
+      "protocol": "tcp",
+      "plugin_id": "90022",
+      "confidence": "medium",
+      "description": "An application error message was disclosed by the server.",
+      "solution": "Configure the application to return generic error pages.",
+      "evidence": "Internal Server Error",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/209.html"
+      ],
+      "cve_ids": [],
+      "cwe_ids": [
+        "CWE-209"
+      ],
+      "cvss_score": null,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "url": "http://app.lab.example.com/old/report",
+        "method": "GET",
+        "alert_ref": "90022",
+        "wasc_id": "13"
+      },
+      "fingerprint": "f307e1d545187788b7f169f6ef5a34efe4d588c6dbc6058f433c7947b3d3607a"
+    },
+    {
+      "source": "nmap",
+      "host": "10.0.0.6",
+      "title": "Open port 3306/tcp",
+      "severity": "informational",
+      "port": 3306,
+      "protocol": "tcp",
+      "plugin_id": null,
+      "confidence": "confirmed",
+      "description": "mysql (MySQL 8.0.27)",
+      "solution": null,
+      "evidence": null,
+      "references": [],
+      "cve_ids": [],
+      "cwe_ids": [],
+      "cvss_score": null,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "os": "Linux 5.0 - 5.4",
+        "os_accuracy": 94,
+        "service": "mysql",
+        "product": "MySQL",
+        "version": "8.0.27",
+        "cpe": [
+          "cpe:/a:mysql:mysql:8.0.27"
+        ],
+        "detection_method": "probed"
+      },
+      "fingerprint": "08537141eb8c834aa41779825e5dcd047d92ea55396ccd7fc0ea7cfd1f4ab5b1"
+    },
+    {
+      "source": "nmap",
+      "host": "10.0.0.5",
+      "title": "Open port 22/tcp",
+      "severity": "informational",
+      "port": 22,
+      "protocol": "tcp",
+      "plugin_id": null,
+      "confidence": "confirmed",
+      "description": "ssh (OpenSSH 7.4)",
+      "solution": null,
+      "evidence": null,
+      "references": [],
+      "cve_ids": [],
+      "cwe_ids": [],
+      "cvss_score": null,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "hostname": "host.lab.example.com",
+        "os": "Linux 5.0 - 5.4",
+        "os_accuracy": 96,
+        "service": "ssh",
+        "product": "OpenSSH",
+        "version": "7.4",
+        "cpe": [
+          "cpe:/a:openbsd:openssh:7.4"
+        ],
+        "detection_method": "probed"
+      },
+      "fingerprint": "4cb8433b7b6432e9194541bf1c13f61f26ec8744ff1a437e74944baceb1a821c"
+    },
+    {
+      "source": "zap",
+      "host": "app.lab.example.com",
+      "title": "Timestamp Disclosure - Unix",
+      "severity": "informational",
+      "port": 443,
+      "protocol": "tcp",
+      "plugin_id": "10096",
+      "confidence": "low",
+      "description": "A timestamp was disclosed by the application/web server.",
+      "solution": "Manually confirm that the timestamp data is not sensitive.",
+      "evidence": "1700000000",
+      "references": [],
+      "cve_ids": [],
+      "cwe_ids": [
+        "CWE-200"
+      ],
+      "cvss_score": null,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "url": "https://app.lab.example.com/",
+        "method": "GET",
+        "alert_ref": "10096",
+        "wasc_id": "13"
+      },
+      "fingerprint": "97b8367c9b79aaf7c604fd0cbb742ad46a7705d814df79f61e8f21a2e313abc8"
+    },
+    {
+      "source": "nmap",
+      "host": "10.0.0.5",
+      "title": "Open port 80/tcp",
+      "severity": "informational",
+      "port": 80,
+      "protocol": "tcp",
+      "plugin_id": null,
+      "confidence": "confirmed",
+      "description": "http (Apache httpd 2.4.49)",
+      "solution": null,
+      "evidence": null,
+      "references": [],
+      "cve_ids": [],
+      "cwe_ids": [],
+      "cvss_score": null,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "hostname": "host.lab.example.com",
+        "os": "Linux 5.0 - 5.4",
+        "os_accuracy": 96,
+        "service": "http",
+        "product": "Apache httpd",
+        "version": "2.4.49",
+        "cpe": [
+          "cpe:/a:apache:http_server:2.4.49"
+        ],
+        "detection_method": "probed"
+      },
+      "fingerprint": "aff65577ab386610faee85cb221b47b224e8decd613ebcc383daf29937432443"
+    },
+    {
+      "source": "nmap",
+      "host": "10.0.0.6",
+      "title": "Open port 443/tcp",
+      "severity": "informational",
+      "port": 443,
+      "protocol": "tcp",
+      "plugin_id": null,
+      "confidence": "confirmed",
+      "description": "https (nginx 1.18.0)",
+      "solution": null,
+      "evidence": null,
+      "references": [],
+      "cve_ids": [],
+      "cwe_ids": [],
+      "cvss_score": null,
+      "cvss_vector": null,
+      "epss_score": null,
+      "epss_percentile": null,
+      "metadata": {
+        "os": "Linux 5.0 - 5.4",
+        "os_accuracy": 94,
+        "service": "https",
+        "product": "nginx",
+        "version": "1.18.0",
+        "cpe": [
+          "cpe:/a:nginx:nginx:1.18.0"
+        ],
+        "detection_method": "probed"
+      },
+      "fingerprint": "ec68726b1dd17d377b77a3962d5e126f97da3c30d1d86a7916f2c9864419dad7"
+    }
+  ]
+}
