@@ -89,6 +89,33 @@ _CONFIDENCE_ORDER: dict[Confidence, int] = {
 }
 
 
+class AssetCriticality(StrEnum):
+    """Business criticality of a scanned asset, ordered low-to-high via :attr:`rank`.
+
+    Sourced from configuration (``prioritization.assets``) and used as a tie-breaker
+    when ranking findings: among otherwise equally severe issues, those on more
+    critical assets surface first.
+    """
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+    @property
+    def rank(self) -> int:
+        """Integer ordering for prioritization (higher is more critical)."""
+        return _ASSET_CRITICALITY_ORDER[self]
+
+
+_ASSET_CRITICALITY_ORDER: dict[AssetCriticality, int] = {
+    AssetCriticality.LOW: 0,
+    AssetCriticality.MEDIUM: 1,
+    AssetCriticality.HIGH: 2,
+    AssetCriticality.CRITICAL: 3,
+}
+
+
 def normalize_title(title: str) -> str:
     """Normalize a finding title for stable fingerprinting.
 
@@ -211,6 +238,7 @@ class Finding(BaseModel):
 
 
 __all__ = [
+    "AssetCriticality",
     "Confidence",
     "Finding",
     "Host",
