@@ -1,41 +1,81 @@
-# One-command lab run: a ZAP daemon plus the scanner.
+# One-command lab run: an OWASP ZAP daemon plus the vulnpipe scanner on a shared
+# network.
 #
 #   ZAP_API_KEY=changeme docker compose -f docker/docker-compose.yml up --build
 #
-# Provide secrets via the environment / an .env file (see .env.example). The
-# scanner only runs against in-scope targets and requires --authorized.
+# Provide secrets via the environment or an .env file (see .env.example). Before
+# the first run, copy configs/targets.example.yaml to configs/targets.yaml and edit
+# it for your in-scope lab target. The scanner reaches ZAP at http://zap:8080 over
+# the shared network; the example config picks that up via ${ZAP_API_URL} (set on
+# the scanner service below). Scanning only runs against in-scope targets and
+# requires --authorized.
+
+name: vulnpipe
 
 services:
   zap:
-    # Verify the tag before pinning. Currently: stable.
+    # Official OWASP ZAP image. `stable` is the current rolling stable tag --
+    # regenerated on each full release and monthly (www.zaproxy.org/docs/docker).
     image: ghcr.io/zaproxy/zaproxy:stable
+    # Run as a daemon and allow API calls from the scanner container (ZAP restricts
+    # its API to localhost by default).
     command: >
       zap.sh -daemon -host 0.0.0.0 -port 8080
       -config api.key=${ZAP_API_KEY:?set ZAP_API_KEY}
       -config api.addrs.addr.name=.*
       -config api.addrs.addr.regex=true
+    networks: [vulnpipe]
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080"]
+      test:
+        - CMD
+        - curl
+        - -fsS
+        - http://localhost:8080/JSON/core/view/version/?apikey=${ZAP_API_KEY}
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 12
+      start_period: 20s
 
   scanner:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     depends_on:
+      # The entrypoint performs the authoritative readiness wait, so ordering only
+      # needs the ZAP container to have started.
       zap:
-        condition: service_healthy
+        condition: service_started
+    networks: [vulnpipe]
     environment:
+      # Reach ZAP by its service name on the shared network. This also feeds the
+      # example config's ${ZAP_API_URL} and the entrypoint's readiness wait.
+      ZAP_API_URL: http://zap:8080
       ZAP_API_KEY: ${ZAP_API_KEY:?set ZAP_API_KEY}
       NVD_API_KEY: ${NVD_API_KEY:-}
       APP_USERNAME: ${APP_USERNAME:-}
       APP_PASSWORD: ${APP_PASSWORD:-}
+      API_BEARER_TOKEN: ${API_BEARER_TOKEN:-}
     volumes:
       - ../configs:/app/configs:ro
-      - ../results:/app/results
+      - vulnpipe-results:/app/results
     # Edit configs/targets.yaml first; --authorized acknowledges scope ownership.
-    command: ["scan", "--config", "configs/targets.yaml", "--authorized"]
+    # A first run with no baseline treats every finding as new, so the gate may
+    # exit non-zero by design -- establish a baseline to gate only on regressions.
+    command:
+      - scan
+      - --config
+      - configs/targets.yaml
+      - --authorized
+      - --sarif
+      - results/vulnpipe.sarif
+      - --junit
+      - results/junit.xml
+
+networks:
+  vulnpipe:
+    driver: bridge
+
+volumes:
+  vulnpipe-results:
