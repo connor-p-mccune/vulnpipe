@@ -1,0 +1,49 @@
+# Lab overlay: add a self-hosted, intentionally-vulnerable web app so you can run
+# vulnpipe end-to-end against a real (but safe, locally owned) target.
+#
+#   ZAP_API_KEY=changeme docker compose \
+#     -f docker/docker-compose.yml -f docker/docker-compose.lab.yml up --build
+#
+# The target is OWASP Juice Shop, running only on the private `vulnpipe` network.
+# It is deliberately vulnerable and you are running it yourself, so scanning it is
+# authorized -- exactly the use case the scope/authorization rules are built for.
+#
+# Note: Juice Shop is an Angular single-page app, so ZAP's traditional spider crawls
+# it shallowly. For deeper coverage enable ZAP's AJAX spider or seed URLs. A
+# server-rendered alternative (DVWA), which also exercises vulnpipe's authenticated
+# scanning, is described in docs/case-study.md.
+
+services:
+  juice-shop:
+    # Pin to a digest after your first `docker pull` for a reproducible lab.
+    image: bkimminich/juice-shop:latest
+    networks: [vulnpipe]
+    ports:
+      - "3000:3000"
+    healthcheck:
+      # node is always present in this image; avoids depending on curl/wget.
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://localhost:3000/rest/admin/application-version',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+
+  scanner:
+    depends_on:
+      juice-shop:
+        condition: service_healthy
+    command:
+      - scan
+      - --config
+      - configs/targets.lab.yaml
+      - --authorized
+      - --html
+      - results/lab-report.html
+      - --sarif
+      - results/lab.sarif
+      - --junit
+      - results/lab-junit.xml

@@ -1,0 +1,35 @@
+# Lab scope/targets: ONLY the self-hosted OWASP Juice Shop container on the private
+# `vulnpipe` docker network. Used by docker/docker-compose.lab.yml.
+#
+# Scanning this is authorized because you run the target yourself, on an isolated
+# network. Nothing outside this scope is ever scanned.
+
+scope:
+  hosts:
+    - "juice-shop" # the container's service name on the shared network
+  urls:
+    - "http://juice-shop:3000"
+
+targets:
+  - name: juice-shop
+    host: "juice-shop" # network layer: nmap discovers the open service
+    urls:
+      - "http://juice-shop:3000" # web layer: ZAP spiders + active-scans
+
+zap:
+  # docker-compose sets ZAP_API_URL=http://zap:8080 for the scanner service.
+  api_url: "${ZAP_API_URL:-http://zap:8080}"
+  api_key_env: "ZAP_API_KEY"
+  spider_max_duration_minutes: 2 # Juice Shop is small; keep the demo quick
+  active_scan_timeout_seconds: 1200
+  max_concurrency: 1
+
+# Enrichment reaches out to NVD / EPSS. Leave enabled if the scanner has internet
+# egress; set both to false for a fully offline lab run.
+enrichment:
+  nvd_enabled: true
+  nvd_api_key_env: "NVD_API_KEY"
+  epss_enabled: true
+
+prioritization:
+  default_criticality: high # the whole lab target is the asset under test
