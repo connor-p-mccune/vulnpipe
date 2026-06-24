@@ -117,12 +117,20 @@ class HeaderAuth(_AuthBase):
 
 
 class ScriptAuth(_AuthBase):
-    """Script-based authentication context for ZAP."""
+    """Script-based authentication context for ZAP.
+
+    The named script must already be loaded into the ZAP daemon; ``parameters`` are
+    its (non-secret) configuration. When the script authenticates a user,
+    ``username_env`` / ``password_env`` name the environment variables holding that
+    user's credentials -- resolved at scan time, never stored inline.
+    """
 
     type: Literal["script"] = "script"
     script_name: str
     script_engine: str = "Oracle Nashorn"
     parameters: dict[str, str] = Field(default_factory=dict)
+    username_env: str | None = None
+    password_env: str | None = None
 
 
 AuthConfig = Annotated[FormAuth | HeaderAuth | ScriptAuth, Field(discriminator="type")]
