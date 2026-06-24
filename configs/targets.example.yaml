@@ -23,6 +23,26 @@ targets:
     host: "10.0.0.0/24"
 
   # Web + host target with authenticated ZAP scanning.
+  #
+  # The optional `auth` block keeps the active scan logged in (a major
+  # false-positive reducer). Three schemes are supported; credentials are always
+  # referenced by environment-variable NAME and resolved at scan time. Pick one:
+  #
+  #   # header / JWT bearer -- a token injected on every request:
+  #   auth:
+  #     type: header
+  #     header_name: "Authorization"   # default; any header name works
+  #     token_env: "API_BEARER_TOKEN"  # value read from $API_BEARER_TOKEN
+  #     token_prefix: "Bearer "        # prepended to the token (use "" for none)
+  #
+  #   # script-based -- a ZAP auth script already loaded into the daemon:
+  #   auth:
+  #     type: script
+  #     script_name: "jwt-login.js"
+  #     script_engine: "Oracle Nashorn"
+  #     parameters: { loginUrl: "https://app.lab.example.com/api/auth" }
+  #     username_env: "APP_USERNAME"   # optional; creates a ZAP user when set
+  #     password_env: "APP_PASSWORD"
   - name: web-app
     host: "10.0.0.10"
     urls:
