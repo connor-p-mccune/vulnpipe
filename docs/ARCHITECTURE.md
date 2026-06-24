@@ -32,8 +32,11 @@ intake → nmap scan → zap scan → enrich (cvss/nvd/epss)
 4. **enrich** (`enrichment/`) — CVSS scoring, NVD CVE metadata, EPSS probabilities
    (HTTP cached on disk; failures mark fields unknown, never guessed).
 5. **normalize / dedup / false-positive / prioritize** (`processing/`) — pure
-   functions transforming findings: collapse duplicates by fingerprint, drop
-   allowlisted/low-confidence findings, and order by severity/CVSS/EPSS.
+   functions transforming findings: normalize cleans and builds them, dedup
+   collapses duplicates by fingerprint (keeping the richest detail from each
+   group), the false-positive filter drops allowlisted findings and any below a
+   confidence floor (`configs/false_positives.example.yaml`), and prioritization
+   orders by severity, then CVSS, then EPSS, then asset criticality.
 6. **report** (`reporting/`) — JSON (canonical), HTML (human), SARIF (CI/dashboards).
 7. **ci diff + gate** (`ci/`) — diff against a baseline (new / persisting /
    resolved) and decide the exit status from a severity policy.
@@ -84,3 +87,9 @@ strict schema (`Scope`, `Target`, the discriminated `AuthConfig`, and scanner
 settings). Secrets are referenced by environment-variable *name* and resolved at
 scan time with `resolve_secret`, so raw credentials never enter the config file or
 the in-memory model.
+
+Asset criticality for prioritization is configured under `prioritization`: each
+rule maps a host / CIDR / `*.domain` pattern to a criticality, resolved per finding
+with `PrioritizationConfig.criticality_for` (first matching rule wins, else the
+configured default). The prioritizer takes that resolver as an argument, keeping
+`processing/` decoupled from config loading.
