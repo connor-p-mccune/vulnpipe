@@ -66,7 +66,9 @@ nmap:
   timeout_seconds: 1800
 
 zap:
-  api_url: "http://localhost:8080"
+  # Defaults to localhost for a local daemon; the docker-compose stack sets
+  # ZAP_API_URL=http://zap:8080 so the same file works inside the container network.
+  api_url: "${ZAP_API_URL:-http://localhost:8080}"
   api_key_env: "ZAP_API_KEY"
   spider_max_duration_minutes: 5
   active_scan_timeout_seconds: 3600
