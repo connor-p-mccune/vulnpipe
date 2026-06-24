@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ tool_name }} report</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0; padding: 0 1.5rem 3rem; color: #1b1b1b; background: #fafafa; line-height: 1.45;
+    }
+    header { padding: 1.5rem 0 1rem; border-bottom: 2px solid #e0e0e0; margin-bottom: 1.5rem; }
+    h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
+    h2 { font-size: 1.2rem; margin: 2rem 0 .75rem; }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
+    .muted { color: #6b6b6b; font-weight: normal; }
+    .badges { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0; }
+    .badge {
+      display: inline-block; padding: .15rem .55rem; border-radius: 999px;
+      font-size: .8rem; color: #fff; white-space: nowrap;
+    }
+    .sev-critical { background: #7b1fa2; }
+    .sev-high { background: #c62828; }
+    .sev-medium { background: #ef6c00; }
+    .sev-low { background: #f9a825; color: #1b1b1b; }
+    .sev-informational { background: #1565c0; }
+    .cards { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+    .card {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+      padding: .75rem 1.25rem; min-width: 8rem;
+    }
+    .card .num { font-size: 1.8rem; font-weight: 600; }
+    svg { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: .5rem; }
+    .chart-label { font-size: 13px; fill: #1b1b1b; }
+    .chart-count { font-size: 13px; fill: #1b1b1b; font-weight: 600; }
+    section.host {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+      padding: .5rem 1rem 1rem; margin-bottom: 1rem;
+    }
+    ul.host-findings { list-style: none; padding: 0; margin: .5rem 0 0; }
+    ul.host-findings li { padding: .35rem 0; border-top: 1px solid #f0f0f0; }
+    .evidence { margin: .2rem 0 0 .25rem; font-size: .85rem; color: #444; }
+    .evidence code { background: #f3f3f3; padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
+    table.findings { border-collapse: collapse; width: 100%; background: #fff; font-size: .9rem; }
+    table.findings th, table.findings td {
+      text-align: left; padding: .45rem .6rem; border-bottom: 1px solid #ececec;
+    }
+    table.findings thead th { background: #f0f0f0; cursor: pointer; user-select: none; position: sticky; top: 0; }
+    table.findings thead th::after { content: " \2195"; color: #9a9a9a; font-size: .8em; }
+    table.findings tbody tr:hover { background: #f7f7ff; }
+    .empty { padding: 2rem; text-align: center; color: #6b6b6b; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{ tool_name }} vulnerability report</h1>
+    <div class="muted">{{ tool_name }} {{ tool_version }} &middot; detection &amp; reporting only</div>
+  </header>
+
+  <h2>Summary</h2>
+  <div class="cards">
+    <div class="card"><div class="num">{{ summary.total }}</div><div class="muted">findings</div></div>
+    <div class="card"><div class="num">{{ summary.host_count }}</div><div class="muted">hosts</div></div>
+  </div>
+  <div class="badges">
+    {% for severity in severity_order %}
+    <span class="badge {{ styles[severity].css_class }}">{{ styles[severity].label }}: {{ summary.by_severity[severity] }}</span>
+    {% endfor %}
+  </div>
+
+  <h2>Severity breakdown</h2>
+  <svg width="{{ chart.width }}" height="{{ chart.height }}" role="img" aria-label="Findings by severity">
+    {% for bar in chart.bars %}
+    <text x="0" y="{{ bar.text_y }}" class="chart-label">{{ bar.label }}</text>
+    <rect x="{{ chart.bar_x }}" y="{{ bar.rect_y }}" width="{{ bar.width }}" height="{{ bar.bar_height }}" rx="3" fill="{{ bar.color }}"></rect>
+    <text x="{{ bar.count_x }}" y="{{ bar.text_y }}" class="chart-count">{{ bar.count }}</text>
+    {% endfor %}
+  </svg>
+
+  <h2>Per-host breakdown</h2>
+  {% if host_groups %}
+    {% for group in host_groups %}
+    <section class="host">
+      <h3>{{ group.host }} <span class="muted">({{ group.findings | length }} finding{{ "s" if group.findings | length != 1 else "" }})</span></h3>
+      <div class="badges">
+        {% for severity in severity_order %}
+        {% if group.counts[severity] %}
+        <span class="badge {{ styles[severity].css_class }}">{{ styles[severity].label }}: {{ group.counts[severity] }}</span>
+        {% endif %}
+        {% endfor %}
+      </div>
+      <ul class="host-findings">
+        {% for finding in group.findings %}
+        <li>
+          <span class="badge {{ styles[finding.severity].css_class }}">{{ styles[finding.severity].label }}</span>
+          <strong>{{ finding.title }}</strong>{% if finding.port is not none %} <span class="muted">:{{ finding.port }}</span>{% endif %}
+          {% if finding.evidence %}<div class="evidence">Evidence: <code>{{ finding.evidence }}</code></div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endfor %}
+  {% else %}
+    <p class="empty">No findings.</p>
+  {% endif %}
+
+  <h2>All findings</h2>
+  <table class="findings" id="findings-table">
+    <thead>
+      <tr>
+        <th data-type="number">Severity</th>
+        <th data-type="text">Host</th>
+        <th data-type="number">Port</th>
+        <th data-type="text">Title</th>
+        <th data-type="text">CVEs</th>
+        <th data-type="number">CVSS</th>
+        <th data-type="number">EPSS</th>
+        <th data-type="text">Confidence</th>
+        <th data-type="text">Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for finding in findings %}
+      <tr>
+        <td data-sort="{{ finding.severity.rank }}"><span class="badge {{ styles[finding.severity].css_class }}">{{ styles[finding.severity].label }}</span></td>
+        <td>{{ finding.host }}</td>
+        <td data-sort="{{ finding.port if finding.port is not none else -1 }}">{{ finding.port if finding.port is not none else "" }}</td>
+        <td>{{ finding.title }}</td>
+        <td>{{ finding.cve_ids | join(", ") }}</td>
+        <td data-sort="{{ finding.cvss_score if finding.cvss_score is not none else -1 }}">{{ "%.1f" | format(finding.cvss_score) if finding.cvss_score is not none else "" }}</td>
+        <td data-sort="{{ finding.epss_score if finding.epss_score is not none else -1 }}">{{ "%.4f" | format(finding.epss_score) if finding.epss_score is not none else "" }}</td>
+        <td>{{ finding.confidence.value if finding.confidence is not none else "" }}</td>
+        <td>{{ finding.source }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <script>
+    (function () {
+      var table = document.getElementById("findings-table");
+      if (!table) { return; }
+      var headers = table.tHead.rows[0].cells;
+      for (var i = 0; i < headers.length; i++) {
+        (function (column) {
+          headers[column].addEventListener("click", function () {
+            sortBy(column, headers[column].getAttribute("data-type") === "number");
+          });
+        })(i);
+      }
+      var ascending = [];
+      function cellKey(row, column, numeric) {
+        var cell = row.cells[column];
+        var raw = cell.hasAttribute("data-sort") ? cell.getAttribute("data-sort") : cell.textContent;
+        return numeric ? parseFloat(raw) : raw.toLowerCase();
+      }
+      function sortBy(column, numeric) {
+        var body = table.tBodies[0];
+        var rows = Array.prototype.slice.call(body.rows);
+        var dir = ascending[column] = !ascending[column];
+        rows.sort(function (a, b) {
+          var ka = cellKey(a, column, numeric), kb = cellKey(b, column, numeric);
+          if (ka < kb) { return dir ? -1 : 1; }
+          if (ka > kb) { return dir ? 1 : -1; }
+          return 0;
+        });
+        for (var i = 0; i < rows.length; i++) { body.appendChild(rows[i]); }
+      }
+    })();
+  </script>
+</body>
+</html>
