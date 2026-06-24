@@ -243,6 +243,22 @@ def test_diff_unknown_format_exits_2(tmp_path: Path) -> None:
     assert result.exit_code == 2
 
 
+def test_diff_invalid_current_exits_2(tmp_path: Path) -> None:
+    base = _findings_file(tmp_path, "base.json", [_f("a")])
+    bad = tmp_path / "cur.json"
+    bad.write_text("{ not json", encoding="utf-8")
+    result = runner.invoke(app, ["diff", "--baseline", str(base), "--current", str(bad)])
+    assert result.exit_code == 2
+
+
+# --------------------------------------------------------------------------- #
+# version
+# --------------------------------------------------------------------------- #
+def test_version_command() -> None:
+    result = runner.invoke(app, ["version"])
+    assert result.exit_code == 0
+
+
 # --------------------------------------------------------------------------- #
 # baseline
 # --------------------------------------------------------------------------- #
