@@ -44,6 +44,22 @@ intake → nmap scan → zap scan → enrich (cvss/nvd/epss)
 The orchestrator (`core/orchestrator.py`) runs the network layer through a bounded
 thread pool and caps ZAP concurrency separately (active scans are heavy).
 
+## Module responsibilities
+
+| Package / module | Responsibility |
+| --- | --- |
+| `core/models.py` | The shared `Finding`, `Host`, and `Service` models, the `Severity` / `Confidence` / `AssetCriticality` enums, and the `compute_fingerprint` helper. |
+| `core/config.py` | YAML + environment config loading, the strict pydantic schema, and the authorization/scope guards (`ensure_authorized`, `ensure_*_in_scope`). |
+| `core/orchestrator.py` | Runs the full pipeline end to end and returns the prioritized findings plus the diff and gate verdict. |
+| `core/logging.py` | The rich-backed structured logger used throughout (the project never uses `print`). |
+| `scanners/` | `BaseScanner` + the registry, and the Nmap (network) and ZAP (web) integrations. Each `scan()` returns `list[Finding]`. |
+| `enrichment/` | CVSS parsing/scoring and cached NVD / EPSS lookups that fill — never fabricate — the `cvss_*` / `epss_*` fields. |
+| `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize. |
+| `reporting/` | The JSON / HTML / SARIF renderers plus the shared summary view-model. Deterministic for fixed input. |
+| `ci/` | The baseline store, the differ, the severity gate, and JUnit XML output for CI. |
+| `auth/` | ZAP authentication-context construction (form / header-JWT / script). |
+| `cli/main.py` | The Typer CLI (`scan` / `report` / `diff` / `baseline`) and the `--authorized` + scope gate. |
+
 ## The `Finding` model
 
 Defined in `core/models.py` (pydantic v2, frozen). Every scanner emits `Finding`
@@ -61,6 +77,31 @@ processing produce new findings via `model_copy`, leaving the fingerprint intact
 
 `Severity` and `Confidence` are ordered enums (`.rank`). `Severity.from_cvss_score`
 applies the FIRST CVSS v3 qualitative bands.
+
+### Lifecycle of a finding
+
+A finding is created once, in a scanner, and from then on is only ever *copied* —
+its fingerprint never changes from birth to report:
+
+1. **born** — a scanner maps raw tool output into a `Finding` through
+   `processing/normalizer.make_finding` (text trimmed, CVE ids validated, severity
+   derived from the CVSS score when not supplied). `source` records the tool.
+2. **enriched** — `enrichment/` looks up each cited CVE once and fills only the
+   still-unknown `cvss_*` / `epss_*` fields via `model_copy`; data a scanner already
+   provided is never overwritten and a failed lookup leaves the field `None`.
+3. **deduplicated** — findings sharing a fingerprint are merged into the single
+   richest finding (`processing/deduplicator`).
+4. **filtered** — the false-positive stage drops allowlisted findings and anything
+   below the configured confidence floor.
+5. **prioritized** — the survivors are ordered most-actionable-first
+   (severity → CVSS → EPSS → asset criticality → fingerprint).
+6. **reported** — emitted to JSON / HTML / SARIF in that prioritized order.
+7. **diffed** — the fingerprint is matched against the baseline to classify the
+   finding as new / persisting / resolved, which the gate turns into a build verdict.
+
+Because the model is `frozen` and every stage returns new findings rather than
+mutating, one underlying issue keeps a single stable identity across the whole run
+(and across runs) — exactly what dedup and the differ rely on.
 
 ## Reporting
 
