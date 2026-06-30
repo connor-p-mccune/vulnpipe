@@ -212,6 +212,14 @@ class Finding(BaseModel):
     cvss_vector: str | None = None
     epss_score: float | None = Field(default=None, ge=0.0, le=1.0)
     epss_percentile: float | None = Field(default=None, ge=0.0, le=1.0)
+    kev: bool = Field(
+        default=False,
+        description=(
+            "Whether a cited CVE appears in the CISA Known Exploited Vulnerabilities "
+            "(KEV) catalog -- i.e. is being actively exploited in the wild. Set by the "
+            "enrichment stage; defaults to False (absence of evidence, not a guess)."
+        ),
+    )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("protocol")

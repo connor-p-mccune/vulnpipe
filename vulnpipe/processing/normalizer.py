@@ -109,6 +109,7 @@ def make_finding(
     cvss_vector: str | None = None,
     epss_score: float | None = None,
     epss_percentile: float | None = None,
+    kev: bool = False,
     metadata: dict[str, Any] | None = None,
 ) -> Finding:
     """Assemble a cleaned, frozen :class:`Finding` -- the one construction path.
@@ -144,6 +145,7 @@ def make_finding(
         cvss_vector=clean_text(cvss_vector),
         epss_score=epss_score,
         epss_percentile=epss_percentile,
+        kev=kev,
         metadata=metadata if metadata is not None else {},
     )
 

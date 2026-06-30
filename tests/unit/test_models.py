@@ -98,6 +98,14 @@ def test_finding_fingerprint_stable_across_enrichment() -> None:
     assert enriched.cvss_score == 9.8
 
 
+def test_finding_kev_defaults_false_and_does_not_affect_fingerprint() -> None:
+    finding = Finding(source="nmap", host="10.0.0.5", port=443, plugin_id="v", title="CVE issue")
+    assert finding.kev is False  # absence of evidence, not a guess
+    flagged = finding.model_copy(update={"kev": True})
+    assert flagged.kev is True
+    assert flagged.fingerprint == finding.fingerprint  # KEV status is not an identity field
+
+
 def test_finding_is_frozen() -> None:
     finding = Finding(source="nmap", host="10.0.0.5", title="X")
     with pytest.raises((ValidationError, TypeError)):

@@ -145,3 +145,9 @@ def test_make_finding_fingerprint_is_stable() -> None:
 
 def test_make_finding_metadata_defaults_to_empty_dict() -> None:
     assert make_finding(source="nmap", host="10.0.0.5", title="x").metadata == {}
+
+
+def test_make_finding_kev_defaults_false_and_passes_through() -> None:
+    assert make_finding(source="nmap", host="10.0.0.5", title="x").kev is False
+    flagged = make_finding(source="nmap", host="10.0.0.5", title="CVE-2021-44228", kev=True)
+    assert flagged.kev is True
