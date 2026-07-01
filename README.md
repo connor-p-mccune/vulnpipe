@@ -69,8 +69,9 @@ Point vulnpipe at an authorized, in-scope range and it will:
 - **scan** the web services it finds (or URLs you declare) with a running OWASP ZAP
   daemon — spider + active scan, with optional authenticated sessions;
 - **normalize** everything into a single `Finding` model with a stable fingerprint;
-- **enrich** findings with CVSS scores/vectors (NVD) and EPSS exploit-probability —
-  cached on disk, and never fabricated (a failed lookup leaves the field unknown);
+- **enrich** findings with CVSS scores/vectors (NVD), EPSS exploit-probability, and
+  CISA **KEV** (known-exploited-in-the-wild) status — cached on disk, and never
+  fabricated (a failed lookup leaves the field unknown);
 - **filter** false positives via an allowlist plus a confidence threshold;
 - **prioritize** by severity → CVSS → EPSS → asset criticality;
 - **report** to JSON (canonical), HTML (human), and SARIF (the GitHub Security tab);

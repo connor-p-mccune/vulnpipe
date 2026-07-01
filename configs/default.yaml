@@ -25,6 +25,7 @@ enrichment:
   nvd_enabled: true
   nvd_api_key_env: "NVD_API_KEY"
   epss_enabled: true
+  kev_enabled: true            # flag CVEs in the CISA Known Exploited Vulnerabilities catalog
   cache_dir: ".cache"
 
 run:

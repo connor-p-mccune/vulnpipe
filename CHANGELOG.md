@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- CISA KEV (Known Exploited Vulnerabilities) enrichment: findings whose CVE is in
+  the catalog are flagged `kev=True` with catalog context (date added, ransomware
+  use) in metadata. A `kev` field on `Finding` and a `kev_enabled` enrichment flag.
 - Continuous-integration workflow running the quality gates (ruff, black, mypy)
   and the test suite across Python 3.12 / 3.13 / 3.14, plus the integration suite.
 - GitHub Pages publishing of the sample HTML report.

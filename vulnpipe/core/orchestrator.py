@@ -208,7 +208,7 @@ def _enrich(
     owns = clients is None
     active = clients if clients is not None else build_enrichment(config)
     try:
-        return enrich_findings(findings, nvd=active.nvd, epss=active.epss)
+        return enrich_findings(findings, nvd=active.nvd, epss=active.epss, kev=active.kev)
     finally:
         if owns:
             active.close()

@@ -146,6 +146,7 @@ def test_enrich_builds_and_closes_clients(monkeypatch: pytest.MonkeyPatch) -> No
         def __init__(self) -> None:
             self.nvd = None
             self.epss = None
+            self.kev = None
             self.closed = False
 
         def close(self) -> None:

@@ -22,6 +22,7 @@ from vulnpipe.core.logging import get_logger, log_event
 from vulnpipe.core.models import Finding
 from vulnpipe.enrichment._http import CacheProtocol, open_cache
 from vulnpipe.enrichment.epss_client import EpssClient, EpssScore
+from vulnpipe.enrichment.kev_client import KevClient, KevEntry
 from vulnpipe.enrichment.nvd_client import CveDetail, NvdClient
 
 _log = get_logger(__name__)
@@ -29,10 +30,11 @@ _log = get_logger(__name__)
 
 @dataclass(frozen=True)
 class EnrichmentClients:
-    """The enrichment clients; either is ``None`` when that source is disabled."""
+    """The enrichment clients; any is ``None`` when that source is disabled."""
 
     nvd: NvdClient | None = None
     epss: EpssClient | None = None
+    kev: KevClient | None = None
 
     def close(self) -> None:
         """Close whichever underlying clients exist."""
@@ -40,6 +42,8 @@ class EnrichmentClients:
             self.nvd.close()
         if self.epss is not None:
             self.epss.close()
+        if self.kev is not None:
+            self.kev.close()
 
 
 def build_enrichment(
@@ -54,12 +58,15 @@ def build_enrichment(
     that client. The cache directory is opened only when at least one source is
     enabled (and unless a cache is injected, e.g. in tests).
     """
+    enrichment = config.enrichment
     shared = cache
-    if shared is None and (config.enrichment.nvd_enabled or config.enrichment.epss_enabled):
-        shared = open_cache(config.enrichment.cache_dir)
+    any_enabled = enrichment.nvd_enabled or enrichment.epss_enabled or enrichment.kev_enabled
+    if shared is None and any_enabled:
+        shared = open_cache(enrichment.cache_dir)
     return EnrichmentClients(
         nvd=NvdClient.from_config(config, cache=shared, sleep=sleep),
         epss=EpssClient.from_config(config, cache=shared, sleep=sleep),
+        kev=KevClient.from_config(config, cache=shared, sleep=sleep),
     )
 
 
@@ -68,12 +75,16 @@ def enrich_findings(
     *,
     nvd: NvdClient | None = None,
     epss: EpssClient | None = None,
+    kev: KevClient | None = None,
 ) -> list[Finding]:
-    """Return ``findings`` with CVSS/EPSS fields filled from NVD and EPSS lookups.
+    """Return ``findings`` enriched from NVD (CVSS), EPSS, and the CISA KEV catalog.
 
-    Each distinct CVE is looked up once. Findings without CVEs (or for which no
-    data is found) pass through unchanged. Existing values are never overwritten
-    and nothing is fabricated: a failed lookup simply leaves the field unknown.
+    Each distinct CVE is resolved once. NVD/EPSS fill the CVSS/EPSS fields; the KEV
+    catalog flags findings whose CVE is being actively exploited in the wild
+    (``kev=True``, with catalog context recorded in metadata). Findings without CVEs
+    (or for which no data is found) pass through unchanged. Existing values are never
+    overwritten and nothing is fabricated: a missing lookup leaves the field unknown
+    and a CVE absent from KEV stays ``kev=False``.
     """
     items = list(findings)
     if not items:
@@ -83,9 +94,12 @@ def enrich_findings(
         return items
     nvd_details = _lookup_nvd(nvd, cve_ids)
     epss_scores = epss.get_scores(cve_ids) if epss is not None else {}
-    if not nvd_details and not epss_scores:
+    kev_entries = _lookup_kev(kev, cve_ids)
+    if not nvd_details and not epss_scores and not kev_entries:
         return items
-    enriched = [_enrich_finding(finding, nvd_details, epss_scores) for finding in items]
+    enriched = [
+        _enrich_finding(finding, nvd_details, epss_scores, kev_entries) for finding in items
+    ]
     log_event(
         _log,
         logging.INFO,
@@ -94,6 +108,7 @@ def enrich_findings(
         cves=len(cve_ids),
         nvd_hits=len(nvd_details),
         epss_hits=len(epss_scores),
+        kev_hits=len(kev_entries),
     )
     return enriched
 
@@ -107,6 +122,14 @@ def _lookup_nvd(nvd: NvdClient | None, cve_ids: Sequence[str]) -> dict[str, CveD
         if detail is not None:
             details[cve] = detail
     return details
+
+
+def _lookup_kev(kev: KevClient | None, cve_ids: Sequence[str]) -> dict[str, KevEntry]:
+    """Return the KEV entries for the cited CVEs that appear in the catalog."""
+    if kev is None:
+        return {}
+    catalog = kev.get_catalog()
+    return {cve: catalog[cve] for cve in cve_ids if cve in catalog}
 
 
 def _cvss_rank(detail: CveDetail) -> tuple[float, str]:
@@ -129,10 +152,26 @@ def _best_epss(cve_ids: Sequence[str], scores: dict[str, EpssScore]) -> EpssScor
     return max(candidates, key=_epss_rank) if candidates else None
 
 
+def _first_kev(cve_ids: Sequence[str], entries: dict[str, KevEntry]) -> KevEntry | None:
+    """First cited CVE present in the KEV catalog, in the finding's CVE order."""
+    return next((entries[cve] for cve in cve_ids if cve in entries), None)
+
+
+def _kev_metadata(finding: Finding, entry: KevEntry) -> dict[str, object]:
+    """Record KEV catalog context in metadata without clobbering existing keys."""
+    meta = dict(finding.metadata)
+    meta.setdefault("kev_date_added", entry.date_added)
+    meta.setdefault("kev_known_ransomware", entry.known_ransomware)
+    if entry.vulnerability_name is not None:
+        meta.setdefault("kev_name", entry.vulnerability_name)
+    return meta
+
+
 def _enrich_finding(
     finding: Finding,
     nvd_details: dict[str, CveDetail],
     epss_scores: dict[str, EpssScore],
+    kev_entries: dict[str, KevEntry],
 ) -> Finding:
     if not finding.cve_ids:
         return finding
@@ -149,6 +188,10 @@ def _enrich_finding(
             updates["epss_score"] = score.epss
         if finding.epss_percentile is None and score.percentile is not None:
             updates["epss_percentile"] = score.percentile
+    kev_entry = _first_kev(finding.cve_ids, kev_entries)
+    if kev_entry is not None and not finding.kev:
+        updates["kev"] = True
+        updates["metadata"] = _kev_metadata(finding, kev_entry)
     if not updates:
         return finding
     return finding.model_copy(update=updates)

@@ -13,6 +13,7 @@ from vulnpipe.enrichment.enricher import (
     enrich_findings,
 )
 from vulnpipe.enrichment.epss_client import EpssClient, EpssScore
+from vulnpipe.enrichment.kev_client import KevClient, KevEntry
 from vulnpipe.enrichment.nvd_client import CveDetail, NvdClient
 from vulnpipe.processing.normalizer import make_finding
 
@@ -42,6 +43,19 @@ class _FakeEpss:
         ids = list(cve_ids)
         self.calls.append(ids)
         return {cve: self._scores[cve] for cve in ids if cve in self._scores}
+
+    def close(self) -> None:
+        pass
+
+
+class _FakeKev:
+    def __init__(self, catalog: dict[str, KevEntry]) -> None:
+        self._catalog = catalog
+        self.calls = 0
+
+    def get_catalog(self) -> dict[str, KevEntry]:
+        self.calls += 1
+        return self._catalog
 
     def close(self) -> None:
         pass
@@ -125,6 +139,61 @@ def test_enrich_only_epss_fills_epss_only() -> None:
     assert enriched.cvss_score is None
 
 
+# --------------------------------------------------------------------------- #
+# enrich_findings: CISA KEV (known-exploited) flagging
+# --------------------------------------------------------------------------- #
+def _kev(cve: str, **kwargs: Any) -> KevEntry:
+    return KevEntry(cve_id=cve, **kwargs)
+
+
+def test_enrich_flags_known_exploited_cve() -> None:
+    finding = _finding(source="nmap", title="CVE-2021-44228", cve_ids=["CVE-2021-44228"])
+    assert finding.kev is False
+    kev = _FakeKev({"CVE-2021-44228": _kev("CVE-2021-44228", date_added="2021-12-10")})
+    [enriched] = enrich_findings([finding], kev=kev)  # type: ignore[arg-type]
+    assert enriched.kev is True
+    assert enriched.metadata["kev_date_added"] == "2021-12-10"
+    assert enriched.fingerprint == finding.fingerprint  # KEV status is not fingerprinted
+
+
+def test_enrich_records_ransomware_and_name_metadata() -> None:
+    finding = _finding(cve_ids=["CVE-2021-44228"])
+    entry = _kev(
+        "CVE-2021-44228",
+        vulnerability_name="Apache Log4j2 RCE",
+        known_ransomware=True,
+        date_added="2021-12-10",
+    )
+    [enriched] = enrich_findings([finding], kev=_FakeKev({"CVE-2021-44228": entry}))  # type: ignore[arg-type]
+    assert enriched.metadata["kev_known_ransomware"] is True
+    assert enriched.metadata["kev_name"] == "Apache Log4j2 RCE"
+
+
+def test_enrich_cve_absent_from_kev_stays_false() -> None:
+    finding = _finding(cve_ids=["CVE-2021-9999"])
+    kev = _FakeKev({"CVE-2021-44228": _kev("CVE-2021-44228")})
+    result = enrich_findings([finding], kev=kev)  # type: ignore[arg-type]
+    assert result[0] is finding  # nothing to fill -> unchanged object
+    assert result[0].kev is False
+
+
+def test_enrich_kev_does_not_clobber_existing_metadata() -> None:
+    finding = _finding(cve_ids=["CVE-2021-44228"], metadata={"kev_date_added": "operator-set"})
+    entry = _kev("CVE-2021-44228", date_added="2021-12-10")
+    [enriched] = enrich_findings([finding], kev=_FakeKev({"CVE-2021-44228": entry}))  # type: ignore[arg-type]
+    assert enriched.kev is True
+    assert enriched.metadata["kev_date_added"] == "operator-set"  # existing key preserved
+
+
+def test_enrich_kev_only_still_enriches_without_nvd_or_epss() -> None:
+    # KEV hits alone must defeat the "nothing to do" short-circuit.
+    finding = _finding(cve_ids=["CVE-2021-44228"])
+    kev = _FakeKev({"CVE-2021-44228": _kev("CVE-2021-44228")})
+    [enriched] = enrich_findings([finding], nvd=None, epss=None, kev=kev)  # type: ignore[arg-type]
+    assert enriched.kev is True
+    assert kev.calls == 1  # catalog fetched once
+
+
 def test_enrich_preserves_fingerprint_and_severity() -> None:
     finding = _finding(cve_ids=["CVE-2021-0002"], severity=Severity.MEDIUM)
     nvd = _FakeNvd({"CVE-2021-0002": CveDetail("CVE-2021-0002", cvss_score=9.8, cvss_vector=VEC_B)})
@@ -184,9 +253,11 @@ def _config(enrichment: EnrichmentConfig) -> Config:
 def test_build_enrichment_disabled_opens_no_cache(monkeypatch: pytest.MonkeyPatch) -> None:
     opened: list[Any] = []
     monkeypatch.setattr(enricher, "open_cache", lambda directory: opened.append(directory))
-    clients = build_enrichment(_config(EnrichmentConfig(nvd_enabled=False, epss_enabled=False)))
-    assert clients.nvd is None and clients.epss is None
-    assert opened == []  # cache untouched when both sources are disabled
+    clients = build_enrichment(
+        _config(EnrichmentConfig(nvd_enabled=False, epss_enabled=False, kev_enabled=False))
+    )
+    assert clients.nvd is None and clients.epss is None and clients.kev is None
+    assert opened == []  # cache untouched when every source is disabled
 
 
 def test_build_enrichment_enabled_shares_cache(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -200,18 +271,37 @@ def test_build_enrichment_enabled_shares_cache(monkeypatch: pytest.MonkeyPatch) 
 
     monkeypatch.setattr(enricher, "open_cache", fake_open)
     clients = build_enrichment(
-        _config(EnrichmentConfig(nvd_enabled=True, epss_enabled=True, cache_dir=".cache"))
+        _config(
+            EnrichmentConfig(
+                nvd_enabled=True, epss_enabled=True, kev_enabled=True, cache_dir=".cache"
+            )
+        )
     )
     assert isinstance(clients.nvd, NvdClient)
     assert isinstance(clients.epss, EpssClient)
-    assert opened == [".cache"]  # opened exactly once, shared by both clients
+    assert isinstance(clients.kev, KevClient)
+    assert opened == [".cache"]  # opened exactly once, shared by all clients
+
+
+def test_build_enrichment_kev_only_opens_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    # KEV enabled on its own must still open the shared cache and build the client.
+    opened: list[Any] = []
+    monkeypatch.setattr(enricher, "open_cache", lambda directory: opened.append(directory) or {})
+    clients = build_enrichment(
+        _config(EnrichmentConfig(nvd_enabled=False, epss_enabled=False, kev_enabled=True))
+    )
+    assert clients.nvd is None and clients.epss is None
+    assert isinstance(clients.kev, KevClient)
+    assert opened == [".cache"]
 
 
 def test_enrichment_clients_close_delegates() -> None:
     nvd = _FakeNvd({})
     epss = _FakeEpss({})
+    kev = _FakeKev({})
     closed: list[str] = []
     nvd.close = lambda: closed.append("nvd")  # type: ignore[method-assign]
     epss.close = lambda: closed.append("epss")  # type: ignore[method-assign]
-    EnrichmentClients(nvd=nvd, epss=epss).close()  # type: ignore[arg-type]
-    assert closed == ["nvd", "epss"]
+    kev.close = lambda: closed.append("kev")  # type: ignore[method-assign]
+    EnrichmentClients(nvd=nvd, epss=epss, kev=kev).close()  # type: ignore[arg-type]
+    assert closed == ["nvd", "epss", "kev"]

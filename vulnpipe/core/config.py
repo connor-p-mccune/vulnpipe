@@ -236,6 +236,7 @@ class EnrichmentConfig(BaseModel):
     nvd_enabled: bool = True
     nvd_api_key_env: str = "NVD_API_KEY"
     epss_enabled: bool = True
+    kev_enabled: bool = True
     cache_dir: str = ".cache"
 
 

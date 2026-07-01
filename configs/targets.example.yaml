@@ -78,6 +78,7 @@ enrichment:
   nvd_enabled: true
   nvd_api_key_env: "NVD_API_KEY"
   epss_enabled: true
+  kev_enabled: true           # cross-reference CVEs against the CISA KEV catalog
   cache_dir: ".cache"
 
 run:

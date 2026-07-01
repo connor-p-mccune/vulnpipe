@@ -29,8 +29,9 @@ intake → nmap scan → zap scan → enrich (cvss/nvd/epss)
    and `vulners`/`vuln` NSE CVE output.
 3. **zap scan** (`scanners/zap_scanner.py`) — drive a running ZAP daemon's spider
    + active scan over in-scope web services and pull `core.alerts`.
-4. **enrich** (`enrichment/`) — CVSS scoring, NVD CVE metadata, EPSS probabilities
-   (HTTP cached on disk; failures mark fields unknown, never guessed).
+4. **enrich** (`enrichment/`) — CVSS scoring, NVD CVE metadata, EPSS probabilities,
+   and CISA KEV (known-exploited) cross-referencing (HTTP cached on disk; failures
+   mark fields unknown, never guessed).
 5. **normalize / dedup / false-positive / prioritize** (`processing/`) — pure
    functions transforming findings: normalize cleans and builds them, dedup
    collapses duplicates by fingerprint (keeping the richest detail from each
@@ -53,7 +54,7 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `core/orchestrator.py` | Runs the full pipeline end to end and returns the prioritized findings plus the diff and gate verdict. |
 | `core/logging.py` | The rich-backed structured logger used throughout (the project never uses `print`). |
 | `scanners/` | `BaseScanner` + the registry, and the Nmap (network) and ZAP (web) integrations. Each `scan()` returns `list[Finding]`. |
-| `enrichment/` | CVSS parsing/scoring and cached NVD / EPSS lookups that fill — never fabricate — the `cvss_*` / `epss_*` fields. |
+| `enrichment/` | CVSS parsing/scoring, cached NVD / EPSS lookups, and CISA KEV cross-referencing that fill — never fabricate — the `cvss_*` / `epss_*` / `kev` fields. |
 | `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize. |
 | `reporting/` | The JSON / HTML / SARIF renderers plus the shared summary view-model. Deterministic for fixed input. |
 | `ci/` | The baseline store, the differ, the severity gate, and JUnit XML output for CI. |
@@ -87,8 +88,10 @@ its fingerprint never changes from birth to report:
    `processing/normalizer.make_finding` (text trimmed, CVE ids validated, severity
    derived from the CVSS score when not supplied). `source` records the tool.
 2. **enriched** — `enrichment/` looks up each cited CVE once and fills only the
-   still-unknown `cvss_*` / `epss_*` fields via `model_copy`; data a scanner already
-   provided is never overwritten and a failed lookup leaves the field `None`.
+   still-unknown `cvss_*` / `epss_*` fields via `model_copy`, and flags findings whose
+   CVE is in the CISA KEV catalog (`kev=True`, with catalog context in metadata); data
+   a scanner already provided is never overwritten and a failed lookup leaves the field
+   `None` (or `kev=False` — absence of evidence, not a guess).
 3. **deduplicated** — findings sharing a fingerprint are merged into the single
    richest finding (`processing/deduplicator`).
 4. **filtered** — the false-positive stage drops allowlisted findings and anything
