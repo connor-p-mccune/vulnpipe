@@ -77,6 +77,14 @@ def test_report_sarif(tmp_path: Path) -> None:
     assert '"version": "2.1.0"' in result.stdout
 
 
+def test_report_markdown(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["report", "-i", str(_write_report(tmp_path)), "-f", "markdown"])
+    assert result.exit_code == 0
+    assert "# vulnpipe security report" in result.stdout
+    assert "## Findings" in result.stdout
+    assert "Cross Site Scripting (Reflected)" in result.stdout
+
+
 def test_report_unknown_format_exits_nonzero(tmp_path: Path) -> None:
     result = runner.invoke(app, ["report", "-i", str(_write_report(tmp_path)), "-f", "pdf"])
     assert result.exit_code == 2
@@ -132,6 +140,8 @@ def test_scan_writes_reports_and_passes(tmp_path: Path, monkeypatch: pytest.Monk
             str(out / "junit.xml"),
             "--html",
             str(out / "report.html"),
+            "--markdown",
+            str(out / "report.md"),
         ],
     )
     assert result.exit_code == 0
@@ -139,6 +149,7 @@ def test_scan_writes_reports_and_passes(tmp_path: Path, monkeypatch: pytest.Monk
     assert (out / "report.sarif").is_file()
     assert (out / "junit.xml").is_file()
     assert (out / "report.html").is_file()
+    assert (out / "report.md").is_file()
 
 
 def test_scan_gate_failure_exits_nonzero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

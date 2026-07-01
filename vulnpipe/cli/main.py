@@ -20,6 +20,7 @@ import logging
 from pathlib import Path
 from typing import Annotated
 
+import click
 import typer
 from pydantic import ValidationError
 
@@ -79,6 +80,16 @@ def _write(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def _emit(text: str) -> None:
+    """Write report text to stdout as UTF-8 bytes, regardless of console locale.
+
+    Reports may contain non-ASCII characters (e.g. the Markdown format's severity
+    markers). Emitting through the binary stream keeps ``vulnpipe report ... > file``
+    deterministic on any platform rather than failing on a legacy console encoding.
+    """
+    click.get_binary_stream("stdout").write(text.encode("utf-8"))
+
+
 def _load_allowlist(path: Path | None) -> FalsePositiveConfig:
     return load_false_positive_config(path) if path is not None else FalsePositiveConfig()
 
@@ -97,9 +108,10 @@ def _write_reports(
     output: Path,
     sarif: Path | None,
     html: Path | None,
+    markdown: Path | None,
     junit: Path | None,
 ) -> None:
-    """Write the canonical JSON report plus any requested SARIF / HTML / JUnit."""
+    """Write the canonical JSON report plus any requested SARIF / HTML / Markdown / JUnit."""
     findings = list(result.findings)
     json_path = output / "latest.json"
     _write(json_path, get_reporter("json").render(findings))
@@ -110,6 +122,9 @@ def _write_reports(
     if html is not None:
         _write(html, get_reporter("html").render(findings))
         log.info("wrote HTML report: %s", html)
+    if markdown is not None:
+        _write(markdown, get_reporter("markdown").render(findings))
+        log.info("wrote Markdown report: %s", markdown)
     if junit is not None:
         _write(junit, build_junit_xml(result.diff, result.gate))
         log.info("wrote JUnit report: %s", junit)
@@ -187,6 +202,10 @@ def scan(
         Path | None,
         typer.Option("--html", dir_okay=False, help="Also write an HTML report here."),
     ] = None,
+    markdown: Annotated[
+        Path | None,
+        typer.Option("--markdown", dir_okay=False, help="Also write a Markdown report here."),
+    ] = None,
     junit: Annotated[
         Path | None,
         typer.Option("--junit", dir_okay=False, help="Also write a JUnit gate report here."),
@@ -215,7 +234,7 @@ def scan(
         baseline=base,
         gate_threshold=gate_severity,
     )
-    _write_reports(result, output=output, sarif=sarif, html=html, junit=junit)
+    _write_reports(result, output=output, sarif=sarif, html=html, markdown=markdown, junit=junit)
     _log_summary(result)
 
     if not no_gate and result.gate.exit_code != 0:
@@ -229,10 +248,10 @@ def report(
         typer.Option("--input", "-i", exists=True, dir_okay=False, help="Findings JSON to render."),
     ],
     fmt: Annotated[
-        str, typer.Option("--format", "-f", help="Report format: json, html, or sarif.")
+        str, typer.Option("--format", "-f", help="Report format: json, html, markdown, or sarif.")
     ] = "html",
 ) -> None:
-    """Render a findings JSON file into a JSON, HTML, or SARIF report on stdout."""
+    """Render a findings JSON file into a JSON, HTML, Markdown, or SARIF report on stdout."""
     try:
         reporter = get_reporter(fmt)
     except KeyError as exc:
@@ -245,7 +264,7 @@ def report(
     except (OSError, ValueError) as exc:
         log.error("Failed to read findings from %s: %s", input_path, exc)
         raise typer.Exit(code=2) from exc
-    typer.echo(reporter.render(findings), nl=False)
+    _emit(reporter.render(findings))
 
 
 def _print_diff_text(diff: Diff) -> None:

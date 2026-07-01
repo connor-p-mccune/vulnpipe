@@ -282,9 +282,9 @@ vulnpipe scan --config configs/targets.yaml --authorized
 ```
 
 This runs the full pipeline and writes the canonical report to
-`results/latest.json`. Add `--html`, `--sarif`, and/or `--junit` to also write those
-formats, `--baseline baseline.json` to diff and gate against a baseline, and
-`--gate-severity` to set the gate threshold (default `high`).
+`results/latest.json`. Add `--html`, `--markdown`, `--sarif`, and/or `--junit` to also
+write those formats, `--baseline baseline.json` to diff and gate against a baseline,
+and `--gate-severity` to set the gate threshold (default `high`).
 
 A run logs a concise summary:
 
@@ -311,13 +311,15 @@ are stable across runs.
 | --- | --- |
 | **JSON** | The canonical, lossless artifact. `scan` writes `results/latest.json`; `report` / `diff` / `baseline` read it back. |
 | **HTML** | The human-readable report: summary, inline SVG severity chart, per-host breakdown, and a client-side sortable findings table. |
+| **Markdown** | A pull-request / Slack–friendly summary: headline totals, a severity table, and a prioritized findings table with risk score, CVSS, EPSS, and a KEV marker. |
 | **SARIF** | SARIF 2.1.0 for the GitHub code-scanning / Security tab. |
 
 Render any format from a findings JSON to stdout:
 
 ```bash
-vulnpipe report --input results/latest.json --format html  > report.html
-vulnpipe report --input results/latest.json --format sarif > vulnpipe.sarif
+vulnpipe report --input results/latest.json --format html     > report.html
+vulnpipe report --input results/latest.json --format markdown > report.md
+vulnpipe report --input results/latest.json --format sarif    > vulnpipe.sarif
 ```
 
 ### Sample report
@@ -447,7 +449,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | Command | What it does |
 | --- | --- |
 | `scan` | Validate authorization/scope, run the pipeline, write reports, and gate. Requires `--config` and `--authorized`. |
-| `report` | Render a findings JSON into JSON / HTML / SARIF on stdout (`--input`, `--format`). |
+| `report` | Render a findings JSON into JSON / HTML / Markdown / SARIF on stdout (`--input`, `--format`). |
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json`). |
 | `baseline` | Create or update a baseline from a findings JSON (`--input`, `--output`, `--update`). |
 | `version` | Print the vulnpipe version. |

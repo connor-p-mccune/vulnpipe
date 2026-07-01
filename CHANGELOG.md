@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Composite `risk_score` (0–100) computed on every finding: a transparent blend of
   technical impact (CVSS/severity) and exploitation likelihood (KEV, then EPSS),
   surfaced in every report format and stripped on JSON round-trip like the fingerprint.
+- Markdown report format (`report --format markdown`, `scan --markdown`) for
+  pull-request comments and Slack: headline totals, a severity table, and a
+  prioritized findings table with risk score, CVSS, EPSS, and a KEV marker.
 
 ### Changed
 - Prioritization now ranks known-exploited (KEV) findings ahead of equally severe
