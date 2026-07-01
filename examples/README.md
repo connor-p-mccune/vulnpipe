@@ -12,32 +12,25 @@ against a real system.
 | File | What it is |
 | --- | --- |
 | [`sample-report.json`](sample-report.json) | The canonical, lossless JSON report — exactly what `vulnpipe scan` writes to `results/latest.json` and what `report` / `diff` / `baseline` read back. |
-| [`sample-report.html`](sample-report.html) | The human-readable HTML report (summary, inline SVG severity chart, per-host breakdown, and a sortable findings table). Open it in a browser. |
+| [`sample-report.html`](sample-report.html) | The human-readable HTML report (summary, inline SVG severity chart, per-host breakdown, and a filterable, sortable findings table). Open it in a browser. |
+| [`sample-report.md`](sample-report.md) | The Markdown report — a pull-request / Slack–friendly summary. |
+| [`sample-report.csv`](sample-report.csv) | The CSV report — one row per finding for a spreadsheet or data-frame. |
 
 The sample contains 15 findings across 4 hosts (1 critical, 5 high, 2 medium,
-2 low, 5 informational), shown in vulnpipe's prioritized order.
+2 low, 5 informational), shown in vulnpipe's prioritized order. Two of them are
+flagged **known-exploited** (in the CISA KEV catalog) and carry a composite
+`risk_score` — so the two Apache path-traversal CVEs surface at the top of their
+severity band even when another finding scores higher on CVSS alone.
 
 ## Regenerating
 
-From a checkout with the dev dependencies installed:
+From a checkout with the package installed (`pip install -e .`), run the committed
+script from the repository root:
 
-```python
-import json
-from pathlib import Path
-
-from vulnpipe.scanners.nmap_scanner import parse_nmap_xml
-from vulnpipe.scanners.zap_scanner import normalize_alerts
-from vulnpipe.processing import deduplicate, prioritize
-from vulnpipe.reporting import get_reporter
-
-fix = Path("tests/fixtures")
-nmap = parse_nmap_xml(fix.joinpath("nmap_vulners.xml").read_text(encoding="utf-8"))
-zap = normalize_alerts(
-    json.loads(fix.joinpath("sample_zap_alerts.json").read_text(encoding="utf-8"))["alerts"]
-)
-findings = prioritize(deduplicate([*nmap, *zap]))
-
-out = Path("examples")
-out.joinpath("sample-report.json").write_text(get_reporter("json").render(findings), encoding="utf-8")
-out.joinpath("sample-report.html").write_text(get_reporter("html").render(findings), encoding="utf-8")
+```bash
+python scripts/regenerate_examples.py
 ```
+
+It parses the fixtures, applies CISA KEV status offline (network NVD/EPSS enrichment
+is skipped so the output stays deterministic), prioritizes, and writes every sample
+format into this directory.
