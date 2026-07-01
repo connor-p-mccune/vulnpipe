@@ -51,6 +51,7 @@ from vulnpipe.reporting import (
     available_formats,
     get_reporter,
     load_findings,
+    render_stats,
     severity_counts,
 )
 
@@ -266,6 +267,24 @@ def report(
         log.error("Failed to read findings from %s: %s", input_path, exc)
         raise typer.Exit(code=2) from exc
     _emit(reporter.render(findings))
+
+
+@app.command()
+def stats(
+    input_path: Annotated[
+        Path,
+        typer.Option(
+            "--input", "-i", exists=True, dir_okay=False, help="Findings JSON to summarize."
+        ),
+    ],
+) -> None:
+    """Print a terminal summary of a findings JSON: severity, top risks, worst hosts."""
+    try:
+        findings = load_findings(input_path)
+    except (OSError, ValueError) as exc:
+        log.error("Failed to read findings from %s: %s", input_path, exc)
+        raise typer.Exit(code=2) from exc
+    _emit(render_stats(findings))
 
 
 def _print_diff_text(diff: Diff) -> None:

@@ -230,7 +230,9 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
   file, runs the pipeline, writes the canonical JSON report (and optional SARIF / HTML
   / JUnit), and exits non-zero when the gate trips on a newly introduced severe
   finding. Reports are written *before* the gate exit, so CI can still upload them.
-- `report` — render a findings JSON to JSON / HTML / SARIF on stdout.
+- `report` — render a findings JSON to JSON / HTML / Markdown / CSV / SARIF on stdout.
+- `stats` — print a terminal summary of a findings JSON (severity breakdown, top
+  risks, worst-affected hosts) via a fixed-width Rich render.
 - `diff` — classify a findings JSON against a baseline (text or JSON output).
 - `baseline` — create or update a baseline from a findings JSON.
 

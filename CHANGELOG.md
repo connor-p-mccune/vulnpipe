@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   client-side filter toolbar (search, severity, known-exploited-only).
 - `scripts/regenerate_examples.py` to rebuild the committed sample reports (now also
   emitting Markdown and CSV) deterministically from the fixtures.
+- `stats` CLI command: a terminal summary of a findings JSON (severity breakdown,
+  top findings by risk, and worst-affected hosts) rendered with Rich tables.
 
 ### Changed
 - Prioritization now ranks known-exploited (KEV) findings ahead of equally severe

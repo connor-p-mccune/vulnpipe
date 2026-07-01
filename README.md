@@ -456,6 +456,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | --- | --- |
 | `scan` | Validate authorization/scope, run the pipeline, write reports, and gate. Requires `--config` and `--authorized`. |
 | `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / SARIF on stdout (`--input`, `--format`). |
+| `stats` | Print a terminal summary of a findings JSON — severity breakdown, top risks, and worst-affected hosts (`--input`). |
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json`). |
 | `baseline` | Create or update a baseline from a findings JSON (`--input`, `--output`, `--update`). |
 | `version` | Print the vulnpipe version. |

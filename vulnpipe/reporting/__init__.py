@@ -23,6 +23,7 @@ from vulnpipe.reporting.json_reporter import (
 )
 from vulnpipe.reporting.markdown_reporter import MarkdownReporter, render_markdown
 from vulnpipe.reporting.sarif_reporter import SarifReporter, build_sarif
+from vulnpipe.reporting.stats import render_stats
 from vulnpipe.reporting.summary import (
     SEVERITY_DISPLAY_ORDER,
     ReportSummary,
@@ -78,6 +79,7 @@ __all__ = [
     "render_csv",
     "render_html",
     "render_markdown",
+    "render_stats",
     "report_to_findings",
     "severity_counts",
     "summarize",

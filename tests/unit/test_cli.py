@@ -92,6 +92,21 @@ def test_report_csv(tmp_path: Path) -> None:
     assert "Cross Site Scripting (Reflected)" in result.stdout
 
 
+def test_stats(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["stats", "-i", str(_write_report(tmp_path))])
+    assert result.exit_code == 0
+    assert "findings across" in result.stdout
+    assert "By severity" in result.stdout
+    assert "Top 10 by risk" in result.stdout
+
+
+def test_stats_invalid_input_exits_nonzero(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text("{ not json", encoding="utf-8")
+    result = runner.invoke(app, ["stats", "-i", str(bad)])
+    assert result.exit_code == 2
+
+
 def test_report_unknown_format_exits_nonzero(tmp_path: Path) -> None:
     result = runner.invoke(app, ["report", "-i", str(_write_report(tmp_path)), "-f", "pdf"])
     assert result.exit_code == 2
