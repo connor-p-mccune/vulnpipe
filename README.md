@@ -488,6 +488,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `trend` | Analyze how findings evolve across a chronological series of scan JSONs — totals, severity mix, and introduced/resolved deltas (text or JSON). |
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json`). |
 | `baseline` | Create or update a baseline from a findings JSON (`--input`, `--output`, `--update`). |
+| `schema` | Print the JSON Schema for the targets/scope config, for editor validation and autocomplete. |
 | `version` | Print the vulnpipe version. |
 
 Run `vulnpipe <command> --help` for the full option list.

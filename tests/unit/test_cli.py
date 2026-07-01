@@ -59,6 +59,15 @@ def _write_report(tmp_path: Path) -> Path:
     )
 
 
+def test_schema_outputs_config_json_schema() -> None:
+    result = runner.invoke(app, ["schema"])
+    assert result.exit_code == 0
+    document = json.loads(result.stdout)
+    assert document["type"] == "object"
+    assert "scope" in document["properties"]
+    assert "targets" in document["properties"]
+
+
 def test_report_json(tmp_path: Path) -> None:
     result = runner.invoke(app, ["report", "--input", str(_write_report(tmp_path)), "-f", "json"])
     assert result.exit_code == 0

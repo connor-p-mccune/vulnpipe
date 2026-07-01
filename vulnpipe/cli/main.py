@@ -39,6 +39,7 @@ from vulnpipe.ci.gate import DEFAULT_GATE_SEVERITY
 from vulnpipe.ci.junit import build_junit_xml
 from vulnpipe.ci.trends import build_trend, render_trend_text, trend_to_payload
 from vulnpipe.core.config import (
+    Config,
     ConfigError,
     ensure_authorized,
     ensure_config_in_scope,
@@ -159,6 +160,13 @@ def _log_summary(result: PipelineResult) -> None:
 def version() -> None:
     """Print the vulnpipe version."""
     log.info("vulnpipe %s", __version__)
+
+
+@app.command()
+def schema() -> None:
+    """Print the JSON Schema for the targets/scope configuration (for editor validation)."""
+    document = Config.model_json_schema()
+    _emit(json.dumps(document, indent=2, ensure_ascii=False) + "\n")
 
 
 @app.command()
