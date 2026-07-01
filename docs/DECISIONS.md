@@ -146,3 +146,44 @@ in-memory config model. `.env` is gitignored; `.env.example` documents the names
 **Consequences.** A committed config is always safe to share, and a missing
 credential is a clear, early error. The trade-off is one level of indirection when
 reading configs ("which env var backs this?").
+
+## ADR-0011 — Known-exploited (KEV) as a first-class signal
+
+**Context.** Severity and CVSS describe how bad an issue *could* be in theory. They
+say nothing about whether it is *actually being exploited*, which is the single most
+useful input to "what do I fix first." CISA's Known Exploited Vulnerabilities catalog
+answers exactly that, for free.
+
+**Decision.** Cross-reference every cited CVE against the KEV catalog during
+enrichment and carry the result as a first-class `Finding.kev` boolean (catalog
+context in metadata), rather than burying it in metadata alone. KEV then feeds
+prioritization (a tie-breaker within a severity band), the risk score (full
+exploitation likelihood), and the reports. A CVE absent from the catalog stays
+`kev=False` — absence of evidence, never a guess — and a fetch failure degrades to an
+empty catalog.
+
+**Consequences.** "Actively exploited" is queryable and drives ordering and gating,
+not just display, so an exploited Medium can out-prioritize a theoretical High. The
+cost is one more enrichment source and a model field; both are cheap because the
+catalog is a single cached document and the field defaults false.
+
+## ADR-0012 — A transparent, intrinsic composite risk score
+
+**Context.** A reviewer staring at severity, CVSS, EPSS, and a KEV flag has to combine
+four numbers in their head to rank findings. A single score helps — but an opaque or
+fabricated one would violate the project's "never invent data" rule and be impossible
+to trust.
+
+**Decision.** Compute a `risk_score` (0–100) as a documented function of fields the
+finding already carries: technical impact (CVSS, or a per-severity fallback) modulated
+by exploitation likelihood (KEV → full, else EPSS, else a conservative zero floor).
+It is *intrinsic* to the finding — asset criticality stays a separate,
+context-dependent concern in the prioritizer — so it can be a pure computed field that
+flows into every report for free and is stripped on JSON round-trip like the
+fingerprint. It is a ranking aid, not a data source: it fabricates nothing.
+
+**Consequences.** Reports and the CI gate get one honest urgency number
+(`--gate-risk-score`), and because the formula is a small documented function it is
+easy to test and to explain. The trade-off is that any weighting is a judgement call;
+keeping it transparent and intrinsic (not folding in external context) makes the
+judgement inspectable rather than hidden.
