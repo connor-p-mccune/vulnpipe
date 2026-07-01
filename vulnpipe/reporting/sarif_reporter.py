@@ -124,7 +124,13 @@ def _build_rule(rule_id: str, finding: Finding, security_severity: float) -> dic
 
 def _build_result(finding: Finding, rule_id: str, rule_index: int) -> dict[str, Any]:
     """Build the SARIF ``result`` for a single finding."""
-    properties: dict[str, Any] = {"severity": finding.severity.value, "source": finding.source}
+    properties: dict[str, Any] = {
+        "severity": finding.severity.value,
+        "source": finding.source,
+        "riskScore": finding.risk_score,
+    }
+    if finding.kev:
+        properties["kev"] = True
     if finding.cvss_score is not None:
         properties["cvssScore"] = finding.cvss_score
     if finding.epss_score is not None:

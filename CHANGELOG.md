@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   input) fails the build on a new finding whose composite risk score is at least `N`,
   in addition to the severity gate — so an actively-exploited Medium can fail CI even
   though it sits below the severity bar.
+- SARIF results now carry the composite `riskScore` and a `kev` flag in their
+  properties, so those signals reach the GitHub Security tab and other SARIF consumers.
 
 ## [0.2.0] - 2026-07-01
 

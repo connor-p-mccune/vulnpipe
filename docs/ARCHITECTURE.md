@@ -149,9 +149,10 @@ the severity/host counts once so the formats cannot drift.
   text, never live markup.
 - **SARIF** (`sarif_reporter.py`) emits SARIF 2.1.0 for the GitHub Security tab: one
   rule per distinct check, severity mapped to `level`, the finding fingerprint under
-  `partialFingerprints` for stable cross-run tracking, and a `security-severity`
-  ranking hint (the real CVSS score when known, otherwise the severity band floor —
-  never written back onto the finding).
+  `partialFingerprints` for stable cross-run tracking, a `security-severity` ranking
+  hint (the real CVSS score when known, otherwise the severity band floor — never
+  written back onto the finding), and the composite `riskScore` plus a `kev` flag in
+  each result's properties so those signals travel to SARIF consumers too.
 
 `get_reporter(fmt)` resolves a format name to a reporter; the `report` CLI command
 loads a findings JSON and renders it to any format on stdout.

@@ -163,6 +163,28 @@ def test_optional_description_and_epss_are_emitted() -> None:
     assert run["results"][0]["properties"]["epssScore"] == 0.6
 
 
+def test_result_carries_risk_score_and_kev() -> None:
+    finding = make_finding(
+        source="nmap",
+        host="10.0.0.5",
+        title="CVE-2021-42013",
+        plugin_id="vulners",
+        cve_ids=["CVE-2021-42013"],
+        cvss_score=9.8,
+        kev=True,
+    )
+    props = build_sarif([finding])["runs"][0]["results"][0]["properties"]
+    assert props["riskScore"] == finding.risk_score
+    assert props["kev"] is True
+
+
+def test_result_omits_kev_when_not_known_exploited() -> None:
+    finding = make_finding(source="zap", host="h", title="X", plugin_id="1")
+    props = build_sarif([finding])["runs"][0]["results"][0]["properties"]
+    assert "kev" not in props  # only emitted when true
+    assert props["riskScore"] == finding.risk_score  # always present
+
+
 def test_duplicate_rule_keeps_higher_security_severity_when_later_is_lower() -> None:
     findings = [
         make_finding(source="zap", host="a", title="X", plugin_id="1", cvss_score=9.0),
