@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emitting Markdown and CSV) deterministically from the fixtures.
 - `stats` CLI command: a terminal summary of a findings JSON (severity breakdown,
   top findings by risk, and worst-affected hosts) rendered with Rich tables.
+- `trend` CLI command and `ci/trends.py`: analyze a chronological series of findings
+  JSONs — per-scan totals and severity mix, findings introduced/resolved between
+  scans (matched by fingerprint), and the critical+high backlog direction (text/JSON).
 
 ### Changed
 - Prioritization now ranks known-exploited (KEV) findings ahead of equally severe

@@ -107,6 +107,38 @@ def test_stats_invalid_input_exits_nonzero(tmp_path: Path) -> None:
     assert result.exit_code == 2
 
 
+def test_trend_text(tmp_path: Path) -> None:
+    a = _findings_file(tmp_path, "2026-06-01.json", [_f("RCE", severity=Severity.HIGH)])
+    b = _findings_file(
+        tmp_path,
+        "2026-06-15.json",
+        [_f("RCE", severity=Severity.HIGH), _f("SQLi", severity=Severity.CRITICAL)],
+    )
+    result = runner.invoke(app, ["trend", str(a), str(b)])
+    assert result.exit_code == 0
+    assert "risk trend: worsening" in result.stdout
+    assert "2026-06-01" in result.stdout and "2026-06-15" in result.stdout
+
+
+def test_trend_json(tmp_path: Path) -> None:
+    a = _findings_file(tmp_path, "s1.json", [_f("RCE", severity=Severity.HIGH)])
+    result = runner.invoke(app, ["trend", "--format", "json", str(a)])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["scans"][0]["label"] == "s1"
+
+
+def test_trend_unknown_format_exits_nonzero(tmp_path: Path) -> None:
+    a = _findings_file(tmp_path, "s1.json", [_f("RCE", severity=Severity.HIGH)])
+    result = runner.invoke(app, ["trend", "--format", "xml", str(a)])
+    assert result.exit_code == 2
+
+
+def test_trend_missing_file_exits_nonzero(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["trend", str(tmp_path / "nope.json")])
+    assert result.exit_code == 2
+
+
 def test_report_unknown_format_exits_nonzero(tmp_path: Path) -> None:
     result = runner.invoke(app, ["report", "-i", str(_write_report(tmp_path)), "-f", "pdf"])
     assert result.exit_code == 2

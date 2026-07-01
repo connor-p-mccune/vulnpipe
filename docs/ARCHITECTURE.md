@@ -58,7 +58,7 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `enrichment/` | CVSS parsing/scoring, cached NVD / EPSS lookups, and CISA KEV cross-referencing that fill — never fabricate — the `cvss_*` / `epss_*` / `kev` fields. |
 | `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize. |
 | `reporting/` | The JSON / HTML / SARIF renderers plus the shared summary view-model. Deterministic for fixed input. |
-| `ci/` | The baseline store, the differ, the severity gate, and JUnit XML output for CI. |
+| `ci/` | The baseline store, the differ, the severity gate, JUnit XML output, and multi-scan trend analysis. |
 | `auth/` | ZAP authentication-context construction (form / header-JWT / script). |
 | `cli/main.py` | The Typer CLI (`scan` / `report` / `diff` / `baseline`) and the `--authorized` + scope gate. |
 
@@ -234,6 +234,9 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
 - `stats` — print a terminal summary of a findings JSON (severity breakdown, top
   risks, worst-affected hosts) via a fixed-width Rich render.
 - `diff` — classify a findings JSON against a baseline (text or JSON output).
+- `trend` — analyze a chronological series of findings JSONs: per-scan totals and
+  severity mix, findings introduced/resolved between scans (matched by fingerprint),
+  and whether the critical+high backlog is trending up or down (`ci/trends.py`, pure).
 - `baseline` — create or update a baseline from a findings JSON.
 
 ## Docker packaging

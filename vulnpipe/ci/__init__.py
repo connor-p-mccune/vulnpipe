@@ -28,6 +28,13 @@ from vulnpipe.ci.gate import (
     meets_threshold,
 )
 from vulnpipe.ci.junit import build_junit_xml
+from vulnpipe.ci.trends import (
+    ScanPoint,
+    Trend,
+    build_trend,
+    render_trend_text,
+    trend_to_payload,
+)
 
 __all__ = [
     "BASELINE_SCHEMA_VERSION",
@@ -37,14 +44,19 @@ __all__ = [
     "BaselineError",
     "Diff",
     "GateResult",
+    "ScanPoint",
+    "Trend",
     "baseline_to_json",
     "build_baseline",
     "build_junit_xml",
+    "build_trend",
     "diff_findings",
     "diff_to_payload",
     "evaluate_gate",
     "load_baseline",
     "meets_threshold",
     "merge_baseline",
+    "render_trend_text",
     "save_baseline",
+    "trend_to_payload",
 ]

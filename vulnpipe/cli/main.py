@@ -36,6 +36,7 @@ from vulnpipe.ci.baseline import (
 from vulnpipe.ci.differ import Diff, diff_findings, diff_to_payload
 from vulnpipe.ci.gate import DEFAULT_GATE_SEVERITY
 from vulnpipe.ci.junit import build_junit_xml
+from vulnpipe.ci.trends import build_trend, render_trend_text, trend_to_payload
 from vulnpipe.core.config import (
     ConfigError,
     ensure_authorized,
@@ -327,6 +328,35 @@ def diff(
         typer.echo(json.dumps(diff_to_payload(result), indent=2, ensure_ascii=False))
     else:
         _print_diff_text(result)
+
+
+@app.command()
+def trend(
+    inputs: Annotated[
+        list[Path],
+        typer.Argument(help="Findings JSON files, oldest first (the time axis)."),
+    ],
+    fmt: Annotated[
+        str, typer.Option("--format", "-f", help="Output format: text or json.")
+    ] = "text",
+) -> None:
+    """Analyze how findings evolve across a chronological series of scan reports."""
+    if fmt not in {"text", "json"}:
+        log.error("Unknown trend format %r; choose text or json", fmt)
+        raise typer.Exit(code=2)
+    if not inputs:
+        log.error("Provide at least one findings JSON file")
+        raise typer.Exit(code=2)
+    try:
+        snapshots = [(path.stem, load_findings(path)) for path in inputs]
+    except (OSError, ValueError) as exc:
+        log.error("Failed to load trend inputs: %s", exc)
+        raise typer.Exit(code=2) from exc
+    result = build_trend(snapshots)
+    if fmt == "json":
+        typer.echo(json.dumps(trend_to_payload(result), indent=2, ensure_ascii=False))
+    else:
+        _emit(render_trend_text(result))
 
 
 @app.command()
