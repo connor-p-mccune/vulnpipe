@@ -17,6 +17,7 @@ any scanner runs.
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -46,6 +47,7 @@ from vulnpipe.core.config import (
 from vulnpipe.core.logging import configure_logging, get_logger
 from vulnpipe.core.models import Severity
 from vulnpipe.core.orchestrator import PipelineResult, run_pipeline
+from vulnpipe.core.planner import build_scan_plan, render_plan
 from vulnpipe.processing import FalsePositiveConfig, load_false_positive_config
 from vulnpipe.reporting import (
     SEVERITY_DISPLAY_ORDER,
@@ -241,6 +243,35 @@ def scan(
 
     if not no_gate and result.gate.exit_code != 0:
         raise typer.Exit(code=result.gate.exit_code)
+
+
+@app.command()
+def validate(
+    config: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            "-c",
+            exists=True,
+            dir_okay=False,
+            readable=True,
+            help="Path to the YAML target/scope configuration.",
+        ),
+    ],
+) -> None:
+    """Validate a config and print what would be scanned, without scanning anything."""
+    try:
+        cfg = load_config(config)
+    except (ConfigError, OSError, ValueError, ValidationError) as exc:
+        log.error("%s", exc)
+        raise typer.Exit(code=2) from exc
+    plan = build_scan_plan(cfg)
+    _emit(render_plan(plan))
+    unset = [name for name in plan.secret_env_names if os.environ.get(name) is None]
+    if unset:
+        log.warning("required environment variable(s) not set: %s", ", ".join(unset))
+    if not plan.is_valid:
+        raise typer.Exit(code=1)
 
 
 @app.command()

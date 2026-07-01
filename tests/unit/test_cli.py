@@ -139,6 +139,35 @@ def test_trend_missing_file_exits_nonzero(tmp_path: Path) -> None:
     assert result.exit_code == 2
 
 
+# --------------------------------------------------------------------------- #
+# validate
+# --------------------------------------------------------------------------- #
+def test_validate_in_scope_config_passes(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["validate", "-c", str(_write_config(tmp_path))])
+    assert result.exit_code == 0
+    assert "Scan plan" in result.stdout
+    assert "10.0.0.10" in result.stdout
+    assert "OK:" in result.stdout
+
+
+def test_validate_out_of_scope_config_exits_one(tmp_path: Path) -> None:
+    cfg = tmp_path / "targets.yaml"
+    cfg.write_text(
+        'scope:\n  hosts: ["10.0.0.0/24"]\ntargets:\n  - host: "192.168.1.1"\n',
+        encoding="utf-8",
+    )
+    result = runner.invoke(app, ["validate", "-c", str(cfg)])
+    assert result.exit_code == 1
+    assert "out of scope" in result.stdout
+
+
+def test_validate_bad_config_exits_two(tmp_path: Path) -> None:
+    cfg = tmp_path / "targets.yaml"
+    cfg.write_text("scope: {}\n", encoding="utf-8")  # no targets -> invalid schema
+    result = runner.invoke(app, ["validate", "-c", str(cfg)])
+    assert result.exit_code == 2
+
+
 def test_report_unknown_format_exits_nonzero(tmp_path: Path) -> None:
     result = runner.invoke(app, ["report", "-i", str(_write_report(tmp_path)), "-f", "pdf"])
     assert result.exit_code == 2

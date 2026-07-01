@@ -230,6 +230,9 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
   file, runs the pipeline, writes the canonical JSON report (and optional SARIF / HTML
   / JUnit), and exits non-zero when the gate trips on a newly introduced severe
   finding. Reports are written *before* the gate exit, so CI can still upload them.
+- `validate` — dry-run a config through `core/planner.build_scan_plan` (pure): print
+  the in-scope network/web targets, enrichment sources, and required secret env vars,
+  and exit non-zero if any target is out of scope or the scope allowlist is empty.
 - `report` — render a findings JSON to JSON / HTML / Markdown / CSV / SARIF on stdout.
 - `stats` — print a terminal summary of a findings JSON (severity breakdown, top
   risks, worst-affected hosts) via a fixed-width Rich render.

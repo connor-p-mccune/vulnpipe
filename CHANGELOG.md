@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `trend` CLI command and `ci/trends.py`: analyze a chronological series of findings
   JSONs — per-scan totals and severity mix, findings introduced/resolved between
   scans (matched by fingerprint), and the critical+high backlog direction (text/JSON).
+- `validate` CLI command and `core/planner.py`: a dry run that resolves a config into
+  a scan plan (in-scope network/web targets, enrichment sources, required secret env
+  vars) and flags out-of-scope targets or an empty scope, without scanning.
 
 ### Changed
 - Prioritization now ranks known-exploited (KEV) findings ahead of equally severe

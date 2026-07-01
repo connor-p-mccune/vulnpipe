@@ -455,6 +455,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | Command | What it does |
 | --- | --- |
 | `scan` | Validate authorization/scope, run the pipeline, write reports, and gate. Requires `--config` and `--authorized`. |
+| `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
 | `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / SARIF on stdout (`--input`, `--format`). |
 | `stats` | Print a terminal summary of a findings JSON — severity breakdown, top risks, and worst-affected hosts (`--input`). |
 | `trend` | Analyze how findings evolve across a chronological series of scan JSONs — totals, severity mix, and introduced/resolved deltas (text or JSON). |
