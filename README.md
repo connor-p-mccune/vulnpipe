@@ -73,7 +73,7 @@ Point vulnpipe at an authorized, in-scope range and it will:
   CISA **KEV** (known-exploited-in-the-wild) status — cached on disk, and never
   fabricated (a failed lookup leaves the field unknown);
 - **filter** false positives via an allowlist plus a confidence threshold;
-- **prioritize** by severity → CVSS → EPSS → asset criticality;
+- **prioritize** by severity → known-exploited (KEV) → CVSS → EPSS → asset criticality;
 - **report** to JSON (canonical), HTML (human), and SARIF (the GitHub Security tab);
 - **gate** CI by diffing against a baseline and failing only on *new* severe findings.
 

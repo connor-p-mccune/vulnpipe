@@ -13,6 +13,7 @@ def _f(
     severity: Severity = Severity.MEDIUM,
     cvss: float | None = None,
     epss: float | None = None,
+    kev: bool = False,
     host: str = "10.0.0.5",
 ) -> Finding:
     return make_finding(
@@ -22,6 +23,7 @@ def _f(
         severity=severity,
         cvss_score=cvss,
         epss_score=epss,
+        kev=kev,
     )
 
 
@@ -51,6 +53,30 @@ def test_breaks_severity_ties_by_cvss() -> None:
         ]
     )
     assert [f.title for f in result] == ["higher", "lower"]
+
+
+def test_known_exploited_outranks_within_severity_band() -> None:
+    # Same severity; the KEV (actively exploited) finding must come first, even when
+    # the other has a higher CVSS -- known exploitation outweighs a theoretical score.
+    result = prioritize(
+        [
+            _f("scored-not-exploited", severity=Severity.HIGH, cvss=8.9, kev=False),
+            _f("known-exploited", severity=Severity.HIGH, cvss=7.1, kev=True),
+        ]
+    )
+    assert [f.title for f in result] == ["known-exploited", "scored-not-exploited"]
+
+
+def test_kev_does_not_override_severity() -> None:
+    # A known-exploited Medium still ranks below a (non-exploited) Critical: KEV is a
+    # tie-breaker *within* a severity band, not above it.
+    result = prioritize(
+        [
+            _f("kev-medium", severity=Severity.MEDIUM, kev=True),
+            _f("crit", severity=Severity.CRITICAL, kev=False),
+        ]
+    )
+    assert [f.title for f in result] == ["crit", "kev-medium"]
 
 
 def test_breaks_cvss_ties_by_epss() -> None:

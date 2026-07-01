@@ -6,10 +6,12 @@ layered, each key breaking ties left by the previous one:
 1. **severity** -- the normalized cross-scanner bucket (CVSS-derived for scored
    findings, ZAP-risk-derived otherwise), so a High always outranks a Medium even
    when one side has no CVSS score;
-2. **CVSS base score** -- finer ordering within a severity band;
-3. **EPSS probability** -- how likely the issue is to be exploited;
-4. **asset criticality** -- how important the affected host is (from config);
-5. **fingerprint** -- a stable final tie-breaker so the order is fully reproducible.
+2. **known-exploited (KEV)** -- among equally severe findings, those whose CVE is in
+   the CISA KEV catalog (actively exploited in the wild) surface first;
+3. **CVSS base score** -- finer ordering within a severity band;
+4. **EPSS probability** -- how likely the issue is to be exploited;
+5. **asset criticality** -- how important the affected host is (from config);
+6. **fingerprint** -- a stable final tie-breaker so the order is fully reproducible.
 
 Missing CVSS/EPSS values sort last within their tier: an unknown score is never
 treated as a high one. Pure function -- findings in, a new ordered list out, with
@@ -46,16 +48,19 @@ def _uniform_criticality(_host: str) -> AssetCriticality:
     return AssetCriticality.MEDIUM
 
 
-def _sort_key(finding: Finding, resolve: CriticalityResolver) -> tuple[int, float, float, int, str]:
+def _sort_key(
+    finding: Finding, resolve: CriticalityResolver
+) -> tuple[int, int, float, float, int, str]:
     """Ascending sort key encoding the descending priority order.
 
-    Ranks and scores are negated so a plain ascending sort puts the highest first;
-    the fingerprint stays ascending as the stable final tie-breaker.
+    Ranks, flags, and scores are negated so a plain ascending sort puts the highest
+    first; the fingerprint stays ascending as the stable final tie-breaker.
     """
     cvss = finding.cvss_score if finding.cvss_score is not None else _MISSING_SCORE
     epss = finding.epss_score if finding.epss_score is not None else _MISSING_SCORE
     return (
         -finding.severity.rank,
+        -int(finding.kev),
         -cvss,
         -epss,
         -resolve(finding.host).rank,

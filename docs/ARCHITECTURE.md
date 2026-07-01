@@ -37,7 +37,8 @@ intake → nmap scan → zap scan → enrich (cvss/nvd/epss)
    collapses duplicates by fingerprint (keeping the richest detail from each
    group), the false-positive filter drops allowlisted findings and any below a
    confidence floor (`configs/false_positives.example.yaml`), and prioritization
-   orders by severity, then CVSS, then EPSS, then asset criticality.
+   orders by severity, then known-exploited (KEV) status, then CVSS, then EPSS, then
+   asset criticality.
 6. **report** (`reporting/`) — JSON (canonical), HTML (human), SARIF (CI/dashboards).
 7. **ci diff + gate** (`ci/`) — diff against a baseline (new / persisting /
    resolved) and decide the exit status from a severity policy.
