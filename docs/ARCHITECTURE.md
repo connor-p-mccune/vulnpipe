@@ -141,10 +141,12 @@ the severity/host counts once so the formats cannot drift.
   re-validation and recomputed identically) — so the HTML/SARIF renderers and the CI
   differ read it back rather than re-running scanners.
 - **HTML** (`html_reporter.py` + Jinja2 templates) renders a summary with severity
-  counts, an inline SVG severity chart (bar geometry computed by a pure, tested
-  helper), a per-host breakdown, and a client-side sortable findings table.
-  Autoescaping is on, so scanner evidence such as a reflected `<script>` payload is
-  shown as inert text, never live markup.
+  counts and a known-exploited (KEV) count, an inline SVG severity chart (bar
+  geometry computed by a pure, tested helper), a per-host breakdown that highlights
+  known-exploited findings, and a client-side **filterable** (search + severity +
+  KEV-only) and sortable findings table with risk-score and KEV columns. Autoescaping
+  is on, so scanner evidence such as a reflected `<script>` payload is shown as inert
+  text, never live markup.
 - **SARIF** (`sarif_reporter.py`) emits SARIF 2.1.0 for the GitHub Security tab: one
   rule per distinct check, severity mapped to `level`, the finding fingerprint under
   `partialFingerprints` for stable cross-run tracking, and a `security-severity`

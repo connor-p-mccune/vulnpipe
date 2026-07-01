@@ -12,6 +12,7 @@ from vulnpipe.reporting.html_reporter import (
     HtmlReporter,
     build_severity_chart,
     render_html,
+    risk_css,
 )
 from vulnpipe.reporting.summary import SEVERITY_DISPLAY_ORDER, severity_counts
 
@@ -124,3 +125,46 @@ def test_render_empty_findings_does_not_error() -> None:
 
 def test_reporter_name() -> None:
     assert HtmlReporter.name == "html"
+
+
+# --------------------------------------------------------------------------- #
+# Risk band coloring + KEV surfacing
+# --------------------------------------------------------------------------- #
+def test_risk_css_bands() -> None:
+    assert risk_css(95) == "sev-critical"
+    assert risk_css(70) == "sev-high"
+    assert risk_css(40) == "sev-medium"
+    assert risk_css(10) == "sev-low"
+    assert risk_css(0) == "sev-informational"
+
+
+def _kev_finding() -> Finding:
+    return make_finding(
+        source="nmap",
+        host="10.0.0.5",
+        title="CVE-2021-42013",
+        severity=Severity.CRITICAL,
+        port=80,
+        plugin_id="vulners",
+        cve_ids=["CVE-2021-42013"],
+        cvss_score=9.8,
+        epss_score=0.94,
+        kev=True,
+    )
+
+
+def test_render_surfaces_kev_and_risk() -> None:
+    html = render_html([_kev_finding()])
+    assert "known-exploited" in html  # the summary card label
+    assert "Known-exploited" in html  # the per-host KEV badge
+    assert "badge-kev" in html
+    assert 'id="severity-filter"' in html  # the interactive filter toolbar
+    assert 'id="kev-only"' in html
+    # EPSS is rendered as a percentage in the table.
+    assert "94.0%" in html
+
+
+def test_render_marks_kev_rows() -> None:
+    html = render_html([_kev_finding()])
+    assert 'data-kev="1"' in html
+    assert 'data-severity="critical"' in html

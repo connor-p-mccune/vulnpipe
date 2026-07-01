@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prioritized findings table with risk score, CVSS, EPSS, and a KEV marker.
 - CSV report format (`report --format csv`) — one row per finding for a spreadsheet
   or data-frame; columns mirror the JSON fields plus fingerprint and risk score.
+- HTML report: a known-exploited summary card, KEV highlighting in the per-host
+  breakdown, risk-score and KEV columns, EPSS shown as a percentage, and a
+  client-side filter toolbar (search, severity, known-exploited-only).
+- `scripts/regenerate_examples.py` to rebuild the committed sample reports (now also
+  emitting Markdown and CSV) deterministically from the fixtures.
 
 ### Changed
 - Prioritization now ranks known-exploited (KEV) findings ahead of equally severe

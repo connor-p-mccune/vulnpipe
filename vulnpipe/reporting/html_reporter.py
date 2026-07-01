@@ -82,6 +82,25 @@ class SeverityChart:
     bars: tuple[ChartBar, ...]
 
 
+# Risk-score band thresholds, mapped onto the shared severity color classes so the
+# risk badge reads on the same palette as everything else in the report.
+_RISK_BANDS: tuple[tuple[int, str], ...] = (
+    (90, "sev-critical"),
+    (70, "sev-high"),
+    (40, "sev-medium"),
+    (10, "sev-low"),
+    (0, "sev-informational"),
+)
+
+
+def risk_css(score: int) -> str:
+    """Return the CSS severity class coloring a risk-score badge for ``score``."""
+    for floor, css_class in _RISK_BANDS:
+        if score >= floor:
+            return css_class
+    return "sev-informational"
+
+
 def build_severity_chart(counts: dict[Severity, int]) -> SeverityChart:
     """Compute the SVG geometry for a severity bar chart from ``counts``.
 
@@ -141,6 +160,8 @@ def render_html(findings: Iterable[Finding]) -> str:
         chart=build_severity_chart(counts),
         host_groups=group_by_host(items),
         findings=items,
+        kev_count=sum(1 for finding in items if finding.kev),
+        risk_css=risk_css,
     )
 
 
@@ -161,4 +182,5 @@ __all__ = [
     "SeverityStyle",
     "build_severity_chart",
     "render_html",
+    "risk_css",
 ]

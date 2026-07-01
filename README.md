@@ -310,7 +310,7 @@ are stable across runs.
 | Format | Use |
 | --- | --- |
 | **JSON** | The canonical, lossless artifact. `scan` writes `results/latest.json`; `report` / `diff` / `baseline` read it back. |
-| **HTML** | The human-readable report: summary, inline SVG severity chart, per-host breakdown, and a client-side sortable findings table. |
+| **HTML** | The human-readable report: summary (with a known-exploited count), inline SVG severity chart, per-host breakdown, and a client-side filterable + sortable findings table with risk-score and KEV columns. |
 | **Markdown** | A pull-request / Slack–friendly summary: headline totals, a severity table, and a prioritized findings table with risk score, CVSS, EPSS, and a KEV marker. |
 | **CSV** | One row per finding for a spreadsheet or data-frame — columns mirror the JSON fields (plus fingerprint and risk score). |
 | **SARIF** | SARIF 2.1.0 for the GitHub code-scanning / Security tab. |
@@ -331,24 +331,27 @@ synthetic lab data) lives in [`examples/`](examples/):
 - [`examples/sample-report.html`](examples/sample-report.html) — open it in a browser
 - [`examples/sample-report.json`](examples/sample-report.json) — the canonical JSON
 
-It holds 15 findings across 4 hosts, in vulnpipe's prioritized order:
+It holds 15 findings across 4 hosts, in vulnpipe's prioritized order. Two are
+**known-exploited** (in the CISA KEV catalog), so they lead their severity band even
+when another finding scores higher on CVSS alone — and each carries a composite
+`risk_score` (0–100):
 
 ```text
-SEVERITY      CVSS  SOURCE  HOST                  TITLE
-critical       9.8  nmap    10.0.0.5              CVE-2021-42013
-high           7.7  nmap    10.0.0.6              CVE-2021-23017
-high           7.5  nmap    10.0.0.5              CVE-2016-10009
-high           7.5  nmap    10.0.0.5              CVE-2021-41773
-high            –   zap     app.lab.example.com   SQL Injection
-high            –   zap     app.lab.example.com   Cross Site Scripting (Reflected)
-medium         5.3  nmap    10.0.0.5              CVE-2018-15473
-medium          –   zap     app.lab.example.com   Vulnerable JS Library
-low             –   zap     app.lab.example.com   Application Error Disclosure
+SEVERITY      RISK  KEV  CVSS  SOURCE  HOST                  TITLE
+critical        98   ⚠   9.8  nmap    10.0.0.5              CVE-2021-42013
+high            75   ⚠   7.5  nmap    10.0.0.5              CVE-2021-41773
+high            54       7.7  nmap    10.0.0.6              CVE-2021-23017
+high            52       7.5  nmap    10.0.0.5              CVE-2016-10009
+high            56        –   zap     app.lab.example.com   SQL Injection
+high            56        –   zap     app.lab.example.com   Cross Site Scripting (Reflected)
+medium          37       5.3  nmap    10.0.0.5              CVE-2018-15473
+medium          35        –   zap     app.lab.example.com   Vulnerable JS Library
+low              –        –   zap     app.lab.example.com   Application Error Disclosure
 …
 ```
 
 The canonical JSON is an envelope of `schema_version`, tool identity, a summary, and
-every finding with its fingerprint:
+every finding with its fingerprint and computed risk score:
 
 ```jsonc
 {
@@ -369,7 +372,9 @@ every finding with its fingerprint:
       "plugin_id": "vulners",
       "cve_ids": ["CVE-2021-42013"],
       "cvss_score": 9.8,
-      "fingerprint": "741786901e8421ee…"
+      "kev": true,
+      "fingerprint": "741786901e8421ee…",
+      "risk_score": 98
     }
     // …
   ]

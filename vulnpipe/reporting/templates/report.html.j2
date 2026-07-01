@@ -25,12 +25,19 @@
     .sev-medium { background: #ef6c00; }
     .sev-low { background: #f9a825; color: #1b1b1b; }
     .sev-informational { background: #1565c0; }
+    .badge-kev {
+      background: #111; color: #fff; border: 1px solid #c62828; font-weight: 600;
+    }
     .cards { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
     .card {
       background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
       padding: .75rem 1.25rem; min-width: 8rem;
     }
     .card .num { font-size: 1.8rem; font-weight: 600; }
+    .card.kev { border-color: #c62828; }
+    .card.kev .num { color: #c62828; }
+    .card.kev.zero { border-color: #e0e0e0; }
+    .card.kev.zero .num { color: #1b1b1b; }
     svg { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: .5rem; }
     .chart-label { font-size: 13px; fill: #1b1b1b; }
     .chart-count { font-size: 13px; fill: #1b1b1b; font-weight: 600; }
@@ -40,8 +47,18 @@
     }
     ul.host-findings { list-style: none; padding: 0; margin: .5rem 0 0; }
     ul.host-findings li { padding: .35rem 0; border-top: 1px solid #f0f0f0; }
+    ul.host-findings li.kev { border-left: 3px solid #c62828; padding-left: .5rem; }
     .evidence { margin: .2rem 0 0 .25rem; font-size: .85rem; color: #444; }
     .evidence code { background: #f3f3f3; padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: .25rem 0 .75rem;
+    }
+    .toolbar input[type="search"], .toolbar select {
+      font: inherit; padding: .35rem .5rem; border: 1px solid #ccc; border-radius: 6px; background: #fff;
+    }
+    .toolbar input[type="search"] { min-width: 14rem; }
+    .toolbar label { font-size: .9rem; display: inline-flex; align-items: center; gap: .3rem; }
+    #visible-count { color: #6b6b6b; font-size: .85rem; margin-left: auto; }
     table.findings { border-collapse: collapse; width: 100%; background: #fff; font-size: .9rem; }
     table.findings th, table.findings td {
       text-align: left; padding: .45rem .6rem; border-bottom: 1px solid #ececec;
@@ -49,6 +66,10 @@
     table.findings thead th { background: #f0f0f0; cursor: pointer; user-select: none; position: sticky; top: 0; }
     table.findings thead th::after { content: " \2195"; color: #9a9a9a; font-size: .8em; }
     table.findings tbody tr:hover { background: #f7f7ff; }
+    table.findings tbody tr.kev { background: #fff5f5; }
+    table.findings tbody tr.kev:hover { background: #ffecec; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .risk-badge { min-width: 2.2rem; text-align: center; }
     .empty { padding: 2rem; text-align: center; color: #6b6b6b; }
   </style>
 </head>
@@ -62,6 +83,9 @@
   <div class="cards">
     <div class="card"><div class="num">{{ summary.total }}</div><div class="muted">findings</div></div>
     <div class="card"><div class="num">{{ summary.host_count }}</div><div class="muted">hosts</div></div>
+    <div class="card kev{{ '' if kev_count else ' zero' }}" title="CVEs in the CISA Known Exploited Vulnerabilities catalog">
+      <div class="num">{{ kev_count }}</div><div class="muted">known-exploited</div>
+    </div>
   </div>
   <div class="badges">
     {% for severity in severity_order %}
@@ -92,8 +116,10 @@
       </div>
       <ul class="host-findings">
         {% for finding in group.findings %}
-        <li>
+        <li{% if finding.kev %} class="kev"{% endif %}>
           <span class="badge {{ styles[finding.severity].css_class }}">{{ styles[finding.severity].label }}</span>
+          <span class="badge risk-badge {{ risk_css(finding.risk_score) }}" title="Composite risk score (0-100)">{{ finding.risk_score }}</span>
+          {% if finding.kev %}<span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888; Known-exploited</span>{% endif %}
           <strong>{{ finding.title }}</strong>{% if finding.port is not none %} <span class="muted">:{{ finding.port }}</span>{% endif %}
           {% if finding.evidence %}<div class="evidence">Evidence: <code>{{ finding.evidence }}</code></div>{% endif %}
         </li>
@@ -106,30 +132,45 @@
   {% endif %}
 
   <h2>All findings</h2>
+  <div class="toolbar">
+    <input type="search" id="search" placeholder="Filter findings&hellip;" aria-label="Filter findings">
+    <select id="severity-filter" aria-label="Filter by severity">
+      <option value="">All severities</option>
+      {% for severity in severity_order %}
+      <option value="{{ severity.value }}">{{ styles[severity].label }}</option>
+      {% endfor %}
+    </select>
+    <label><input type="checkbox" id="kev-only"> Known-exploited only</label>
+    <span id="visible-count"></span>
+  </div>
   <table class="findings" id="findings-table">
     <thead>
       <tr>
         <th data-type="number">Severity</th>
+        <th data-type="number">Risk</th>
         <th data-type="text">Host</th>
         <th data-type="number">Port</th>
         <th data-type="text">Title</th>
         <th data-type="text">CVEs</th>
         <th data-type="number">CVSS</th>
         <th data-type="number">EPSS</th>
+        <th data-type="number">KEV</th>
         <th data-type="text">Confidence</th>
         <th data-type="text">Source</th>
       </tr>
     </thead>
     <tbody>
       {% for finding in findings %}
-      <tr>
+      <tr data-severity="{{ finding.severity.value }}" data-kev="{{ 1 if finding.kev else 0 }}">
         <td data-sort="{{ finding.severity.rank }}"><span class="badge {{ styles[finding.severity].css_class }}">{{ styles[finding.severity].label }}</span></td>
+        <td class="num" data-sort="{{ finding.risk_score }}"><span class="badge risk-badge {{ risk_css(finding.risk_score) }}">{{ finding.risk_score }}</span></td>
         <td>{{ finding.host }}</td>
-        <td data-sort="{{ finding.port if finding.port is not none else -1 }}">{{ finding.port if finding.port is not none else "" }}</td>
+        <td class="num" data-sort="{{ finding.port if finding.port is not none else -1 }}">{{ finding.port if finding.port is not none else "" }}</td>
         <td>{{ finding.title }}</td>
         <td>{{ finding.cve_ids | join(", ") }}</td>
-        <td data-sort="{{ finding.cvss_score if finding.cvss_score is not none else -1 }}">{{ "%.1f" | format(finding.cvss_score) if finding.cvss_score is not none else "" }}</td>
-        <td data-sort="{{ finding.epss_score if finding.epss_score is not none else -1 }}">{{ "%.4f" | format(finding.epss_score) if finding.epss_score is not none else "" }}</td>
+        <td class="num" data-sort="{{ finding.cvss_score if finding.cvss_score is not none else -1 }}">{{ "%.1f" | format(finding.cvss_score) if finding.cvss_score is not none else "" }}</td>
+        <td class="num" data-sort="{{ finding.epss_score if finding.epss_score is not none else -1 }}">{{ "%.1f%%" | format(finding.epss_score * 100) if finding.epss_score is not none else "" }}</td>
+        <td class="num" data-sort="{{ 1 if finding.kev else 0 }}">{% if finding.kev %}<span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888;</span>{% endif %}</td>
         <td>{{ finding.confidence.value if finding.confidence is not none else "" }}</td>
         <td>{{ finding.source }}</td>
       </tr>
@@ -141,6 +182,8 @@
     (function () {
       var table = document.getElementById("findings-table");
       if (!table) { return; }
+
+      // --- column sorting ------------------------------------------------- //
       var headers = table.tHead.rows[0].cells;
       for (var i = 0; i < headers.length; i++) {
         (function (column) {
@@ -167,6 +210,34 @@
         });
         for (var i = 0; i < rows.length; i++) { body.appendChild(rows[i]); }
       }
+
+      // --- filtering ------------------------------------------------------ //
+      var search = document.getElementById("search");
+      var severityFilter = document.getElementById("severity-filter");
+      var kevOnly = document.getElementById("kev-only");
+      var counter = document.getElementById("visible-count");
+      var allRows = Array.prototype.slice.call(table.tBodies[0].rows);
+
+      function applyFilters() {
+        var q = search.value.toLowerCase();
+        var sev = severityFilter.value;
+        var kev = kevOnly.checked;
+        var shown = 0;
+        for (var i = 0; i < allRows.length; i++) {
+          var row = allRows[i];
+          var matchText = q === "" || row.textContent.toLowerCase().indexOf(q) !== -1;
+          var matchSev = sev === "" || row.getAttribute("data-severity") === sev;
+          var matchKev = !kev || row.getAttribute("data-kev") === "1";
+          var visible = matchText && matchSev && matchKev;
+          row.style.display = visible ? "" : "none";
+          if (visible) { shown++; }
+        }
+        counter.textContent = "showing " + shown + " of " + allRows.length + " findings";
+      }
+      search.addEventListener("input", applyFilters);
+      severityFilter.addEventListener("change", applyFilters);
+      kevOnly.addEventListener("change", applyFilters);
+      applyFilters();
     })();
   </script>
 </body>
