@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `validate` CLI command and `core/planner.py`: a dry run that resolves a config into
   a scan plan (in-scope network/web targets, enrichment sources, required secret env
   vars) and flags out-of-scope targets or an empty scope, without scanning.
+- A reusable composite GitHub Action (`action.yml`) that installs vulnpipe, runs an
+  authorized scan, and gates the build — with inputs passed through the environment
+  (never interpolated into the shell) to avoid command injection.
 
 ### Changed
 - Prioritization now ranks known-exploited (KEV) findings ahead of equally severe

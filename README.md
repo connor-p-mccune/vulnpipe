@@ -426,6 +426,30 @@ A ready-to-adapt GitHub Actions workflow lives at
 runs an authorized scan, uploads the SARIF to code scanning, publishes the JUnit
 gate report, and carries the baseline forward across runs via the Actions cache.
 
+### Use as a GitHub Action
+
+vulnpipe also ships a reusable composite action ([`action.yml`](action.yml)), so a
+workflow can run a scan and gate the build in a few lines — it sets up Python,
+installs vulnpipe, runs the scan, and fails the job on a new severe finding:
+
+```yaml
+- uses: connor-p-mccune/vulnpipe@v1
+  with:
+    config: configs/targets.yaml
+    authorized: "true"          # you are authorized to scan every in-scope target
+    gate-severity: high
+    baseline: baseline.json      # optional: gate only on regressions
+    sarif: results/vulnpipe.sarif
+- uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: results/vulnpipe.sarif
+```
+
+Inputs are passed through the environment inside the action, never interpolated into
+the shell, so untrusted values can't inject commands. The action wraps the CLI, so
+provision the `nmap` binary and/or a ZAP daemon in the job as your targets require.
+
 ## Run via Docker
 
 The bundled compose stack brings up an OWASP ZAP daemon and the scanner on a shared
