@@ -1,9 +1,10 @@
 # Continuous integration: the project's own quality gates.
 #
 # Runs lint + type checks, the unit suite across the supported Python versions,
-# and the integration suite (which needs the nmap binary on PATH). This enforces
-# on every push / PR exactly the four gates the project requires locally:
-# `ruff check`, `black --check`, `mypy vulnpipe`, and `pytest`.
+# a CLI smoke test against the installed console script, and the integration
+# suite (which needs the nmap binary on PATH). This enforces on every push / PR
+# exactly the four gates the project requires locally: `ruff check`,
+# `black --check`, `mypy vulnpipe`, and `pytest`.
 
 name: CI
 
@@ -60,6 +61,32 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  cli-smoke:
+    name: cli smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      # Install the built package (not editable) so this exercises the real
+      # console-script entry point and packaging, not just the source tree.
+      - run: pip install .
+      - name: Exercise the CLI end to end
+        run: |
+          set -euxo pipefail
+          vulnpipe version
+          vulnpipe schema > /dev/null
+          vulnpipe validate -c configs/targets.lab.yaml
+          for fmt in json html markdown csv prometheus sarif; do
+            vulnpipe report -i examples/sample-report.json -f "$fmt" > /dev/null
+          done
+          vulnpipe stats -i examples/sample-report.json > /dev/null
+          vulnpipe diff --baseline examples/sample-report.json --current examples/sample-report.json
+          vulnpipe trend examples/sample-report.json > /dev/null
 
   integration:
     name: integration
