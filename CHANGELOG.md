@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Risk-score CI gating: `scan --gate-risk-score N` (and a matching GitHub Action
+  input) fails the build on a new finding whose composite risk score is at least `N`,
+  in addition to the severity gate — so an actively-exploited Medium can fail CI even
+  though it sits below the severity bar.
+
 ## [0.2.0] - 2026-07-01
 
 Risk intelligence and integrations: known-exploited (KEV) cross-referencing, a

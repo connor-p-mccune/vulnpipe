@@ -19,8 +19,23 @@ from vulnpipe.core.models import Finding, Severity
 from vulnpipe.processing.normalizer import make_finding
 
 
-def _f(title: str, severity: Severity, *, host: str = "10.0.0.10") -> Finding:
-    return make_finding(source="nmap", host=host, title=title, severity=severity, plugin_id="p")
+def _f(
+    title: str,
+    severity: Severity,
+    *,
+    host: str = "10.0.0.10",
+    cvss: float | None = None,
+    kev: bool = False,
+) -> Finding:
+    return make_finding(
+        source="nmap",
+        host=host,
+        title=title,
+        severity=severity,
+        plugin_id="p",
+        cvss_score=cvss,
+        kev=kev,
+    )
 
 
 def test_default_threshold_is_high() -> None:
@@ -79,6 +94,38 @@ def test_threshold_is_configurable() -> None:
     assert evaluate_gate(diff, threshold=Severity.CRITICAL).exit_code == 0
     # Lowering it to Medium fails on the same High.
     assert evaluate_gate(diff, threshold=Severity.MEDIUM).exit_code == 1
+
+
+def test_risk_score_threshold_fails_below_severity_bar() -> None:
+    # A new Medium that is below the severity bar but has a high risk score
+    # (KEV-driven) trips the gate once a risk threshold is set.
+    medium_kev = _f("exploited-medium", Severity.MEDIUM, cvss=6.9, kev=True)
+    assert medium_kev.risk_score >= 60
+    diff = diff_findings([medium_kev], build_baseline([]))
+    assert evaluate_gate(diff).exit_code == 0  # severity gate alone passes
+    result = evaluate_gate(diff, min_risk_score=60)
+    assert result.exit_code == 1
+    assert [f.title for f in result.triggering] == ["exploited-medium"]
+    assert "risk >= 60" in result.summary
+
+
+def test_risk_score_threshold_not_met_passes() -> None:
+    low = _f("minor", Severity.LOW, cvss=2.0)
+    diff = diff_findings([low], build_baseline([]))
+    result = evaluate_gate(diff, min_risk_score=80)
+    assert result.passed is True
+    assert "risk >= 80" in result.summary  # criterion is reported even when it passes
+
+
+def test_severity_and_risk_criteria_union() -> None:
+    current = [
+        _f("new-high", Severity.HIGH),  # trips on severity
+        _f("exploited-medium", Severity.MEDIUM, cvss=6.9, kev=True),  # trips on risk
+        _f("quiet-low", Severity.LOW, cvss=1.0),  # trips on neither
+    ]
+    result = evaluate_gate(diff_findings(current, build_baseline([])), min_risk_score=60)
+    assert result.exit_code == 1
+    assert [f.title for f in result.triggering] == ["new-high", "exploited-medium"]
 
 
 def test_triggering_preserves_diff_order() -> None:

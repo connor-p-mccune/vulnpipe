@@ -193,7 +193,9 @@ After reporting, the CI stage (`ci/`) turns findings into a build verdict.
   **resolved** (in the baseline but gone from the scan). `new` / `persisting` keep the
   prioritized order; `resolved` follows the baseline order, so the diff is deterministic.
 - **Gate** (`gate.py`) fails the build when any **new** finding meets or exceeds a
-  configured severity (High by default). Persisting (baselined) findings are exempt —
+  configured severity (High by default) *or*, optionally, a composite risk-score
+  threshold (`--gate-risk-score`), so an actively-exploited Medium can fail CI even
+  though it sits below the severity bar. Persisting (baselined) findings are exempt —
   that is the whole point of a baseline. The verdict is exposed as a process
   `exit_code` so a CI job exits non-zero exactly when a regression is introduced.
 - **JUnit** (`junit.py`) renders the verdict as JUnit XML: every current finding is a

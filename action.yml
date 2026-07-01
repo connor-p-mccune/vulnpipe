@@ -22,6 +22,10 @@ inputs:
     description: Fail the job on a new finding at or above this severity.
     required: false
     default: high
+  gate-risk-score:
+    description: Also fail on a new finding with a composite risk score at or above this (0-100; empty to skip).
+    required: false
+    default: ""
   baseline:
     description: Baseline file to diff and gate against (optional; gate only on regressions).
     required: false
@@ -76,6 +80,7 @@ runs:
         VP_OUTPUT: ${{ inputs.output-dir }}
         VP_AUTHORIZED: ${{ inputs.authorized }}
         VP_GATE: ${{ inputs.gate-severity }}
+        VP_GATE_RISK: ${{ inputs.gate-risk-score }}
         VP_BASELINE: ${{ inputs.baseline }}
         VP_FALSE_POSITIVES: ${{ inputs.false-positives }}
         VP_SARIF: ${{ inputs.sarif }}
@@ -84,6 +89,7 @@ runs:
         set -euo pipefail
         args=(scan --config "$VP_CONFIG" --output "$VP_OUTPUT" --gate-severity "$VP_GATE")
         if [ "$VP_AUTHORIZED" = "true" ]; then args+=(--authorized); fi
+        if [ -n "$VP_GATE_RISK" ]; then args+=(--gate-risk-score "$VP_GATE_RISK"); fi
         if [ -n "$VP_BASELINE" ]; then args+=(--baseline "$VP_BASELINE"); fi
         if [ -n "$VP_FALSE_POSITIVES" ]; then args+=(--false-positives "$VP_FALSE_POSITIVES"); fi
         if [ -n "$VP_SARIF" ]; then args+=(--sarif "$VP_SARIF"); fi

@@ -282,6 +282,22 @@ def test_scan_writes_reports_and_passes(tmp_path: Path, monkeypatch: pytest.Monk
     assert (out / "report.md").is_file()
 
 
+def test_scan_accepts_gate_risk_score(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def _capture(*_args: object, **kwargs: object) -> PipelineResult:
+        captured.update(kwargs)
+        return _result([_f("Low issue", severity=Severity.LOW)])
+
+    monkeypatch.setattr(cli_main, "run_pipeline", _capture)
+    result = runner.invoke(
+        app,
+        ["scan", "-c", str(_write_config(tmp_path)), "--authorized", "--gate-risk-score", "80"],
+    )
+    assert result.exit_code == 0
+    assert captured["gate_min_risk_score"] == 80
+
+
 def test_scan_gate_failure_exits_nonzero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_pipeline(monkeypatch, _result([_f("RCE", severity=Severity.HIGH)]))
     out = tmp_path / "out"

@@ -393,8 +393,10 @@ stored **baseline** of accepted findings (matched by fingerprint):
 - **resolved** — in the baseline but gone from the scan.
 
 The **gate** fails the build only when a *new* finding meets or exceeds the
-configured severity (default `high`), so existing accepted issues don't break CI —
-only regressions do.
+configured severity (default `high`) — or, with `--gate-risk-score N`, a composite
+risk score of at least `N` — so existing accepted issues don't break CI, only
+regressions do. Risk-score gating lets an actively-exploited (KEV) Medium fail the
+build even though it sits below the severity bar.
 
 ```bash
 # Establish a baseline from an accepted scan.

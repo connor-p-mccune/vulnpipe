@@ -201,6 +201,15 @@ def scan(
         Severity,
         typer.Option("--gate-severity", help="Fail on a new finding at or above this severity."),
     ] = DEFAULT_GATE_SEVERITY,
+    gate_risk_score: Annotated[
+        int | None,
+        typer.Option(
+            "--gate-risk-score",
+            min=0,
+            max=100,
+            help="Also fail on a new finding with a composite risk score at or above this.",
+        ),
+    ] = None,
     false_positives: Annotated[
         Path | None,
         typer.Option(
@@ -246,6 +255,7 @@ def scan(
         allowlist=allowlist,
         baseline=base,
         gate_threshold=gate_severity,
+        gate_min_risk_score=gate_risk_score,
     )
     _write_reports(result, output=output, sarif=sarif, html=html, markdown=markdown, junit=junit)
     _log_summary(result)

@@ -224,6 +224,7 @@ def run_pipeline(
     allowlist: FalsePositiveConfig | None = None,
     baseline: Baseline | None = None,
     gate_threshold: Severity = DEFAULT_GATE_SEVERITY,
+    gate_min_risk_score: int | None = None,
     enrichment: EnrichmentClients | None = None,
     run_network: NetworkScan | None = None,
     run_web: WebScan | None = None,
@@ -264,7 +265,7 @@ def run_pipeline(
 
     effective_baseline = baseline if baseline is not None else Baseline()
     diff = diff_findings(prioritized, effective_baseline)
-    gate = evaluate_gate(diff, threshold=gate_threshold)
+    gate = evaluate_gate(diff, threshold=gate_threshold, min_risk_score=gate_min_risk_score)
     log_event(
         _log,
         logging.INFO,
