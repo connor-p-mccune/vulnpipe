@@ -79,6 +79,24 @@ processing produce new findings via `model_copy`, leaving the fingerprint intact
 `Severity` and `Confidence` are ordered enums (`.rank`). `Severity.from_cvss_score`
 applies the FIRST CVSS v3 qualitative bands.
 
+### Composite risk score
+
+Every finding also exposes a computed `risk_score` (0–100) — a single, transparent
+number that blends **impact** and **likelihood** so reports can rank issues by
+real-world urgency, not severity alone:
+
+- **impact** is the CVSS base score (`cvss_score / 10`) when known, else a
+  per-severity fallback (so an unscored finding still gets a number);
+- **likelihood** is `1.0` when the CVE is in the CISA KEV catalog (actively
+  exploited), else the EPSS probability, else `0.0` — a conservative floor.
+
+Likelihood modulates impact between a 0.7 base weight and full weight
+(`compute_risk_score`), so a serious-but-unexploited issue still scores within its
+band while active exploitation pushes it to the top. Like the fingerprint, it is
+computed and output-only: it appears in every report format but is stripped on JSON
+round-trip and never feeds the fingerprint. Nothing is fabricated — it is a
+documented function of fields already on the finding, not a new data source.
+
 ### Lifecycle of a finding
 
 A finding is created once, in a scanner, and from then on is only ever *copied* —

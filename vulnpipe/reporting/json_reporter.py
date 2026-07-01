@@ -27,7 +27,7 @@ REPORT_SCHEMA_VERSION = "1.0"
 
 #: Model fields that are computed/output-only and must be dropped before a finding
 #: dict is validated back into a :class:`Finding` (``extra="forbid"`` rejects them).
-_COMPUTED_FIELDS = frozenset({"fingerprint"})
+_COMPUTED_FIELDS = frozenset({"fingerprint", "risk_score"})
 
 
 def build_report(findings: Iterable[Finding]) -> dict[str, Any]:

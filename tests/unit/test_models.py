@@ -11,6 +11,7 @@ from vulnpipe.core.models import (
     Service,
     Severity,
     compute_fingerprint,
+    compute_risk_score,
     normalize_title,
 )
 
@@ -117,3 +118,66 @@ def test_finding_rejects_out_of_range_scores() -> None:
         Finding(source="nmap", host="10.0.0.5", title="X", cvss_score=11.0)
     with pytest.raises(ValidationError):
         Finding(source="nmap", host="10.0.0.5", title="X", epss_score=2.0)
+
+
+# --------------------------------------------------------------------------- #
+# Composite risk score
+# --------------------------------------------------------------------------- #
+def test_risk_score_is_bounded() -> None:
+    for score in (
+        compute_risk_score(severity=Severity.CRITICAL, cvss_score=10.0, epss_score=1.0, kev=True),
+        compute_risk_score(
+            severity=Severity.INFORMATIONAL, cvss_score=None, epss_score=None, kev=False
+        ),
+    ):
+        assert 0 <= score <= 100
+
+
+def test_risk_score_informational_without_impact_is_zero() -> None:
+    # No impact (info, no CVSS) -> zero risk even if flagged known-exploited.
+    assert (
+        compute_risk_score(
+            severity=Severity.INFORMATIONAL, cvss_score=None, epss_score=None, kev=True
+        )
+        == 0
+    )
+
+
+def test_risk_score_kev_outweighs_epss() -> None:
+    high = Severity.HIGH
+    kev = compute_risk_score(severity=high, cvss_score=7.5, epss_score=None, kev=True)
+    epss_high = compute_risk_score(severity=high, cvss_score=7.5, epss_score=0.9, kev=False)
+    epss_none = compute_risk_score(severity=high, cvss_score=7.5, epss_score=None, kev=False)
+    # A KEV listing forces full likelihood, so it dominates the EPSS-only cases.
+    assert kev > epss_high > epss_none
+
+
+def test_risk_score_rises_with_cvss_and_epss() -> None:
+    low = compute_risk_score(severity=Severity.HIGH, cvss_score=7.0, epss_score=0.1, kev=False)
+    high = compute_risk_score(severity=Severity.HIGH, cvss_score=8.9, epss_score=0.8, kev=False)
+    assert high > low
+
+
+def test_risk_score_uses_severity_fallback_without_cvss() -> None:
+    # A ZAP high with no CVSS still scores in its band via the severity fallback.
+    scored = compute_risk_score(severity=Severity.HIGH, cvss_score=None, epss_score=None, kev=False)
+    assert scored > compute_risk_score(
+        severity=Severity.LOW, cvss_score=None, epss_score=None, kev=False
+    )
+
+
+def test_finding_risk_score_is_computed_and_not_fingerprinted() -> None:
+    finding = Finding(
+        source="nmap", host="10.0.0.5", title="X", severity=Severity.CRITICAL, cvss_score=9.8
+    )
+    assert finding.risk_score == compute_risk_score(
+        severity=Severity.CRITICAL, cvss_score=9.8, epss_score=None, kev=False
+    )
+    flagged = finding.model_copy(update={"kev": True})
+    assert flagged.risk_score > finding.risk_score  # KEV raises risk
+    assert flagged.fingerprint == finding.fingerprint  # but not identity
+
+
+def test_finding_serializes_risk_score() -> None:
+    finding = Finding(source="nmap", host="10.0.0.5", title="X", cvss_score=5.0)
+    assert finding.model_dump(mode="json")["risk_score"] == finding.risk_score

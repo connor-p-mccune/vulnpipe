@@ -125,6 +125,51 @@ def normalize_title(title: str) -> str:
     return " ".join(title.split()).lower()
 
 
+#: Fallback "impact" weight (0..1) for a finding with no CVSS score, by severity
+#: band. A real CVSS base score is always preferred; this only fills the gap so a
+#: scored and an unscored finding both receive a risk number.
+_SEVERITY_IMPACT: dict["Severity", float] = {
+    Severity.INFORMATIONAL: 0.0,
+    Severity.LOW: 0.2,
+    Severity.MEDIUM: 0.5,
+    Severity.HIGH: 0.8,
+    Severity.CRITICAL: 0.95,
+}
+
+#: Share of the risk score carried by technical impact alone; the remainder is
+#: unlocked by exploitation likelihood (EPSS probability, or a KEV listing).
+_RISK_IMPACT_BASE = 0.7
+
+
+def compute_risk_score(
+    *,
+    severity: "Severity",
+    cvss_score: float | None,
+    epss_score: float | None,
+    kev: bool,
+) -> int:
+    """Compute a transparent composite risk score in ``[0, 100]``.
+
+    The score blends two axes already present on a finding:
+
+    * **impact** -- how damaging the issue is, from the CVSS base score
+      (``cvss_score / 10``) when known, otherwise a per-severity fallback so an
+      unscored finding still gets a number;
+    * **likelihood** -- how likely it is to be exploited: ``1.0`` when the CVE is in
+      the CISA KEV catalog (actively exploited), otherwise the EPSS probability, or
+      ``0.0`` when neither is known (a conservative floor, never a guess).
+
+    Likelihood modulates impact between :data:`_RISK_IMPACT_BASE` and full weight, so
+    a serious-but-unexploited issue still scores within its band while active
+    exploitation pushes it toward the top. Nothing here is fabricated: it is a
+    documented function of fields already on the finding, not a new data source.
+    """
+    impact = cvss_score / 10.0 if cvss_score is not None else _SEVERITY_IMPACT[severity]
+    likelihood = 1.0 if kev else (epss_score if epss_score is not None else 0.0)
+    risk = impact * (_RISK_IMPACT_BASE + (1.0 - _RISK_IMPACT_BASE) * likelihood)
+    return max(0, min(100, round(risk * 100)))
+
+
 def compute_fingerprint(
     *,
     host: str,
@@ -244,6 +289,22 @@ class Finding(BaseModel):
             title=self.title,
         )
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def risk_score(self) -> int:
+        """Composite 0-100 risk score derived from this finding's fields.
+
+        A transparent blend of technical impact (CVSS/severity) and exploitation
+        likelihood (KEV, then EPSS); see :func:`compute_risk_score`. Output-only and
+        excluded from the fingerprint, so it never affects a finding's identity.
+        """
+        return compute_risk_score(
+            severity=self.severity,
+            cvss_score=self.cvss_score,
+            epss_score=self.epss_score,
+            kev=self.kev,
+        )
+
 
 __all__ = [
     "AssetCriticality",
@@ -253,5 +314,6 @@ __all__ = [
     "Service",
     "Severity",
     "compute_fingerprint",
+    "compute_risk_score",
     "normalize_title",
 ]
