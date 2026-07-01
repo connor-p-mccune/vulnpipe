@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Markdown report format (`report --format markdown`, `scan --markdown`) for
   pull-request comments and Slack: headline totals, a severity table, and a
   prioritized findings table with risk score, CVSS, EPSS, and a KEV marker.
+- CSV report format (`report --format csv`) — one row per finding for a spreadsheet
+  or data-frame; columns mirror the JSON fields plus fingerprint and risk score.
 
 ### Changed
 - Prioritization now ranks known-exploited (KEV) findings ahead of equally severe

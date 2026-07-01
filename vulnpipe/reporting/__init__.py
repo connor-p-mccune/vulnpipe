@@ -3,15 +3,16 @@
 Each reporter subclasses :class:`~vulnpipe.reporting.base.BaseReporter` and turns a
 list of findings into a serialized report string. JSON is the canonical, lossless
 artifact (round-trippable via :func:`report_to_findings`); HTML is the human view;
-Markdown drops into a pull-request comment or Slack; SARIF feeds code-scanning
-dashboards. All are deterministic for fixed input.
+Markdown drops into a pull-request comment or Slack; CSV drops into a spreadsheet;
+SARIF feeds code-scanning dashboards. All are deterministic for fixed input.
 
 :func:`get_reporter` resolves a format name (``"json"`` / ``"html"`` / ``"markdown"``
-/ ``"sarif"``) to a reporter instance so callers -- e.g. the ``report`` CLI command
--- can stay format-agnostic.
+/ ``"csv"`` / ``"sarif"``) to a reporter instance so callers -- e.g. the ``report``
+CLI command -- can stay format-agnostic.
 """
 
 from vulnpipe.reporting.base import BaseReporter
+from vulnpipe.reporting.csv_reporter import CsvReporter, render_csv
 from vulnpipe.reporting.html_reporter import HtmlReporter, render_html
 from vulnpipe.reporting.json_reporter import (
     REPORT_SCHEMA_VERSION,
@@ -34,6 +35,7 @@ _REPORTERS: dict[str, type[BaseReporter]] = {
     JsonReporter.name: JsonReporter,
     HtmlReporter.name: HtmlReporter,
     MarkdownReporter.name: MarkdownReporter,
+    CsvReporter.name: CsvReporter,
     SarifReporter.name: SarifReporter,
 }
 
@@ -61,6 +63,7 @@ __all__ = [
     "REPORT_SCHEMA_VERSION",
     "SEVERITY_DISPLAY_ORDER",
     "BaseReporter",
+    "CsvReporter",
     "HtmlReporter",
     "JsonReporter",
     "MarkdownReporter",
@@ -72,6 +75,7 @@ __all__ = [
     "get_reporter",
     "group_by_host",
     "load_findings",
+    "render_csv",
     "render_html",
     "render_markdown",
     "report_to_findings",

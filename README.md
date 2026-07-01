@@ -312,6 +312,7 @@ are stable across runs.
 | **JSON** | The canonical, lossless artifact. `scan` writes `results/latest.json`; `report` / `diff` / `baseline` read it back. |
 | **HTML** | The human-readable report: summary, inline SVG severity chart, per-host breakdown, and a client-side sortable findings table. |
 | **Markdown** | A pull-request / Slack–friendly summary: headline totals, a severity table, and a prioritized findings table with risk score, CVSS, EPSS, and a KEV marker. |
+| **CSV** | One row per finding for a spreadsheet or data-frame — columns mirror the JSON fields (plus fingerprint and risk score). |
 | **SARIF** | SARIF 2.1.0 for the GitHub code-scanning / Security tab. |
 
 Render any format from a findings JSON to stdout:
@@ -449,7 +450,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | Command | What it does |
 | --- | --- |
 | `scan` | Validate authorization/scope, run the pipeline, write reports, and gate. Requires `--config` and `--authorized`. |
-| `report` | Render a findings JSON into JSON / HTML / Markdown / SARIF on stdout (`--input`, `--format`). |
+| `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / SARIF on stdout (`--input`, `--format`). |
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json`). |
 | `baseline` | Create or update a baseline from a findings JSON (`--input`, `--output`, `--update`). |
 | `version` | Print the vulnpipe version. |
