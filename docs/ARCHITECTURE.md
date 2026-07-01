@@ -57,7 +57,7 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `scanners/` | `BaseScanner` + the registry, and the Nmap (network) and ZAP (web) integrations. Each `scan()` returns `list[Finding]`. |
 | `enrichment/` | CVSS parsing/scoring, cached NVD / EPSS lookups, and CISA KEV cross-referencing that fill — never fabricate — the `cvss_*` / `epss_*` / `kev` fields. |
 | `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize. |
-| `reporting/` | The JSON / HTML / SARIF renderers plus the shared summary view-model. Deterministic for fixed input. |
+| `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF renderers, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
 | `ci/` | The baseline store, the differ, the severity gate, JUnit XML output, and multi-scan trend analysis. |
 | `auth/` | ZAP authentication-context construction (form / header-JWT / script). |
 | `cli/main.py` | The Typer CLI (`scan` / `report` / `diff` / `baseline`) and the `--authorized` + scope gate. |

@@ -4,11 +4,12 @@ Each reporter subclasses :class:`~vulnpipe.reporting.base.BaseReporter` and turn
 list of findings into a serialized report string. JSON is the canonical, lossless
 artifact (round-trippable via :func:`report_to_findings`); HTML is the human view;
 Markdown drops into a pull-request comment or Slack; CSV drops into a spreadsheet;
-SARIF feeds code-scanning dashboards. All are deterministic for fixed input.
+Prometheus text feeds observability tooling; SARIF feeds code-scanning dashboards.
+All are deterministic for fixed input.
 
 :func:`get_reporter` resolves a format name (``"json"`` / ``"html"`` / ``"markdown"``
-/ ``"csv"`` / ``"sarif"``) to a reporter instance so callers -- e.g. the ``report``
-CLI command -- can stay format-agnostic.
+/ ``"csv"`` / ``"prometheus"`` / ``"sarif"``) to a reporter instance so callers --
+e.g. the ``report`` CLI command -- can stay format-agnostic.
 """
 
 from vulnpipe.reporting.base import BaseReporter
@@ -22,6 +23,7 @@ from vulnpipe.reporting.json_reporter import (
     report_to_findings,
 )
 from vulnpipe.reporting.markdown_reporter import MarkdownReporter, render_markdown
+from vulnpipe.reporting.prometheus_reporter import PrometheusReporter, render_prometheus
 from vulnpipe.reporting.sarif_reporter import SarifReporter, build_sarif
 from vulnpipe.reporting.stats import render_stats
 from vulnpipe.reporting.summary import (
@@ -37,6 +39,7 @@ _REPORTERS: dict[str, type[BaseReporter]] = {
     HtmlReporter.name: HtmlReporter,
     MarkdownReporter.name: MarkdownReporter,
     CsvReporter.name: CsvReporter,
+    PrometheusReporter.name: PrometheusReporter,
     SarifReporter.name: SarifReporter,
 }
 
@@ -68,6 +71,7 @@ __all__ = [
     "HtmlReporter",
     "JsonReporter",
     "MarkdownReporter",
+    "PrometheusReporter",
     "ReportSummary",
     "SarifReporter",
     "available_formats",
@@ -79,6 +83,7 @@ __all__ = [
     "render_csv",
     "render_html",
     "render_markdown",
+    "render_prometheus",
     "render_stats",
     "report_to_findings",
     "severity_counts",

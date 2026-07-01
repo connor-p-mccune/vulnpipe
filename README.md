@@ -313,6 +313,7 @@ are stable across runs.
 | **HTML** | The human-readable report: summary (with a known-exploited count), inline SVG severity chart, per-host breakdown, and a client-side filterable + sortable findings table with risk-score and KEV columns. |
 | **Markdown** | A pull-request / Slack–friendly summary: headline totals, a severity table, and a prioritized findings table with risk score, CVSS, EPSS, and a KEV marker. |
 | **CSV** | One row per finding for a spreadsheet or data-frame — columns mirror the JSON fields (plus fingerprint and risk score). |
+| **Prometheus** | Text-exposition gauges (findings by severity/source, known-exploited count, peak risk) for the node_exporter textfile collector or a Pushgateway. |
 | **SARIF** | SARIF 2.1.0 for the GitHub code-scanning / Security tab. |
 
 Render any format from a findings JSON to stdout:
@@ -480,7 +481,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | --- | --- |
 | `scan` | Validate authorization/scope, run the pipeline, write reports, and gate. Requires `--config` and `--authorized`. |
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
-| `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / SARIF on stdout (`--input`, `--format`). |
+| `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF on stdout (`--input`, `--format`). |
 | `stats` | Print a terminal summary of a findings JSON — severity breakdown, top risks, and worst-affected hosts (`--input`). |
 | `trend` | Analyze how findings evolve across a chronological series of scan JSONs — totals, severity mix, and introduced/resolved deltas (text or JSON). |
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json`). |

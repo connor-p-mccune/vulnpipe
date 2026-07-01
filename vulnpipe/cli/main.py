@@ -282,10 +282,14 @@ def report(
     ],
     fmt: Annotated[
         str,
-        typer.Option("--format", "-f", help="Report format: json, html, markdown, csv, or sarif."),
+        typer.Option(
+            "--format",
+            "-f",
+            help="Report format: json, html, markdown, csv, prometheus, or sarif.",
+        ),
     ] = "html",
 ) -> None:
-    """Render a findings JSON file into a JSON, HTML, Markdown, CSV, or SARIF report on stdout."""
+    """Render a findings JSON into JSON, HTML, Markdown, CSV, Prometheus, or SARIF on stdout."""
     try:
         reporter = get_reporter(fmt)
     except KeyError as exc:

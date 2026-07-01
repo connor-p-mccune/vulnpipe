@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prioritized findings table with risk score, CVSS, EPSS, and a KEV marker.
 - CSV report format (`report --format csv`) — one row per finding for a spreadsheet
   or data-frame; columns mirror the JSON fields plus fingerprint and risk score.
+- Prometheus report format (`report --format prometheus`) — text-exposition gauges
+  (findings by severity/source, known-exploited count, distinct hosts, peak risk) for
+  the node_exporter textfile collector or a Pushgateway.
 - HTML report: a known-exploited summary card, KEV highlighting in the per-host
   breakdown, risk-score and KEV columns, EPSS shown as a percentage, and a
   client-side filter toolbar (search, severity, known-exploited-only).

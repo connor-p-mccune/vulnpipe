@@ -92,6 +92,13 @@ def test_report_csv(tmp_path: Path) -> None:
     assert "Cross Site Scripting (Reflected)" in result.stdout
 
 
+def test_report_prometheus(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["report", "-i", str(_write_report(tmp_path)), "-f", "prometheus"])
+    assert result.exit_code == 0
+    assert "# TYPE vulnpipe_findings_total gauge" in result.stdout
+    assert 'vulnpipe_findings_total{severity="high"}' in result.stdout
+
+
 def test_stats(tmp_path: Path) -> None:
     result = runner.invoke(app, ["stats", "-i", str(_write_report(tmp_path))])
     assert result.exit_code == 0
