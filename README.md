@@ -260,6 +260,7 @@ does. Provide them via the environment or a gitignored `.env` (see
 | `NVD_API_KEY` | Optional NVD key; raises enrichment rate limits. |
 | `APP_USERNAME` / `APP_PASSWORD` | Form/script authenticated-scan credentials. |
 | `API_BEARER_TOKEN` | Bearer/JWT token for header-based authenticated scanning. |
+| `VULNPIPE_WEBHOOK_URL` | Slack-compatible webhook URL for `vulnpipe notify` (a secret). |
 
 ### Scanner, pipeline, and prioritization settings
 
@@ -483,6 +484,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
 | `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF on stdout (`--input`, `--format`). |
 | `stats` | Print a terminal summary of a findings JSON — severity breakdown, top risks, and worst-affected hosts (`--input`). |
+| `notify` | Post a findings summary to a Slack-compatible webhook (URL resolved from the environment via `--webhook-url-env`). |
 | `trend` | Analyze how findings evolve across a chronological series of scan JSONs — totals, severity mix, and introduced/resolved deltas (text or JSON). |
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json`). |
 | `baseline` | Create or update a baseline from a findings JSON (`--input`, `--output`, `--update`). |

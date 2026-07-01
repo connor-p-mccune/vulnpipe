@@ -11,7 +11,9 @@ import json
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 
+import httpx
 import pytest
+import respx
 from typer.testing import CliRunner
 
 from vulnpipe.ci.baseline import build_baseline, load_baseline, save_baseline
@@ -112,6 +114,35 @@ def test_stats_invalid_input_exits_nonzero(tmp_path: Path) -> None:
     bad.write_text("{ not json", encoding="utf-8")
     result = runner.invoke(app, ["stats", "-i", str(bad)])
     assert result.exit_code == 2
+
+
+# --------------------------------------------------------------------------- #
+# notify
+# --------------------------------------------------------------------------- #
+_WEBHOOK = "https://hooks.example.com/services/T/B/X"
+
+
+@respx.mock
+def test_notify_posts_summary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VULNPIPE_WEBHOOK_URL", _WEBHOOK)
+    route = respx.post(_WEBHOOK).mock(return_value=httpx.Response(200))
+    result = runner.invoke(app, ["notify", "-i", str(_write_report(tmp_path))])
+    assert result.exit_code == 0
+    assert route.called
+
+
+def test_notify_missing_url_exits_two(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("VULNPIPE_WEBHOOK_URL", raising=False)
+    result = runner.invoke(app, ["notify", "-i", str(_write_report(tmp_path))])
+    assert result.exit_code == 2
+
+
+@respx.mock
+def test_notify_webhook_failure_exits_one(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VULNPIPE_WEBHOOK_URL", _WEBHOOK)
+    respx.post(_WEBHOOK).mock(return_value=httpx.Response(500))
+    result = runner.invoke(app, ["notify", "-i", str(_write_report(tmp_path))])
+    assert result.exit_code == 1
 
 
 def test_trend_text(tmp_path: Path) -> None:

@@ -48,6 +48,7 @@ from vulnpipe.core.logging import configure_logging, get_logger
 from vulnpipe.core.models import Severity
 from vulnpipe.core.orchestrator import PipelineResult, run_pipeline
 from vulnpipe.core.planner import build_scan_plan, render_plan
+from vulnpipe.notify import NotifyError, post_webhook
 from vulnpipe.processing import FalsePositiveConfig, load_false_positive_config
 from vulnpipe.reporting import (
     SEVERITY_DISPLAY_ORDER,
@@ -321,6 +322,40 @@ def stats(
         log.error("Failed to read findings from %s: %s", input_path, exc)
         raise typer.Exit(code=2) from exc
     _emit(render_stats(findings))
+
+
+@app.command()
+def notify(
+    input_path: Annotated[
+        Path,
+        typer.Option(
+            "--input", "-i", exists=True, dir_okay=False, help="Findings JSON to summarize."
+        ),
+    ],
+    webhook_url_env: Annotated[
+        str,
+        typer.Option(
+            "--webhook-url-env",
+            help="Env var holding the Slack-compatible webhook URL (a secret).",
+        ),
+    ] = "VULNPIPE_WEBHOOK_URL",
+) -> None:
+    """Post a summary of a findings JSON to a Slack-compatible incoming webhook."""
+    url = os.environ.get(webhook_url_env)
+    if not url:
+        log.error("webhook URL not set; set $%s in the environment", webhook_url_env)
+        raise typer.Exit(code=2)
+    try:
+        findings = load_findings(input_path)
+    except (OSError, ValueError) as exc:
+        log.error("Failed to read findings from %s: %s", input_path, exc)
+        raise typer.Exit(code=2) from exc
+    try:
+        status = post_webhook(url, findings)
+    except NotifyError as exc:
+        log.error("%s", exc)  # never logs the URL, which is a secret
+        raise typer.Exit(code=1) from exc
+    log.info("posted findings summary to webhook (HTTP %d)", status)
 
 
 def _print_diff_text(diff: Diff) -> None:

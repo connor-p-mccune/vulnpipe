@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A reusable composite GitHub Action (`action.yml`) that installs vulnpipe, runs an
   authorized scan, and gates the build — with inputs passed through the environment
   (never interpolated into the shell) to avoid command injection.
+- `notify` CLI command and `notify/` package: post a findings summary to a
+  Slack-compatible incoming webhook, with the webhook URL resolved from the
+  environment (a secret, never logged) and message text escaped for Slack mrkdwn.
 
 ### Changed
 - Prioritization now ranks known-exploited (KEV) findings ahead of equally severe
