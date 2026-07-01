@@ -7,56 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-01
+
+Risk intelligence and integrations: known-exploited (KEV) cross-referencing, a
+composite risk score, four new report formats, and five new CLI commands.
+
 ### Added
-- CISA KEV (Known Exploited Vulnerabilities) enrichment: findings whose CVE is in
-  the catalog are flagged `kev=True` with catalog context (date added, ransomware
-  use) in metadata. A `kev` field on `Finding` and a `kev_enabled` enrichment flag.
-- Composite `risk_score` (0–100) computed on every finding: a transparent blend of
+- **CISA KEV enrichment** — findings whose CVE is in the Known Exploited
+  Vulnerabilities catalog are flagged `kev=True` with catalog context (date added,
+  ransomware use) in metadata. A `kev` field on `Finding` and a `kev_enabled` flag.
+- **Composite `risk_score` (0–100)** computed on every finding: a transparent blend of
   technical impact (CVSS/severity) and exploitation likelihood (KEV, then EPSS),
   surfaced in every report format and stripped on JSON round-trip like the fingerprint.
-- Markdown report format (`report --format markdown`, `scan --markdown`) for
+- **Markdown report format** (`report --format markdown`, `scan --markdown`) for
   pull-request comments and Slack: headline totals, a severity table, and a
   prioritized findings table with risk score, CVSS, EPSS, and a KEV marker.
-- CSV report format (`report --format csv`) — one row per finding for a spreadsheet
+- **CSV report format** (`report --format csv`) — one row per finding for a spreadsheet
   or data-frame; columns mirror the JSON fields plus fingerprint and risk score.
-- Prometheus report format (`report --format prometheus`) — text-exposition gauges
+- **Prometheus report format** (`report --format prometheus`) — text-exposition gauges
   (findings by severity/source, known-exploited count, distinct hosts, peak risk) for
   the node_exporter textfile collector or a Pushgateway.
-- HTML report: a known-exploited summary card, KEV highlighting in the per-host
-  breakdown, risk-score and KEV columns, EPSS shown as a percentage, and a
+- **HTML report enhancements** — a known-exploited summary card, KEV highlighting in
+  the per-host breakdown, risk-score and KEV columns, EPSS shown as a percentage, and a
   client-side filter toolbar (search, severity, known-exploited-only).
-- `scripts/regenerate_examples.py` to rebuild the committed sample reports (now also
-  emitting Markdown and CSV) deterministically from the fixtures.
-- `stats` CLI command: a terminal summary of a findings JSON (severity breakdown,
-  top findings by risk, and worst-affected hosts) rendered with Rich tables.
-- `trend` CLI command and `ci/trends.py`: analyze a chronological series of findings
-  JSONs — per-scan totals and severity mix, findings introduced/resolved between
-  scans (matched by fingerprint), and the critical+high backlog direction (text/JSON).
-- `validate` CLI command and `core/planner.py`: a dry run that resolves a config into
+- **`stats` command** — a terminal summary of a findings JSON (severity breakdown, top
+  findings by risk, and worst-affected hosts) rendered with Rich tables.
+- **`trend` command** and `ci/trends.py` — analyze a chronological series of findings
+  JSONs: per-scan totals and severity mix, findings introduced/resolved between scans
+  (matched by fingerprint), and the critical+high backlog direction (text/JSON).
+- **`validate` command** and `core/planner.py` — a dry run that resolves a config into
   a scan plan (in-scope network/web targets, enrichment sources, required secret env
   vars) and flags out-of-scope targets or an empty scope, without scanning.
-- `schema` CLI command: print the JSON Schema for the targets/scope config file, for
+- **`notify` command** and the `notify/` package — post a findings summary to a
+  Slack-compatible incoming webhook, with the webhook URL resolved from the environment
+  (a secret, never logged) and message text escaped for Slack mrkdwn.
+- **`schema` command** — print the JSON Schema for the targets/scope config file, for
   editor validation and autocomplete.
-- A reusable composite GitHub Action (`action.yml`) that installs vulnpipe, runs an
+- A reusable composite **GitHub Action** (`action.yml`) that installs vulnpipe, runs an
   authorized scan, and gates the build — with inputs passed through the environment
   (never interpolated into the shell) to avoid command injection.
-- `notify` CLI command and `notify/` package: post a findings summary to a
-  Slack-compatible incoming webhook, with the webhook URL resolved from the
-  environment (a secret, never logged) and message text escaped for Slack mrkdwn.
+- `scripts/regenerate_examples.py` to rebuild the committed sample reports (now also
+  emitting Markdown and CSV) deterministically from the fixtures.
+- Continuous-integration workflow running the quality gates (ruff, black, mypy) and the
+  test suite across Python 3.12 / 3.13 / 3.14, plus the integration suite; GitHub Pages
+  publishing of the sample HTML report; a PyPI Trusted-Publishing (OIDC) workflow and
+  `[project.urls]`; architecture decision records (`docs/DECISIONS.md`) and this
+  changelog; a self-hosted vulnerable-target lab overlay and case-study guide; and
+  README badges, a Mermaid diagram, a live-report link, and a demo tape.
 
 ### Changed
-- Prioritization now ranks known-exploited (KEV) findings ahead of equally severe
-  ones, as a tie-breaker within a severity band (severity → KEV → CVSS → EPSS →
-  asset criticality → fingerprint).
-- Continuous-integration workflow running the quality gates (ruff, black, mypy)
-  and the test suite across Python 3.12 / 3.13 / 3.14, plus the integration suite.
-- GitHub Pages publishing of the sample HTML report.
-- PyPI publishing workflow via Trusted Publishing (OIDC) and `[project.urls]`.
-- Architecture decision records (`docs/DECISIONS.md`) and this changelog.
-- A self-hosted vulnerable-target lab overlay (`docker/docker-compose.lab.yml`,
-  `configs/targets.lab.yaml`) and a case-study guide (`docs/case-study.md`).
-- README badges, a Mermaid pipeline diagram, a live-report link, and a
-  reproducible terminal-demo tape (`assets/demo.tape`).
+- Prioritization now ranks known-exploited (KEV) findings ahead of equally severe ones,
+  as a tie-breaker within a severity band (severity → KEV → CVSS → EPSS → asset
+  criticality → fingerprint).
 
 ## [0.1.0] - 2026-06-24
 
@@ -90,5 +92,6 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/connor-p-mccune/vulnpipe/releases/tag/v0.1.0

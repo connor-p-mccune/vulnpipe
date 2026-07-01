@@ -142,7 +142,7 @@ Verify it:
 
 ```console
 $ vulnpipe version
-vulnpipe 0.1.0
+vulnpipe 0.2.0
 ```
 
 ## Quickstart
@@ -358,7 +358,7 @@ every finding with its fingerprint and computed risk score:
 ```jsonc
 {
   "schema_version": "1.0",
-  "tool": { "name": "vulnpipe", "version": "0.1.0" },
+  "tool": { "name": "vulnpipe", "version": "0.2.0" },
   "summary": {
     "total": 15,
     "hosts": 4,
