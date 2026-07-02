@@ -6,6 +6,8 @@ orchestrator and the CI stage. Commands:
 * ``scan`` -- run the full pipeline (refusing to start without ``--authorized`` and
   a scope file), write the JSON report (and optional SARIF / HTML / JUnit), and
   exit non-zero when the gate trips on a newly introduced severe finding;
+* ``gate`` -- re-evaluate the CI gate (severity threshold or a policy file) over an
+  existing findings JSON without rescanning;
 * ``report`` -- render a findings JSON into JSON / HTML / SARIF on stdout;
 * ``diff`` -- classify a findings JSON against a baseline (new / persisting /
   resolved);
@@ -36,7 +38,15 @@ from vulnpipe.ci.baseline import (
 )
 from vulnpipe.ci.differ import Diff, diff_findings, diff_to_payload
 from vulnpipe.ci.gate import DEFAULT_GATE_SEVERITY
-from vulnpipe.ci.junit import build_junit_xml
+from vulnpipe.ci.junit import GateVerdict, build_junit_xml
+from vulnpipe.ci.policy import (
+    PolicyError,
+    PolicyResult,
+    evaluate_policy,
+    load_policy,
+    policy_from_threshold,
+    policy_result_to_payload,
+)
 from vulnpipe.ci.trends import build_trend, render_trend_text, trend_to_payload
 from vulnpipe.core.config import (
     Config,
@@ -110,6 +120,7 @@ def _load_baseline_or_findings(path: Path) -> Baseline:
 
 def _write_reports(
     result: PipelineResult,
+    verdict: GateVerdict,
     *,
     output: Path,
     sarif: Path | None,
@@ -132,11 +143,11 @@ def _write_reports(
         _write(markdown, get_reporter("markdown").render(findings))
         log.info("wrote Markdown report: %s", markdown)
     if junit is not None:
-        _write(junit, build_junit_xml(result.diff, result.gate))
+        _write(junit, build_junit_xml(result.diff, verdict))
         log.info("wrote JUnit report: %s", junit)
 
 
-def _log_summary(result: PipelineResult) -> None:
+def _log_summary(result: PipelineResult, verdict: GateVerdict) -> None:
     counts = severity_counts(result.findings)
     breakdown = ", ".join(f"{sev.value}={counts[sev]}" for sev in SEVERITY_DISPLAY_ORDER)
     log.info("findings: %d (%s)", len(result.findings), breakdown)
@@ -147,10 +158,10 @@ def _log_summary(result: PipelineResult) -> None:
         len(diff.persisting),
         len(diff.resolved),
     )
-    if result.gate.passed:
-        log.info("%s", result.gate.summary)
+    if verdict.passed:
+        log.info("%s", verdict.summary)
     else:
-        log.error("%s", result.gate.summary)
+        log.error("%s", verdict.summary)
 
 
 # --------------------------------------------------------------------------- #
@@ -210,6 +221,17 @@ def scan(
             help="Also fail on a new finding with a composite risk score at or above this.",
         ),
     ] = None,
+    policy: Annotated[
+        Path | None,
+        typer.Option(
+            "--policy",
+            dir_okay=False,
+            help=(
+                "Gate-policy YAML (severity budgets, KEV block, risk threshold); "
+                "when given it decides the verdict instead of --gate-severity."
+            ),
+        ),
+    ] = None,
     false_positives: Annotated[
         Path | None,
         typer.Option(
@@ -244,7 +266,8 @@ def scan(
         ensure_config_in_scope(cfg)
         allowlist = _load_allowlist(false_positives)
         base = load_baseline(baseline) if baseline is not None else None
-    except (ConfigError, BaselineError, OSError, ValueError, ValidationError) as exc:
+        gate_policy = load_policy(policy) if policy is not None else None
+    except (ConfigError, BaselineError, PolicyError, OSError, ValueError, ValidationError) as exc:
         log.error("%s", exc)
         raise typer.Exit(code=2) from exc
 
@@ -257,11 +280,16 @@ def scan(
         gate_threshold=gate_severity,
         gate_min_risk_score=gate_risk_score,
     )
-    _write_reports(result, output=output, sarif=sarif, html=html, markdown=markdown, junit=junit)
-    _log_summary(result)
+    verdict: GateVerdict = result.gate
+    if gate_policy is not None:
+        verdict = evaluate_policy(result.diff, gate_policy)
+    _write_reports(
+        result, verdict, output=output, sarif=sarif, html=html, markdown=markdown, junit=junit
+    )
+    _log_summary(result, verdict)
 
-    if not no_gate and result.gate.exit_code != 0:
-        raise typer.Exit(code=result.gate.exit_code)
+    if not no_gate and verdict.exit_code != 0:
+        raise typer.Exit(code=verdict.exit_code)
 
 
 @app.command()
@@ -416,6 +444,78 @@ def diff(
         typer.echo(json.dumps(diff_to_payload(result), indent=2, ensure_ascii=False))
     else:
         _print_diff_text(result)
+
+
+def _print_policy_text(result: PolicyResult) -> None:
+    """Print a compact text summary of a policy verdict to stdout."""
+    typer.echo(result.summary)
+    for violation in result.violations:
+        typer.echo(f"  x {violation.detail}")
+        for finding in violation.findings:
+            typer.echo(f"      [{finding.severity.value}] {finding.title} ({finding.host})")
+
+
+@app.command()
+def gate(
+    current: Annotated[
+        Path,
+        typer.Option("--current", exists=True, dir_okay=False, help="Current findings JSON."),
+    ],
+    baseline: Annotated[
+        Path | None,
+        typer.Option(
+            "--baseline",
+            dir_okay=False,
+            help="Baseline or findings JSON to diff against; omitted = everything is new.",
+        ),
+    ] = None,
+    policy: Annotated[
+        Path | None,
+        typer.Option(
+            "--policy",
+            dir_okay=False,
+            help="Gate-policy YAML; when omitted the severity/risk options apply.",
+        ),
+    ] = None,
+    gate_severity: Annotated[
+        Severity,
+        typer.Option("--gate-severity", help="Fail on a new finding at or above this severity."),
+    ] = DEFAULT_GATE_SEVERITY,
+    gate_risk_score: Annotated[
+        int | None,
+        typer.Option(
+            "--gate-risk-score",
+            min=0,
+            max=100,
+            help="Also fail on a new finding with a composite risk score at or above this.",
+        ),
+    ] = None,
+    fmt: Annotated[
+        str, typer.Option("--format", "-f", help="Output format: text or json.")
+    ] = "text",
+) -> None:
+    """Evaluate the CI gate over an existing findings JSON, without rescanning."""
+    if fmt not in {"text", "json"}:
+        log.error("Unknown gate format %r; choose text or json", fmt)
+        raise typer.Exit(code=2)
+    try:
+        findings = load_findings(current)
+        base = _load_baseline_or_findings(baseline) if baseline is not None else Baseline()
+        rules = (
+            load_policy(policy)
+            if policy is not None
+            else policy_from_threshold(gate_severity, min_risk_score=gate_risk_score)
+        )
+    except (PolicyError, BaselineError, OSError, ValueError) as exc:
+        log.error("Failed to load gate inputs: %s", exc)
+        raise typer.Exit(code=2) from exc
+    result = evaluate_policy(diff_findings(findings, base), rules)
+    if fmt == "json":
+        typer.echo(json.dumps(policy_result_to_payload(result), indent=2, ensure_ascii=False))
+    else:
+        _print_policy_text(result)
+    if result.exit_code != 0:
+        raise typer.Exit(code=result.exit_code)
 
 
 @app.command()

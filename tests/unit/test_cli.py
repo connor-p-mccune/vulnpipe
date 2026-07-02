@@ -8,6 +8,7 @@ findings JSON written to ``tmp_path``.
 """
 
 import json
+import xml.etree.ElementTree as ET
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 
@@ -228,6 +229,84 @@ def test_report_invalid_json_exits_nonzero(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# gate (policy evaluation without rescanning)
+# --------------------------------------------------------------------------- #
+def _write_policy(tmp_path: Path, body: str) -> Path:
+    path = tmp_path / "policy.yaml"
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_gate_passes_when_within_policy(tmp_path: Path) -> None:
+    current = _findings_file(tmp_path, "current.json", [_f("Low issue", severity=Severity.LOW)])
+    policy = _write_policy(tmp_path, "max_new:\n  critical: 0\n  high: 0\n")
+    result = runner.invoke(app, ["gate", "--current", str(current), "--policy", str(policy)])
+    assert result.exit_code == 0
+    assert "gate passed" in result.stdout
+
+
+def test_gate_fails_on_policy_violation_with_details(tmp_path: Path) -> None:
+    current = _findings_file(tmp_path, "current.json", [_f("RCE", severity=Severity.HIGH)])
+    policy = _write_policy(tmp_path, "max_new:\n  high: 0\n")
+    result = runner.invoke(app, ["gate", "--current", str(current), "--policy", str(policy)])
+    assert result.exit_code == 1
+    assert "gate failed" in result.stdout
+    assert "exceed the budget of 0" in result.stdout
+    assert "RCE" in result.stdout
+
+
+def test_gate_baselined_findings_pass(tmp_path: Path) -> None:
+    finding = _f("Known high", severity=Severity.HIGH)
+    current = _findings_file(tmp_path, "current.json", [finding])
+    baseline_path = tmp_path / "baseline.json"
+    save_baseline(build_baseline([finding]), baseline_path)
+    policy = _write_policy(tmp_path, "max_new:\n  high: 0\n")
+    result = runner.invoke(
+        app,
+        [
+            "gate",
+            "--current",
+            str(current),
+            "--baseline",
+            str(baseline_path),
+            "--policy",
+            str(policy),
+        ],
+    )
+    assert result.exit_code == 0
+
+
+def test_gate_defaults_to_severity_threshold(tmp_path: Path) -> None:
+    current = _findings_file(tmp_path, "current.json", [_f("RCE", severity=Severity.HIGH)])
+    failing = runner.invoke(app, ["gate", "--current", str(current)])
+    assert failing.exit_code == 1  # default threshold is high
+    passing = runner.invoke(app, ["gate", "--current", str(current), "--gate-severity", "critical"])
+    assert passing.exit_code == 0
+
+
+def test_gate_json_output(tmp_path: Path) -> None:
+    current = _findings_file(tmp_path, "current.json", [_f("RCE", severity=Severity.HIGH)])
+    result = runner.invoke(app, ["gate", "--current", str(current), "--format", "json"])
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["passed"] is False
+    assert payload["violations"][0]["rule"] == "max_new[high]"
+
+
+def test_gate_unknown_format_exits_two(tmp_path: Path) -> None:
+    current = _findings_file(tmp_path, "current.json", [])
+    result = runner.invoke(app, ["gate", "--current", str(current), "--format", "xml"])
+    assert result.exit_code == 2
+
+
+def test_gate_bad_policy_exits_two(tmp_path: Path) -> None:
+    current = _findings_file(tmp_path, "current.json", [])
+    policy = _write_policy(tmp_path, "unknown_rule: 1\n")
+    result = runner.invoke(app, ["gate", "--current", str(current), "--policy", str(policy)])
+    assert result.exit_code == 2
+
+
+# --------------------------------------------------------------------------- #
 # scan (pipeline stubbed via run_pipeline)
 # --------------------------------------------------------------------------- #
 def _write_config(tmp_path: Path, *, target_host: str = "10.0.0.10") -> Path:
@@ -296,6 +375,72 @@ def test_scan_accepts_gate_risk_score(tmp_path: Path, monkeypatch: pytest.Monkey
     )
     assert result.exit_code == 0
     assert captured["gate_min_risk_score"] == 80
+
+
+def test_scan_policy_overrides_severity_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A new High fails the default gate, but a permissive policy allows it.
+    _stub_pipeline(monkeypatch, _result([_f("RCE", severity=Severity.HIGH)]))
+    policy = tmp_path / "policy.yaml"
+    policy.write_text("max_new:\n  high: 5\n", encoding="utf-8")
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            "-c",
+            str(_write_config(tmp_path)),
+            "--authorized",
+            "-o",
+            str(tmp_path / "out"),
+            "--policy",
+            str(policy),
+        ],
+    )
+    assert result.exit_code == 0
+
+
+def test_scan_policy_violation_fails_and_writes_junit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A new Medium passes the default severity gate but violates the policy budget.
+    _stub_pipeline(monkeypatch, _result([_f("Sneaky medium", severity=Severity.MEDIUM)]))
+    policy = tmp_path / "policy.yaml"
+    policy.write_text("max_new:\n  medium: 0\n", encoding="utf-8")
+    junit_path = tmp_path / "out" / "junit.xml"
+    result = runner.invoke(
+        app,
+        [
+            "scan",
+            "-c",
+            str(_write_config(tmp_path)),
+            "--authorized",
+            "-o",
+            str(tmp_path / "out"),
+            "--policy",
+            str(policy),
+            "--junit",
+            str(junit_path),
+        ],
+    )
+    assert result.exit_code == 1
+    xml = junit_path.read_text(encoding="utf-8")
+    assert 'failures="1"' in xml
+    # The policy criteria land in the failure body (XML-escaped in the raw text).
+    failure = ET.fromstring(xml).find("./testsuite/testcase/failure")
+    assert failure is not None and failure.text is not None
+    assert "new medium <= 0" in failure.text
+
+
+def test_scan_invalid_policy_exits_two(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_pipeline(monkeypatch, _result([]))
+    policy = tmp_path / "policy.yaml"
+    policy.write_text("bogus: true\n", encoding="utf-8")
+    result = runner.invoke(
+        app,
+        ["scan", "-c", str(_write_config(tmp_path)), "--authorized", "--policy", str(policy)],
+    )
+    assert result.exit_code == 2
 
 
 def test_scan_gate_failure_exits_nonzero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
