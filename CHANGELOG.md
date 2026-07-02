@@ -7,13 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-02
+
+Standards context, policy-as-code gating, and supply-chain (SBOM) analysis.
+
 ### Added
+- **Supply-chain (SBOM) analysis** — a new `sbom/` layer and `sbom` command:
+  parse a CycloneDX component inventory, query the OSV.dev advisory database per
+  component (cached, retried, failure degrades to empty), and normalize each
+  advisory into a standard finding (severity from the advisory's own CVSS vector;
+  remediation from its declared fixed versions). Findings are EPSS/KEV-enriched,
+  deduplicated, and prioritized, so `report` / `stats` / `diff` / `baseline` /
+  `trend` / `gate` all work on supply-chain results unchanged. Passive by design:
+  no scope or `--authorized` needed.
+- **OWASP Top 10 / CWE Top 25 mapping** (`core/standards.py`) — curated official
+  mappings applied at render time: an OWASP breakdown section, CWE Top 25 card,
+  and OWASP column in HTML; OWASP tables in Markdown and `stats`; an `owasp` CSV
+  column; and `external/owasp/...` SARIF rule tags plus an `owasp` result
+  property. Unmapped CWEs are reported as unmapped, never forced into a category.
+- **Policy-as-code gating** (`ci/policy.py`, `configs/policy.example.yaml`) — a
+  declarative YAML gate: per-severity budgets for new findings, a total-new cap,
+  a composite risk-score threshold, and a block on new known-exploited (KEV)
+  findings. `scan --policy` swaps it in for the severity gate (JUnit failure
+  bodies describe the violated rules), and the composite GitHub Action gains a
+  matching `policy` input.
+- **`gate` command** — re-evaluate the CI gate over an existing findings JSON
+  without rescanning, against a baseline (or treating everything as new), with a
+  policy file or the severity/risk options; text or JSON verdict and a non-zero
+  exit on violation.
+- **`badge` command** (`reporting/badge.py`) — render findings into a
+  deterministic shields-style SVG status badge (worst severity bands, report
+  palette colors, a `!` marker for known-exploited) for a README or dashboard.
+- **Expandable finding details in the HTML report** — a per-finding disclosure
+  with description, a highlighted remediation line, the CVSS vector, and up to
+  five reference links (only http(s) references become hyperlinks; anything else
+  stays inert text).
 - Risk-score CI gating: `scan --gate-risk-score N` (and a matching GitHub Action
   input) fails the build on a new finding whose composite risk score is at least `N`,
   in addition to the severity gate — so an actively-exploited Medium can fail CI even
   though it sits below the severity bar.
 - SARIF results now carry the composite `riskScore` and a `kev` flag in their
   properties, so those signals reach the GitHub Security tab and other SARIF consumers.
+- JSON POST support in the shared enrichment HTTP client (same throttle/retry
+  semantics), used by the OSV integration.
 
 ## [0.2.0] - 2026-07-01
 
@@ -100,6 +136,7 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/connor-p-mccune/vulnpipe/releases/tag/v0.1.0

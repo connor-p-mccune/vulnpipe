@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vulnpipe"
-version = "0.2.0"
+version = "0.3.0"
 description = "Modular network + web vulnerability scanning pipeline (detection & reporting only)."
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "vulnpipe contributors" }]
-keywords = ["security", "vulnerability", "scanning", "nmap", "zap", "owasp", "sarif"]
+keywords = ["security", "vulnerability", "scanning", "nmap", "zap", "owasp", "sarif", "sbom", "osv", "cyclonedx"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Information Technology",
