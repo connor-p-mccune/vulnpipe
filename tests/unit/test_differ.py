@@ -8,7 +8,7 @@ that the serialized payload is stable.
 import random
 
 from vulnpipe.ci.baseline import build_baseline
-from vulnpipe.ci.differ import Diff, diff_findings, diff_to_payload
+from vulnpipe.ci.differ import Diff, diff_findings, diff_to_payload, render_diff_markdown
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.processing.normalizer import make_finding
 
@@ -86,3 +86,51 @@ def test_payload_shape_and_determinism() -> None:
 def test_diff_is_frozen_dataclass() -> None:
     diff = Diff(new=(), persisting=(), resolved=())
     assert diff.counts == {"new": 0, "persisting": 0, "resolved": 0}
+
+
+# --------------------------------------------------------------------------- #
+# Markdown rendering (PR comment)
+# --------------------------------------------------------------------------- #
+def test_markdown_headline_and_new_table() -> None:
+    keep = _f("kept")
+    gone = _f("removed", severity=Severity.LOW)
+    fresh = make_finding(
+        source="nmap",
+        host="10.0.0.5",
+        title="CVE-2021-42013",
+        severity=Severity.CRITICAL,
+        port=80,
+        plugin_id="vulners",
+        cve_ids=["CVE-2021-42013"],
+        cvss_score=9.8,
+        kev=True,
+    )
+    md = render_diff_markdown(diff_findings([keep, fresh], build_baseline([keep, gone])))
+    assert md.startswith("## vulnpipe scan delta")
+    assert "**1 new**, 1 persisting, 1 resolved" in md
+    assert "⚠️ 1 new finding(s)." in md
+    assert "### New findings" in md
+    assert "| critical ⚠️ | 98 | 10.0.0.5:80 | CVE-2021-42013 |" in md  # KEV marker + risk
+    assert "### Resolved findings" in md
+    assert "- [low] removed (10.0.0.10)" in md
+
+
+def test_markdown_clean_diff_has_no_tables() -> None:
+    keep = _f("kept")
+    md = render_diff_markdown(diff_findings([keep], build_baseline([keep])))
+    assert "✅ No new findings." in md
+    assert "### New findings" not in md
+    assert "### Resolved findings" not in md
+
+
+def test_markdown_escapes_pipes_in_titles() -> None:
+    fresh = _f("weird | title", severity=Severity.HIGH)
+    md = render_diff_markdown(diff_findings([fresh], build_baseline([])))
+    assert "weird \\| title" in md
+
+
+def test_markdown_is_deterministic() -> None:
+    findings = [_f("a", severity=Severity.HIGH), _f("b", severity=Severity.LOW)]
+    diff = diff_findings(findings, build_baseline([]))
+    assert render_diff_markdown(diff) == render_diff_markdown(diff)
+    assert render_diff_markdown(diff, title="Delta").startswith("## Delta")

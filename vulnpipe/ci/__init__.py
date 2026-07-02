@@ -20,7 +20,7 @@ from vulnpipe.ci.baseline import (
     merge_baseline,
     save_baseline,
 )
-from vulnpipe.ci.differ import Diff, diff_findings, diff_to_payload
+from vulnpipe.ci.differ import Diff, diff_findings, diff_to_payload, render_diff_markdown
 from vulnpipe.ci.gate import (
     DEFAULT_GATE_SEVERITY,
     GateResult,
@@ -75,6 +75,7 @@ __all__ = [
     "merge_baseline",
     "policy_from_threshold",
     "policy_result_to_payload",
+    "render_diff_markdown",
     "render_trend_text",
     "save_baseline",
     "trend_to_payload",
