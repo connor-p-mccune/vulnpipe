@@ -5,16 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ tool_name }} report</title>
   <style>
-    :root { color-scheme: light dark; }
+    :root {
+      color-scheme: light dark;
+      --bg: #fafafa; --fg: #1b1b1b; --muted: #6b6b6b; --link: #1565c0;
+      --card-bg: #fff; --border: #e0e0e0; --border-soft: #f0f0f0;
+      --code-bg: #f3f3f3; --thead-bg: #f0f0f0; --row-hover: #f7f7ff;
+      --kev-row: #fff5f5; --kev-row-hover: #ffecec;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121417; --fg: #e6e6e6; --muted: #9aa0a6; --link: #64b5f6;
+        --card-bg: #1c1f24; --border: #30353b; --border-soft: #262b31;
+        --code-bg: #262b31; --thead-bg: #1c1f24; --row-hover: #20242c;
+        --kev-row: #2a1a1a; --kev-row-hover: #331f1f;
+      }
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      margin: 0; padding: 0 1.5rem 3rem; color: #1b1b1b; background: #fafafa; line-height: 1.45;
+      margin: 0; padding: 0 1.5rem 3rem; color: var(--fg); background: var(--bg); line-height: 1.45;
     }
-    header { padding: 1.5rem 0 1rem; border-bottom: 2px solid #e0e0e0; margin-bottom: 1.5rem; }
+    header { padding: 1.5rem 0 1rem; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem; }
     h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
     h2 { font-size: 1.2rem; margin: 2rem 0 .75rem; }
     h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
-    .muted { color: #6b6b6b; font-weight: normal; }
+    .muted { color: var(--muted); font-weight: normal; }
     .badges { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0; }
     .badge {
       display: inline-block; padding: .15rem .55rem; border-radius: 999px;
@@ -30,64 +44,66 @@
     }
     .cards { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
     .card {
-      background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
       padding: .75rem 1.25rem; min-width: 8rem;
     }
     .card .num { font-size: 1.8rem; font-weight: 600; }
     .card.kev { border-color: #c62828; }
     .card.kev .num { color: #c62828; }
-    .card.kev.zero { border-color: #e0e0e0; }
-    .card.kev.zero .num { color: #1b1b1b; }
+    .card.kev.zero { border-color: var(--border); }
+    .card.kev.zero .num { color: var(--fg); }
     .card.top25 { border-color: #ef6c00; }
     .card.top25 .num { color: #ef6c00; }
-    .card.top25.zero { border-color: #e0e0e0; }
-    .card.top25.zero .num { color: #1b1b1b; }
+    .card.top25.zero { border-color: var(--border); }
+    .card.top25.zero .num { color: var(--fg); }
     .badge-owasp { background: #37474f; }
     ul.owasp-list { list-style: none; padding: 0; margin: .5rem 0 0; max-width: 34rem; }
     ul.owasp-list li {
       display: flex; align-items: center; gap: .5rem;
-      padding: .3rem 0; border-top: 1px solid #f0f0f0;
+      padding: .3rem 0; border-top: 1px solid var(--border-soft);
     }
     ul.owasp-list li .count { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
-    svg { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: .5rem; }
-    .chart-label { font-size: 13px; fill: #1b1b1b; }
-    .chart-count { font-size: 13px; fill: #1b1b1b; font-weight: 600; }
+    svg { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: .5rem; }
+    .chart-label { font-size: 13px; fill: var(--fg); }
+    .chart-count { font-size: 13px; fill: var(--fg); font-weight: 600; }
     section.host {
-      background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
       padding: .5rem 1rem 1rem; margin-bottom: 1rem;
     }
     ul.host-findings { list-style: none; padding: 0; margin: .5rem 0 0; }
-    ul.host-findings li { padding: .35rem 0; border-top: 1px solid #f0f0f0; }
+    ul.host-findings li { padding: .35rem 0; border-top: 1px solid var(--border-soft); }
     ul.host-findings li.kev { border-left: 3px solid #c62828; padding-left: .5rem; }
-    .evidence { margin: .2rem 0 0 .25rem; font-size: .85rem; color: #444; }
-    .evidence code { background: #f3f3f3; padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
+    .evidence { margin: .2rem 0 0 .25rem; font-size: .85rem; color: var(--muted); }
+    .evidence code { background: var(--code-bg); padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
     details.finding-details { margin: .35rem 0 0 .25rem; font-size: .85rem; }
-    details.finding-details summary { cursor: pointer; color: #1565c0; user-select: none; }
+    details.finding-details summary { cursor: pointer; color: var(--link); user-select: none; }
     details.finding-details p { margin: .35rem 0; }
-    details.finding-details code { background: #f3f3f3; padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
+    details.finding-details code { background: var(--code-bg); padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
+    a { color: var(--link); }
     ul.refs { margin: .25rem 0 0; padding-left: 1.25rem; }
     ul.refs li { word-break: break-all; }
     .toolbar {
       display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: .25rem 0 .75rem;
     }
     .toolbar input[type="search"], .toolbar select {
-      font: inherit; padding: .35rem .5rem; border: 1px solid #ccc; border-radius: 6px; background: #fff;
+      font: inherit; padding: .35rem .5rem; border: 1px solid var(--border);
+      border-radius: 6px; background: var(--card-bg); color: var(--fg);
     }
     .toolbar input[type="search"] { min-width: 14rem; }
     .toolbar label { font-size: .9rem; display: inline-flex; align-items: center; gap: .3rem; }
-    #visible-count { color: #6b6b6b; font-size: .85rem; margin-left: auto; }
-    table.findings { border-collapse: collapse; width: 100%; background: #fff; font-size: .9rem; }
+    #visible-count { color: var(--muted); font-size: .85rem; margin-left: auto; }
+    table.findings { border-collapse: collapse; width: 100%; background: var(--card-bg); font-size: .9rem; }
     table.findings th, table.findings td {
-      text-align: left; padding: .45rem .6rem; border-bottom: 1px solid #ececec;
+      text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--border-soft);
     }
-    table.findings thead th { background: #f0f0f0; cursor: pointer; user-select: none; position: sticky; top: 0; }
-    table.findings thead th::after { content: " \2195"; color: #9a9a9a; font-size: .8em; }
-    table.findings tbody tr:hover { background: #f7f7ff; }
-    table.findings tbody tr.kev { background: #fff5f5; }
-    table.findings tbody tr.kev:hover { background: #ffecec; }
+    table.findings thead th { background: var(--thead-bg); cursor: pointer; user-select: none; position: sticky; top: 0; }
+    table.findings thead th::after { content: " \2195"; color: var(--muted); font-size: .8em; }
+    table.findings tbody tr:hover { background: var(--row-hover); }
+    table.findings tbody tr.kev { background: var(--kev-row); }
+    table.findings tbody tr.kev:hover { background: var(--kev-row-hover); }
     td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .risk-badge { min-width: 2.2rem; text-align: center; }
-    .empty { padding: 2rem; text-align: center; color: #6b6b6b; }
+    .empty { padding: 2rem; text-align: center; color: var(--muted); }
   </style>
 </head>
 <body>

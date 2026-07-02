@@ -97,6 +97,13 @@ def test_render_produces_a_full_html_document() -> None:
     assert "addEventListener" in html  # the client-side sorter
 
 
+def test_render_supports_light_and_dark_themes() -> None:
+    html = render_html(_findings())
+    # CSS custom properties plus a dark-scheme media query drive theming with no JS.
+    assert "@media (prefers-color-scheme: dark)" in html
+    assert "var(--bg)" in html and "var(--fg)" in html
+
+
 def test_render_includes_summary_and_per_host_breakdown() -> None:
     html = render_html(_findings())
     assert "Critical: 1" in html and "High: 1" in html
