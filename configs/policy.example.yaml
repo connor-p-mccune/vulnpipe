@@ -1,0 +1,28 @@
+# Example gate policy for vulnpipe (policy-as-code for the CI gate).
+#
+# Copy this next to your targets file and pass it with:
+#
+#   vulnpipe scan --config configs/targets.yaml --authorized --policy configs/policy.yaml
+#   vulnpipe gate --current results/latest.json --baseline baseline.json --policy configs/policy.yaml
+#
+# The policy judges only findings that are NEW relative to the baseline --
+# persisting (accepted) findings never violate it. Every rule is optional; an
+# empty policy permits everything.
+
+# Per-severity budgets for new findings. A severity with no entry is unlimited.
+# "critical: 0" means the build fails on any new critical finding.
+max_new:
+  critical: 0
+  high: 0
+  medium: 5
+
+# Cap the total number of new findings of any severity.
+max_new_total: 20
+
+# Fail on any new finding whose composite risk score (0-100) is at or above this.
+# Catches e.g. an actively-exploited Medium that sits below the severity budgets.
+min_risk_score: 90
+
+# Refuse any new finding whose CVE is in the CISA Known Exploited Vulnerabilities
+# catalog, regardless of severity or budgets.
+block_kev: true

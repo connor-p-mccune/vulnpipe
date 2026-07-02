@@ -27,7 +27,17 @@ from vulnpipe.ci.gate import (
     evaluate_gate,
     meets_threshold,
 )
-from vulnpipe.ci.junit import build_junit_xml
+from vulnpipe.ci.junit import GateVerdict, build_junit_xml
+from vulnpipe.ci.policy import (
+    GatePolicy,
+    PolicyError,
+    PolicyResult,
+    PolicyViolation,
+    evaluate_policy,
+    load_policy,
+    policy_from_threshold,
+    policy_result_to_payload,
+)
 from vulnpipe.ci.trends import (
     ScanPoint,
     Trend,
@@ -43,7 +53,12 @@ __all__ = [
     "BaselineEntry",
     "BaselineError",
     "Diff",
+    "GatePolicy",
     "GateResult",
+    "GateVerdict",
+    "PolicyError",
+    "PolicyResult",
+    "PolicyViolation",
     "ScanPoint",
     "Trend",
     "baseline_to_json",
@@ -53,9 +68,13 @@ __all__ = [
     "diff_findings",
     "diff_to_payload",
     "evaluate_gate",
+    "evaluate_policy",
     "load_baseline",
+    "load_policy",
     "meets_threshold",
     "merge_baseline",
+    "policy_from_threshold",
+    "policy_result_to_payload",
     "render_trend_text",
     "save_baseline",
     "trend_to_payload",

@@ -50,7 +50,8 @@ class GateResult:
         return 0 if self.passed else 1
 
     @property
-    def _criteria(self) -> str:
+    def criteria(self) -> str:
+        """The gate criteria as text, for log lines and JUnit failure bodies."""
         criteria = f"at or above {self.threshold.value}"
         if self.min_risk_score is not None:
             criteria += f" or risk >= {self.min_risk_score}"
@@ -60,8 +61,8 @@ class GateResult:
     def summary(self) -> str:
         """A short, human-readable description of the gate outcome."""
         if self.passed:
-            return f"gate passed: no new findings {self._criteria}"
-        return f"gate failed: {len(self.triggering)} new finding(s) {self._criteria}"
+            return f"gate passed: no new findings {self.criteria}"
+        return f"gate failed: {len(self.triggering)} new finding(s) {self.criteria}"
 
 
 def evaluate_gate(
