@@ -8,6 +8,7 @@ concurrency cap.
 
 import threading
 from collections.abc import Sequence
+from pathlib import Path
 
 import pytest
 
@@ -214,6 +215,54 @@ def test_run_pipeline_wires_all_stages() -> None:
     assert "Cross Site Scripting (Reflected)" in titles
     # Prioritized: the Critical CVE outranks the High XSS.
     assert result.findings[0].title == "CVE-2021-44228"
+
+
+def _sbom_finding() -> list[Finding]:
+    return [
+        make_finding(
+            source="sbom",
+            host="acme-webapp",
+            title="GHSA-x84v-xcm2-53pg: requests 2.19.0",
+            severity=Severity.HIGH,
+            plugin_id="GHSA-x84v-xcm2-53pg",
+            cve_ids=["CVE-2018-18074"],
+            cvss_score=7.5,
+        )
+    ]
+
+
+def test_run_pipeline_includes_injected_sbom_layer() -> None:
+    captured: dict[str, bool] = {}
+
+    def run_sbom(config: Config) -> list[Finding]:
+        captured["called"] = True
+        return _sbom_finding()
+
+    result = orchestrator.run_pipeline(
+        _config(),
+        authorized=True,
+        enrichment=orchestrator.EnrichmentClients(),
+        run_network=lambda _c: _nmap_findings(),
+        run_web=lambda _c, _u: _zap_findings(),
+        run_sbom=run_sbom,
+    )
+    assert captured["called"] is True
+    titles = [f.title for f in result.findings]
+    # Supply-chain findings flow through the same dedup/prioritize path as scanners.
+    assert "GHSA-x84v-xcm2-53pg: requests 2.19.0" in titles
+    assert any(f.source == "sbom" for f in result.findings)
+
+
+def test_default_sbom_scan_empty_when_unconfigured() -> None:
+    # No sbom paths in config -> the default layer does no work and no OSV client.
+    assert orchestrator._default_sbom_scan(_config()) == []
+
+
+def test_default_sbom_scan_skips_unreadable_files(tmp_path: Path) -> None:
+    missing = tmp_path / "nope.json"
+    cfg = _config(sbom=[str(missing)])
+    # A missing/invalid SBOM degrades to a warning and an empty result, not a crash.
+    assert orchestrator._default_sbom_scan(cfg) == []
 
 
 def test_run_pipeline_requires_authorization() -> None:

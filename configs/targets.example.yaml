@@ -84,6 +84,16 @@ enrichment:
 run:
   max_workers: 10             # bounded thread pool for the network layer
 
+# --- Supply-chain analysis (optional) -----------------------------------------
+# Analyze CycloneDX SBOMs for known-vulnerable components (OSV.dev) alongside the
+# network/web scan; the findings enrich, dedup, prioritize, and gate like any
+# other. SBOM files are local artifacts, so they are NOT subject to the scope
+# allowlist (nothing is probed). A file that cannot be read is skipped with a
+# warning. For a standalone SBOM-only run, use `vulnpipe sbom` instead.
+# sbom:
+#   - "sbom/app.cdx.json"
+#   - "sbom/api.cdx.json"
+
 # --- Prioritization (optional) ------------------------------------------------
 # Rank findings on more business-critical assets higher. The first matching rule
 # wins, so list more specific entries first; a host matching no rule uses

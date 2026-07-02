@@ -296,6 +296,14 @@ class Config(BaseModel):
     enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
     run: RunConfig = Field(default_factory=RunConfig)
     prioritization: PrioritizationConfig = Field(default_factory=PrioritizationConfig)
+    sbom: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Paths to CycloneDX JSON SBOMs to analyze for known-vulnerable components "
+            "(OSV.dev) alongside the network/web scan. Passive analysis: SBOM files are "
+            "local artifacts, so they are not subject to the host/URL scope allowlist."
+        ),
+    )
 
 
 # --------------------------------------------------------------------------- #

@@ -51,6 +51,20 @@ def test_load_minimal_config(tmp_path: Path) -> None:
     assert cfg.run.max_workers == 10
 
 
+def test_sbom_paths_default_empty_and_parse(tmp_path: Path) -> None:
+    cfg = load_config(_write(tmp_path, MINIMAL_YAML))
+    assert cfg.sbom == []  # optional, defaults to no SBOM analysis
+    with_sbom = load_config(
+        _write(
+            tmp_path,
+            'scope:\n  hosts: ["10.0.0.0/24"]\n'
+            'targets:\n  - host: "10.0.0.5"\n'
+            'sbom:\n  - "sbom/app.cdx.json"\n  - "sbom/api.cdx.json"\n',
+        )
+    )
+    assert with_sbom.sbom == ["sbom/app.cdx.json", "sbom/api.cdx.json"]
+
+
 def test_missing_file_raises(tmp_path: Path) -> None:
     with pytest.raises(ConfigError):
         load_config(tmp_path / "nope.yaml")

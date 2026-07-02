@@ -16,7 +16,9 @@ fan-out. The heavier web layer is fanned out across a **bounded thread pool**
 (``run.max_workers``) with ZAP active-scan concurrency **capped separately**
 (``zap.max_concurrency``) via a semaphore, because active scans are resource
 intensive. The web layer scans both URLs declared in config and HTTP/HTTPS
-services discovered by the Nmap stage (in scope only).
+services discovered by the Nmap stage (in scope only). A third, passive
+supply-chain layer analyzes any configured CycloneDX SBOMs against OSV.dev; its
+findings join the network/web findings before enrichment.
 
 Scanners are resolved through :mod:`vulnpipe.scanners.registry` by name, never
 special-cased; injectable scan callables keep the pipeline testable without real
@@ -45,12 +47,16 @@ from vulnpipe.core.config import (
 from vulnpipe.core.logging import get_logger, log_event
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.enrichment import EnrichmentClients, build_enrichment, enrich_findings
+from vulnpipe.enrichment._http import open_cache
 from vulnpipe.processing import (
     FalsePositiveConfig,
     deduplicate,
     filter_false_positives,
     prioritize,
 )
+from vulnpipe.sbom.analyzer import analyze_sbom
+from vulnpipe.sbom.cyclonedx import SbomError, load_sbom
+from vulnpipe.sbom.osv_client import OsvClient
 from vulnpipe.scanners.nmap_scanner import SOURCE as NMAP_SOURCE
 from vulnpipe.scanners.registry import get_scanner
 from vulnpipe.scanners.zap_scanner import SOURCE as ZAP_SOURCE
@@ -59,9 +65,10 @@ from vulnpipe.scanners.zap_scanner import WebTarget, select_web_targets_with_aut
 _log = get_logger(__name__)
 
 #: Injectable scan callables (default to the registered scanners) so the pipeline
-#: can be exercised without real Nmap/ZAP.
+#: can be exercised without real Nmap/ZAP/OSV.
 NetworkScan = Callable[[Config], list[Finding]]
 WebScan = Callable[[Config, Sequence[str]], list[Finding]]
+SbomScan = Callable[[Config], list[Finding]]
 
 # Service-name hints (substring match) marking an Nmap-discovered web service, and
 # the well-known web ports used as a fallback when the service is unidentified.
@@ -197,6 +204,37 @@ def _default_web_scan(config: Config, discovered_urls: Sequence[str]) -> list[Fi
 
 
 # --------------------------------------------------------------------------- #
+# Supply-chain (SBOM) layer
+# --------------------------------------------------------------------------- #
+def _default_sbom_scan(config: Config) -> list[Finding]:
+    """Analyze every configured CycloneDX SBOM against OSV.dev.
+
+    SBOM paths are local artifacts, so they bypass the host/URL scope allowlist. A
+    file that cannot be read or parsed degrades to a logged warning and is skipped,
+    consistent with a failed scanner host, rather than aborting the run. The OSV
+    client shares the enrichment on-disk cache.
+    """
+    if not config.sbom:
+        return []
+    cache = open_cache(config.enrichment.cache_dir)
+    client = OsvClient(cache=cache)
+    findings: list[Finding] = []
+    try:
+        for path in config.sbom:
+            try:
+                sbom = load_sbom(path)
+            except SbomError as exc:
+                log_event(
+                    _log, logging.WARNING, "sbom load failed; skipping", path=path, error=str(exc)
+                )
+                continue
+            findings.extend(analyze_sbom(sbom, client))
+    finally:
+        client.close()
+    return findings
+
+
+# --------------------------------------------------------------------------- #
 # Enrichment
 # --------------------------------------------------------------------------- #
 def _enrich(
@@ -228,14 +266,17 @@ def run_pipeline(
     enrichment: EnrichmentClients | None = None,
     run_network: NetworkScan | None = None,
     run_web: WebScan | None = None,
+    run_sbom: SbomScan | None = None,
 ) -> PipelineResult:
     """Run the full pipeline and return prioritized findings plus the CI verdict.
 
     Enforces authorization and scope before scanning. ``run_network`` / ``run_web``
-    default to the registered Nmap / ZAP scanners but can be injected (e.g. in
-    tests). ``baseline`` drives the diff/gate -- when omitted, every finding counts
-    as new (an empty baseline). Raises
-    :class:`~vulnpipe.core.config.AuthorizationError` /
+    / ``run_sbom`` default to the registered Nmap / ZAP scanners and the OSV-backed
+    SBOM analyzer but can be injected (e.g. in tests). The SBOM layer analyzes any
+    ``config.sbom`` files and contributes findings that flow through enrichment,
+    dedup, filtering, and prioritization like scanner output. ``baseline`` drives
+    the diff/gate -- when omitted, every finding counts as new (an empty baseline).
+    Raises :class:`~vulnpipe.core.config.AuthorizationError` /
     :class:`~vulnpipe.core.config.OutOfScopeError` if the run is not authorized or a
     target is out of scope.
     """
@@ -244,17 +285,20 @@ def run_pipeline(
 
     network_scan = run_network if run_network is not None else _default_network_scan
     web_scan = run_web if run_web is not None else _default_web_scan
+    sbom_scan = run_sbom if run_sbom is not None else _default_sbom_scan
 
     network_findings = network_scan(config)
     discovered = derive_web_targets(network_findings, config.scope)
     web_findings = web_scan(config, discovered)
-    raw = [*network_findings, *web_findings]
+    sbom_findings = sbom_scan(config)
+    raw = [*network_findings, *web_findings, *sbom_findings]
     log_event(
         _log,
         logging.INFO,
         "scan stages complete",
         network=len(network_findings),
         web=len(web_findings),
+        sbom=len(sbom_findings),
         discovered_web=len(discovered),
     )
 
@@ -282,6 +326,7 @@ def run_pipeline(
 __all__ = [
     "NetworkScan",
     "PipelineResult",
+    "SbomScan",
     "WebScan",
     "derive_web_targets",
     "run_pipeline",
