@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **SBOM as a scan layer** — a scan config can list CycloneDX SBOMs under `sbom:`,
+  and the orchestrator analyzes them against OSV.dev through the same injectable
+  seam as the network and web layers, so supply-chain findings enrich, dedup,
+  prioritize, diff, and gate alongside scanner output. SBOM files bypass the scope
+  allowlist (local artifacts, nothing probed); an unreadable file degrades to a
+  warning.
+- **`diff --format markdown`** — render the baseline diff as a GitHub-flavored
+  pull-request comment (new/persisting/resolved headline, a table of new findings,
+  and a list of resolved ones).
+- **`schema report` / `schema policy`** — the `schema` command now also prints the
+  JSON Schema for the findings report envelope (finding items in serialization
+  mode, so the computed fingerprint and risk score are part of the contract) and
+  for a gate-policy file.
+- **HTML dark theme** — the report palette moved onto CSS custom properties with a
+  `prefers-color-scheme: dark` media query, so it follows the reader's OS theme.
+
 ## [0.3.0] - 2026-07-02
 
 Standards context, policy-as-code gating, and supply-chain (SBOM) analysis.
