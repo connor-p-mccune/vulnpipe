@@ -74,8 +74,18 @@ Point vulnpipe at an authorized, in-scope range and it will:
   fabricated (a failed lookup leaves the field unknown);
 - **filter** false positives via an allowlist plus a confidence threshold;
 - **prioritize** by severity → known-exploited (KEV) → CVSS → EPSS → asset criticality;
+- **map** findings onto the **OWASP Top 10** and the **CWE Top 25** (curated
+  official mappings; unmapped findings stay unmapped, never forced into a category);
 - **report** to JSON (canonical), HTML (human), and SARIF (the GitHub Security tab);
-- **gate** CI by diffing against a baseline and failing only on *new* severe findings.
+- **gate** CI by diffing against a baseline and failing only on *new* severe findings —
+  or against a reviewable **policy-as-code** YAML (severity budgets, KEV block,
+  risk threshold).
+
+Beyond active scanning, `vulnpipe sbom` performs **passive supply-chain analysis**:
+point it at a CycloneDX SBOM and it queries the [OSV.dev](https://osv.dev/) advisory
+database for known-vulnerable components, emitting the same findings JSON the rest
+of the toolchain consumes — no scope or authorization needed, because nothing is
+probed.
 
 ## How it works
 
@@ -97,12 +107,13 @@ flowchart LR
 
 ```
 vulnpipe/
-├── core/         models.py, config.py, orchestrator.py, logging.py
+├── core/         models.py, config.py, orchestrator.py, standards.py, logging.py
 ├── scanners/     base.py, nmap_scanner.py, zap_scanner.py, registry.py
-├── enrichment/   cvss.py, nvd_client.py, epss_client.py
+├── enrichment/   cvss.py, nvd_client.py, epss_client.py, kev_client.py
 ├── processing/   normalizer.py, deduplicator.py, false_positive.py, prioritizer.py
-├── reporting/    json_reporter.py, html_reporter.py, sarif_reporter.py, templates/
-├── ci/           baseline.py, differ.py, gate.py, junit.py
+├── reporting/    json/html/markdown/csv/prometheus/sarif reporters, badge.py, templates/
+├── ci/           baseline.py, differ.py, gate.py, policy.py, junit.py, trends.py
+├── sbom/         cyclonedx.py, osv_client.py, analyzer.py, pipeline.py
 ├── auth/         auth_contexts.py
 └── cli/          main.py
 ```
@@ -302,6 +313,31 @@ A run logs a concise summary:
 > On the **first** run there is no baseline, so every finding is "new" and the gate
 > may fail by design. Establish a baseline (below) so CI gates only on *regressions*.
 
+## Supply-chain (SBOM) analysis
+
+`vulnpipe sbom` analyzes what your software is *built from*, with no scanners and
+no target: it reads a **CycloneDX** SBOM (the JSON emitted by `syft`, `cdxgen`,
+`pip-audit --format cyclonedx-json`, …), queries **OSV.dev** for the advisories
+affecting each declared component, and emits standard vulnpipe findings — severity
+from each advisory's own CVSS vector, remediation from its declared fixed
+versions, plus EPSS/KEV enrichment and the composite risk score.
+
+```bash
+# Analyze an SBOM; print the canonical findings JSON and keep a copy in results/.
+vulnpipe sbom --input sbom.json --output results
+
+# Or render any report format directly.
+vulnpipe sbom --input sbom.json --format markdown > supply-chain.md
+
+# The output is ordinary findings JSON, so the whole toolchain applies:
+vulnpipe stats    --input results/sbom.json
+vulnpipe baseline --input results/sbom.json --output sbom-baseline.json
+vulnpipe gate     --current results/sbom.json --baseline sbom-baseline.json --policy policy.yaml
+```
+
+Because SBOM analysis is passive — a local file plus a public advisory API — it
+requires no scope file and no `--authorized` flag. Nothing is probed.
+
 ## Reports
 
 vulnpipe renders three formats from the same findings; all are **deterministic** for
@@ -311,9 +347,9 @@ are stable across runs.
 | Format | Use |
 | --- | --- |
 | **JSON** | The canonical, lossless artifact. `scan` writes `results/latest.json`; `report` / `diff` / `baseline` read it back. |
-| **HTML** | The human-readable report: summary (with a known-exploited count), inline SVG severity chart, per-host breakdown, and a client-side filterable + sortable findings table with risk-score and KEV columns. |
-| **Markdown** | A pull-request / Slack–friendly summary: headline totals, a severity table, and a prioritized findings table with risk score, CVSS, EPSS, and a KEV marker. |
-| **CSV** | One row per finding for a spreadsheet or data-frame — columns mirror the JSON fields (plus fingerprint and risk score). |
+| **HTML** | The human-readable report: summary cards (known-exploited and CWE Top 25 counts), inline SVG severity chart, an OWASP Top 10 breakdown, a per-host breakdown with expandable per-finding details (description, remediation, CVSS vector, references), and a client-side filterable + sortable findings table with risk-score, KEV, and OWASP columns. |
+| **Markdown** | A pull-request / Slack–friendly summary: headline totals, severity and OWASP Top 10 tables, and a prioritized findings table with risk score, CVSS, EPSS, and a KEV marker. |
+| **CSV** | One row per finding for a spreadsheet or data-frame — columns mirror the JSON fields (plus fingerprint, risk score, and OWASP categories). |
 | **Prometheus** | Text-exposition gauges (findings by severity/source, known-exploited count, peak risk) for the node_exporter textfile collector or a Pushgateway. |
 | **SARIF** | SARIF 2.1.0 for the GitHub code-scanning / Security tab. |
 
@@ -425,6 +461,38 @@ vulnpipe scan -c configs/targets.yaml --authorized \
   --sarif results/vulnpipe.sarif --junit results/junit.xml
 ```
 
+### Policy-as-code
+
+A single severity threshold can't say *"no new criticals, at most five new
+mediums, and never a new known-exploited finding."* A **gate policy** can — as a
+reviewable YAML file
+([`configs/policy.example.yaml`](configs/policy.example.yaml)):
+
+```yaml
+max_new:            # per-severity budgets for NEW findings
+  critical: 0
+  high: 0
+  medium: 5
+max_new_total: 20   # cap on new findings of any severity
+min_risk_score: 90  # fail on any new finding with composite risk >= 90
+block_kev: true     # refuse any new known-exploited (KEV) finding
+```
+
+Pass it to `scan --policy policy.yaml` (it decides the verdict instead of
+`--gate-severity`), or re-evaluate an existing report without rescanning:
+
+```console
+$ vulnpipe gate --current results/latest.json --baseline baseline.json --policy policy.yaml
+gate failed: 1 policy violation(s), 1 finding(s) (new critical <= 0; new high <= 0; new medium <= 5; new total <= 20; risk < 90; no new known-exploited)
+  x 1 new critical finding(s) exceed the budget of 0
+      [critical] CVE-2021-42013 (10.0.0.5)
+$ echo $?
+1
+```
+
+Only **new** findings are judged — persisting (baselined) findings never violate a
+policy. `--format json` emits the verdict for automation.
+
 A ready-to-adapt GitHub Actions workflow lives at
 [`.github/workflows/security-scan.yml`](.github/workflows/security-scan.yml): it
 runs an authorized scan, uploads the SARIF to code scanning, publishes the JUnit
@@ -483,9 +551,12 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | Command | What it does |
 | --- | --- |
 | `scan` | Validate authorization/scope, run the pipeline, write reports, and gate. Requires `--config` and `--authorized`. |
+| `sbom` | Analyze a CycloneDX SBOM against OSV.dev and emit standard findings — passive supply-chain analysis, no scope/authorization needed (`--input`, `--output`, `--format`, `--no-enrich`). |
+| `gate` | Re-evaluate the CI gate over an existing findings JSON without rescanning — policy file or severity/risk options (`--current`, `--baseline`, `--policy`, `--format text\|json`). |
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
 | `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF on stdout (`--input`, `--format`). |
-| `stats` | Print a terminal summary of a findings JSON — severity breakdown, top risks, and worst-affected hosts (`--input`). |
+| `stats` | Print a terminal summary of a findings JSON — severity breakdown, OWASP Top 10, top risks, and worst-affected hosts (`--input`). |
+| `badge` | Render a findings JSON into a shields-style SVG status badge (`--input`, `--output`, `--label`). |
 | `notify` | Post a findings summary to a Slack-compatible webhook (URL resolved from the environment via `--webhook-url-env`). |
 | `trend` | Analyze how findings evolve across a chronological series of scan JSONs — totals, severity mix, and introduced/resolved deltas (text or JSON). |
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json`). |
