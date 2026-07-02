@@ -69,6 +69,46 @@ def test_get_json_sends_shared_and_custom_headers() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# post_json (same engine, JSON-body POST)
+# --------------------------------------------------------------------------- #
+@respx.mock
+def test_post_json_success_sends_body_and_headers() -> None:
+    route = respx.post(URL).mock(return_value=httpx.Response(200, json={"vulns": []}))
+    with _client() as client:
+        status, data = client.post_json(URL, json_body={"package": {"purl": "pkg:pypi/x"}})
+    assert status == 200
+    assert data == {"vulns": []}
+    request = route.calls.last.request
+    assert request.headers["user-agent"] == "vulnpipe"
+    assert b'"pkg:pypi/x"' in request.content
+
+
+@respx.mock
+def test_post_json_404_returns_none_body() -> None:
+    respx.post(URL).mock(return_value=httpx.Response(404))
+    status, data = _client().post_json(URL, json_body={})
+    assert status == 404
+    assert data is None
+
+
+@respx.mock
+def test_post_json_retries_retryable_status() -> None:
+    route = respx.post(URL)
+    route.side_effect = [httpx.Response(503), httpx.Response(200, json={"ok": 1})]
+    status, data = _client().post_json(URL, json_body={})
+    assert status == 200
+    assert data == {"ok": 1}
+    assert route.call_count == 2
+
+
+@respx.mock
+def test_post_json_exhausted_retries_raise() -> None:
+    respx.post(URL).mock(return_value=httpx.Response(503))
+    with pytest.raises(RetryableStatusError):
+        _client(max_attempts=2).post_json(URL, json_body={})
+
+
+# --------------------------------------------------------------------------- #
 # Retry behavior
 # --------------------------------------------------------------------------- #
 @respx.mock

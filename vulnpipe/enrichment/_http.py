@@ -114,9 +114,26 @@ class HttpJsonClient:
         result: tuple[int, Any] = self._retrying(self._fetch, url, params)
         return result
 
+    def post_json(self, url: str, *, json_body: Any) -> tuple[int, Any]:
+        """POST ``json_body`` to ``url`` and return ``(status_code, parsed_json_or_none)``.
+
+        Same throttle, retry, and response semantics as :meth:`get_json`; used by
+        APIs whose query interface is a JSON POST (e.g. OSV.dev).
+        """
+        result: tuple[int, Any] = self._retrying(self._post, url, json_body)
+        return result
+
     def _fetch(self, url: str, params: Mapping[str, str] | None) -> tuple[int, Any]:
         self._throttle()
         response = self._client.get(url, params=dict(params or {}), headers=self._headers)
+        return self._handle(response)
+
+    def _post(self, url: str, json_body: Any) -> tuple[int, Any]:
+        self._throttle()
+        response = self._client.post(url, json=json_body, headers=self._headers)
+        return self._handle(response)
+
+    def _handle(self, response: httpx.Response) -> tuple[int, Any]:
         if response.status_code in RETRYABLE_STATUS:
             raise RetryableStatusError(response.status_code)
         if response.is_success:
