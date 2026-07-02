@@ -51,6 +51,7 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | Package / module | Responsibility |
 | --- | --- |
 | `core/models.py` | The shared `Finding`, `Host`, and `Service` models, the `Severity` / `Confidence` / `AssetCriticality` enums, and the `compute_fingerprint` helper. |
+| `core/standards.py` | Curated OWASP Top 10 2021 / CWE Top 25 reference data and pure CWE-to-category lookups (unmapped CWEs return no category, never a guess). |
 | `core/config.py` | YAML + environment config loading, the strict pydantic schema, and the authorization/scope guards (`ensure_authorized`, `ensure_*_in_scope`). |
 | `core/orchestrator.py` | Runs the full pipeline end to end and returns the prioritized findings plus the diff and gate verdict. |
 | `core/logging.py` | The rich-backed structured logger used throughout (the project never uses `print`). |
@@ -58,7 +59,8 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `enrichment/` | CVSS parsing/scoring, cached NVD / EPSS lookups, and CISA KEV cross-referencing that fill — never fabricate — the `cvss_*` / `epss_*` / `kev` fields. |
 | `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize. |
 | `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF renderers, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
-| `ci/` | The baseline store, the differ, the severity gate, JUnit XML output, and multi-scan trend analysis. |
+| `ci/` | The baseline store, the differ, the severity gate, the policy-as-code gate (`policy.py`), JUnit XML output, and multi-scan trend analysis. |
+| `sbom/` | Supply-chain analysis: CycloneDX parsing, the OSV.dev advisory client, and the analyzer that normalizes advisories into findings. Passive (reads a file, queries a public API); never probes the described software. |
 | `auth/` | ZAP authentication-context construction (form / header-JWT / script). |
 | `cli/main.py` | The Typer CLI (`scan` / `report` / `diff` / `baseline`) and the `--authorized` + scope gate. |
 
@@ -157,6 +159,27 @@ the severity/host counts once so the formats cannot drift.
 `get_reporter(fmt)` resolves a format name to a reporter; the `report` CLI command
 loads a findings JSON and renders it to any format on stdout.
 
+### Standards mapping (OWASP Top 10 / CWE Top 25)
+
+`core/standards.py` holds a curated copy of the official OWASP Top 10 2021 CWE
+mapping and the 2023 CWE Top 25 list -- pure reference data plus pure lookups. The
+shared view-model (`reporting/summary.summarize_standards`) distributes findings
+over those frameworks once, and every format surfaces it: the HTML report gets an
+OWASP breakdown section, a CWE Top 25 card, and an OWASP column; Markdown and the
+terminal `stats` view get an OWASP table; CSV gets an `owasp` column; SARIF rules
+carry `external/owasp/...` tags next to the CWE tags. The mapping is
+presentation-layer only -- it never enters the finding model or the canonical
+JSON, and a finding whose CWEs are absent from the curated map is reported as
+*unmapped* rather than forced into a category.
+
+### Status badge
+
+`reporting/badge.py` renders findings into a flat shields-style SVG
+(`vulnpipe badge`): the value lists the two worst non-empty severity bands (or
+``clean``), the color follows the report palette, and a leading ``!`` flags
+known-exploited findings. Deterministic like every renderer (fixed-width text
+approximation, no timestamp) and XML-escaped throughout.
+
 ## Authenticated scanning
 
 Authenticated scans are the biggest false-positive reducer — without a session ZAP
@@ -199,6 +222,15 @@ After reporting, the CI stage (`ci/`) turns findings into a build verdict.
   though it sits below the severity bar. Persisting (baselined) findings are exempt —
   that is the whole point of a baseline. The verdict is exposed as a process
   `exit_code` so a CI job exits non-zero exactly when a regression is introduced.
+- **Policy** (`policy.py`) generalizes the gate into policy-as-code: a reviewable
+  YAML file (`configs/policy.example.yaml`) declaring per-severity budgets for new
+  findings (`max_new`), a total-new cap, a risk-score threshold, and a block on new
+  known-exploited (KEV) findings. `evaluate_policy` is pure over a diff and reports
+  violations in a fixed rule order; `policy_from_threshold` expresses the plain
+  severity gate as a policy so both forms share one evaluation path. Either verdict
+  (`GateResult` or `PolicyResult`) satisfies the structural `GateVerdict` protocol
+  the JUnit renderer and the CLI consume. `scan --policy` swaps the verdict in, and
+  the standalone `gate` command re-evaluates a findings JSON without rescanning.
 - **JUnit** (`junit.py`) renders the verdict as JUnit XML: every current finding is a
   `<testcase>` and each gate-triggering finding a `<failure>`, with all content
   XML-escaped. Together with the SARIF report (reused from `reporting/`) this feeds CI
@@ -207,6 +239,37 @@ After reporting, the CI stage (`ci/`) turns findings into a build verdict.
 `.github/workflows/security-scan.yml` is an example workflow: it runs an authorized
 scan, uploads the SARIF to code scanning, and fails the job on a new High/Critical
 finding while still publishing the JSON / SARIF / JUnit artifacts.
+
+## Supply-chain (SBOM) analysis
+
+`sbom/` extends detection to the software supply chain without touching a target:
+it reads a **CycloneDX** component inventory (the JSON emitted by `syft`,
+`cdxgen`, `pip-audit`, and most build tooling) and asks the **OSV.dev** advisory
+database which known vulnerabilities affect each declared component.
+
+- `cyclonedx.py` parses the document into a typed `Sbom` (a *subject* -- the
+  application described -- plus `Component`s with name/version/purl). Parsing is
+  pure and lenient in the usual honest way: malformed entries are skipped,
+  duplicates keep their first occurrence, and a non-CycloneDX `bomFormat` is
+  rejected outright.
+- `osv_client.py` mirrors the enrichment clients: one JSON POST per
+  `purl@version` (cached on disk for a day), pure response parsing, retries with
+  backoff, and failure degrading to an empty result with a logged warning. Among
+  an advisory's CVSS vectors the highest-scoring parseable one wins.
+- `analyzer.py` normalizes each advisory into a standard `Finding` through the
+  same `make_finding` path the scanners use: `host` is the SBOM subject (a stable
+  identity, so baselines survive application releases), `plugin_id` is the OSV id,
+  severity derives from the advisory's own CVSS vector (or stays informational
+  when there is none -- unknown, never guessed), and the remediation line is
+  stated only when OSV declares fixed versions. Components without a purl or
+  version are skipped with a warning: reported as unanalyzed, not silently clean.
+- `pipeline.py` composes the stages for the `sbom` CLI command: load -> OSV ->
+  EPSS + KEV enrichment (both keyless) -> dedup -> prioritize. The output is
+  ordinary findings JSON, so `report`, `stats`, `diff`, `baseline`, `trend`, and
+  `gate` all work on supply-chain results unchanged.
+
+Because this layer only reads a local file and queries public advisory data, it
+sits outside the authorization-scope gate that governs active scanning.
 
 ## Orchestration & CLI
 
@@ -236,9 +299,16 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
 - `validate` — dry-run a config through `core/planner.build_scan_plan` (pure): print
   the in-scope network/web targets, enrichment sources, and required secret env vars,
   and exit non-zero if any target is out of scope or the scope allowlist is empty.
+- `sbom` — analyze a CycloneDX SBOM against OSV.dev and emit standard findings
+  (any report format on stdout, plus an optional `sbom.json`); passive, so it
+  needs no scope or `--authorized`.
+- `gate` — re-evaluate the CI gate over an existing findings JSON without
+  rescanning, using a policy file or the severity/risk options (text or JSON
+  verdict, non-zero exit on violation).
 - `report` — render a findings JSON to JSON / HTML / Markdown / CSV / SARIF on stdout.
 - `stats` — print a terminal summary of a findings JSON (severity breakdown, top
   risks, worst-affected hosts) via a fixed-width Rich render.
+- `badge` — render a findings JSON into a shields-style SVG status badge.
 - `diff` — classify a findings JSON against a baseline (text or JSON output).
 - `trend` — analyze a chronological series of findings JSONs: per-scan totals and
   severity mix, findings introduced/resolved between scans (matched by fingerprint),

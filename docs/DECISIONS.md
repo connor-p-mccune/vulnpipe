@@ -187,3 +187,65 @@ fingerprint. It is a ranking aid, not a data source: it fabricates nothing.
 easy to test and to explain. The trade-off is that any weighting is a judgement call;
 keeping it transparent and intrinsic (not folding in external context) makes the
 judgement inspectable rather than hidden.
+
+## ADR-0013 — Standards mapping as curated reference data, outside the model
+
+**Context.** Findings carry CWE references, but a bare `CWE-79` means little to the
+people reports are written for. The frameworks they actually speak — the OWASP Top
+10 and the CWE Top 25 — are published mappings that change on their own cadence,
+not per-scan data.
+
+**Decision.** Hold a curated copy of the official OWASP Top 10 2021 CWE mapping and
+the 2023 CWE Top 25 as pure reference data (`core/standards.py`) with pure lookups,
+and apply it **at render time** through a shared view-model. It never enters the
+`Finding` model or the canonical JSON; a CWE outside the curated map yields no
+category (the finding reports as *unmapped*).
+
+**Consequences.** Every format gains OWASP/Top-25 context from one source that
+cannot drift per-reporter, JSON round-tripping and fingerprints are untouched, and
+updating to a future Top 10 revision is a data edit, not a migration. The trade-off
+is a curated snapshot that must be refreshed when the standards are — acceptable
+because the standards change every few years and the file documents its sources.
+
+## ADR-0014 — Policy-as-code gating over a single threshold
+
+**Context.** One severity threshold cannot express real gating policies: "no new
+criticals, at most five new mediums, and never a new known-exploited finding" is
+three different rules. Teams also need the gate decision reviewable in a PR, not
+embedded in CI flags.
+
+**Decision.** A declarative `GatePolicy` YAML (severity budgets, a total cap, a
+risk-score threshold, a KEV block) evaluated purely over the baseline diff
+(`ci/policy.py`). The plain threshold gate remains, and `policy_from_threshold`
+expresses it *as* a policy so both forms share one evaluation path; JUnit and the
+CLI consume either verdict through a structural `GateVerdict` protocol rather than
+a shared base class.
+
+**Consequences.** Gate rules live in a reviewed file with deterministic, per-rule
+violation reporting, and the standalone `gate` command re-evaluates a findings JSON
+without rescanning. The trade-off is two verdict types in flight; the protocol
+keeps them interchangeable where it matters and avoids retrofitting the existing
+`GateResult` API.
+
+## ADR-0015 — Supply-chain analysis via OSV, keyed to the SBOM subject
+
+**Context.** A deployment's risk includes what it is *built from*, not just what
+it exposes on the network. SBOMs (CycloneDX) declare that inventory, and OSV.dev
+answers "which advisories affect this package version" across ecosystems, for
+free and without credentials. Analyzing an SBOM is passive — no target is probed —
+so forcing it through the scan authorization gate would be wrong.
+
+**Decision.** A separate `sbom/` layer and CLI command outside the orchestrator:
+parse CycloneDX, query OSV per component (cached, worst CVSS vector wins),
+normalize each advisory through the same `make_finding` path as the scanners with
+`source="sbom"`. `Finding.host` is the SBOM **subject** (the application name, not
+its version), so fingerprints — and therefore baselines and diffs — survive
+application releases. Advisories without a CVSS vector stay informational; skipped
+(unqueryable) components are logged, never silently treated as clean.
+
+**Consequences.** Supply-chain findings flow through the existing reporting,
+enrichment (EPSS/KEV), diffing, and gating machinery unchanged, and the command
+needs no scope file. The trade-offs are deliberate: subject-level identity means
+two SBOMs analyzed under the same subject share a namespace, and severity for
+unscored advisories understates risk until enrichment/risk scoring lifts it —
+both preferred over inventing identity or severity.
