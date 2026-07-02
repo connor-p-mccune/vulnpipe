@@ -20,7 +20,7 @@ from pathlib import Path
 from vulnpipe.enrichment.enricher import enrich_findings
 from vulnpipe.enrichment.kev_client import KevEntry, parse_kev_catalog
 from vulnpipe.processing import deduplicate, prioritize
-from vulnpipe.reporting import get_reporter
+from vulnpipe.reporting import get_reporter, render_badge
 from vulnpipe.scanners.nmap_scanner import parse_nmap_xml
 from vulnpipe.scanners.zap_scanner import normalize_alerts
 
@@ -80,6 +80,9 @@ def main() -> None:
     ):
         (EXAMPLES / filename).write_text(get_reporter(fmt).render(findings), encoding="utf-8")
         print(f"wrote examples/{filename}")
+
+    (EXAMPLES / "sample-badge.svg").write_text(render_badge(findings), encoding="utf-8")
+    print("wrote examples/sample-badge.svg")
 
 
 if __name__ == "__main__":

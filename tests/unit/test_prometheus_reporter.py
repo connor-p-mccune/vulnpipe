@@ -21,7 +21,11 @@ def _findings() -> list[Finding]:
             source="nmap", host="10.0.0.6", title="CVE-2021-23017", severity=Severity.HIGH
         ),
         make_finding(
-            source="zap", host="app.lab.example.com", title="SQL Injection", severity=Severity.HIGH
+            source="zap",
+            host="app.lab.example.com",
+            title="SQL Injection",
+            severity=Severity.HIGH,
+            cwe_ids=["CWE-89"],  # A03 Injection, a CWE Top 25 weakness
         ),
     ]
 
@@ -57,6 +61,13 @@ def test_scalar_metrics() -> None:
     assert series["vulnpipe_known_exploited_total"] == "1"
     assert series["vulnpipe_hosts_total"] == "3"
     assert series["vulnpipe_max_risk_score"] == "98"
+
+
+def test_owasp_and_cwe_top25_metrics() -> None:
+    series = _series(render_prometheus(_findings()))
+    assert series['vulnpipe_owasp_top10_total{category="A03"}'] == "1"  # the SQLi finding
+    assert series['vulnpipe_owasp_top10_total{category="A01"}'] == "0"  # band present, zeroed
+    assert series["vulnpipe_cwe_top25_total"] == "1"
 
 
 def test_label_values_are_escaped() -> None:

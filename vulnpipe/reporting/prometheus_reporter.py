@@ -17,7 +17,12 @@ from collections.abc import Iterable
 
 from vulnpipe.core.models import Finding
 from vulnpipe.reporting.base import BaseReporter
-from vulnpipe.reporting.summary import SEVERITY_DISPLAY_ORDER, count_hosts, severity_counts
+from vulnpipe.reporting.summary import (
+    SEVERITY_DISPLAY_ORDER,
+    count_hosts,
+    severity_counts,
+    summarize_standards,
+)
 
 _Sample = tuple[dict[str, str], int]
 
@@ -63,6 +68,17 @@ def render_prometheus(findings: Iterable[Finding]) -> str:
         "vulnpipe_known_exploited_total",
         "Findings whose CVE is in the CISA KEV (known-exploited) catalog.",
         [({}, sum(1 for finding in items if finding.kev))],
+    )
+    standards = summarize_standards(items)
+    lines += _family(
+        "vulnpipe_owasp_top10_total",
+        "Findings mapped to each OWASP Top 10 2021 category (by short code).",
+        [({"category": category.short}, count) for category, count in standards.owasp.items()],
+    )
+    lines += _family(
+        "vulnpipe_cwe_top25_total",
+        "Findings citing a 2023 CWE Top 25 Most Dangerous Weakness.",
+        [({}, standards.cwe_top_25)],
     )
     lines += _family(
         "vulnpipe_hosts_total",

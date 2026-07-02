@@ -15,6 +15,7 @@ against a real system.
 | [`sample-report.html`](sample-report.html) | The human-readable HTML report (summary, inline SVG severity chart, per-host breakdown, and a filterable, sortable findings table). Open it in a browser. |
 | [`sample-report.md`](sample-report.md) | The Markdown report — a pull-request / Slack–friendly summary. |
 | [`sample-report.csv`](sample-report.csv) | The CSV report — one row per finding for a spreadsheet or data-frame. |
+| [`sample-badge.svg`](sample-badge.svg) | The SVG status badge — the worst outstanding severities at a glance, for a README or dashboard. |
 
 The sample contains 15 findings across 4 hosts (1 critical, 5 high, 2 medium,
 2 low, 5 informational), shown in vulnpipe's prioritized order. Two of them are
