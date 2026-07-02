@@ -38,6 +38,17 @@
     .card.kev .num { color: #c62828; }
     .card.kev.zero { border-color: #e0e0e0; }
     .card.kev.zero .num { color: #1b1b1b; }
+    .card.top25 { border-color: #ef6c00; }
+    .card.top25 .num { color: #ef6c00; }
+    .card.top25.zero { border-color: #e0e0e0; }
+    .card.top25.zero .num { color: #1b1b1b; }
+    .badge-owasp { background: #37474f; }
+    ul.owasp-list { list-style: none; padding: 0; margin: .5rem 0 0; max-width: 34rem; }
+    ul.owasp-list li {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .3rem 0; border-top: 1px solid #f0f0f0;
+    }
+    ul.owasp-list li .count { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
     svg { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: .5rem; }
     .chart-label { font-size: 13px; fill: #1b1b1b; }
     .chart-count { font-size: 13px; fill: #1b1b1b; font-weight: 600; }
@@ -86,6 +97,9 @@
     <div class="card kev" title="CVEs in the CISA Known Exploited Vulnerabilities catalog">
       <div class="num">2</div><div class="muted">known-exploited</div>
     </div>
+    <div class="card top25" title="Findings citing a 2023 CWE Top 25 Most Dangerous Weakness">
+      <div class="num">2</div><div class="muted">CWE Top 25</div>
+    </div>
   </div>
   <div class="badges">
     <span class="badge sev-critical">Critical: 1</span>
@@ -113,6 +127,26 @@
     <rect x="120" y="124" width="320" height="22" rx="3" fill="#1565c0"></rect>
     <text x="448" y="140" class="chart-count">5</text>
   </svg>
+
+  <h2>OWASP Top 10 (2021)</h2>
+  <ul class="owasp-list">
+    <li>
+      <span class="badge badge-owasp">A01</span>
+      <span>Broken Access Control</span>
+      <span class="count">2</span>
+    </li>
+    <li>
+      <span class="badge badge-owasp">A03</span>
+      <span>Injection</span>
+      <span class="count">2</span>
+    </li>
+    <li>
+      <span class="badge badge-owasp">A04</span>
+      <span>Insecure Design</span>
+      <span class="count">1</span>
+    </li>
+  </ul>
+  <p class="muted">10 findings not mapped to an OWASP Top 10 category.</p>
 
   <h2>Per-host breakdown</h2>
     <section class="host">
@@ -238,6 +272,7 @@
         <th data-type="number">Port</th>
         <th data-type="text">Title</th>
         <th data-type="text">CVEs</th>
+        <th data-type="text">OWASP</th>
         <th data-type="number">CVSS</th>
         <th data-type="number">EPSS</th>
         <th data-type="number">KEV</th>
@@ -253,6 +288,7 @@
         <td class="num" data-sort="80">80</td>
         <td>CVE-2021-42013</td>
         <td>CVE-2021-42013</td>
+        <td></td>
         <td class="num" data-sort="9.8">9.8</td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="1"><span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888;</span></td>
@@ -266,6 +302,7 @@
         <td class="num" data-sort="80">80</td>
         <td>CVE-2021-41773</td>
         <td>CVE-2021-41773</td>
+        <td></td>
         <td class="num" data-sort="7.5">7.5</td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="1"><span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888;</span></td>
@@ -279,6 +316,7 @@
         <td class="num" data-sort="443">443</td>
         <td>CVE-2021-23017</td>
         <td>CVE-2021-23017</td>
+        <td></td>
         <td class="num" data-sort="7.7">7.7</td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -292,6 +330,7 @@
         <td class="num" data-sort="22">22</td>
         <td>CVE-2016-10009</td>
         <td>CVE-2016-10009</td>
+        <td></td>
         <td class="num" data-sort="7.5">7.5</td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -305,6 +344,7 @@
         <td class="num" data-sort="8443">8443</td>
         <td>SQL Injection</td>
         <td></td>
+        <td>A03</td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -318,6 +358,7 @@
         <td class="num" data-sort="443">443</td>
         <td>Cross Site Scripting (Reflected)</td>
         <td></td>
+        <td>A03</td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -331,6 +372,7 @@
         <td class="num" data-sort="22">22</td>
         <td>CVE-2018-15473</td>
         <td>CVE-2018-15473</td>
+        <td></td>
         <td class="num" data-sort="5.3">5.3</td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -344,6 +386,7 @@
         <td class="num" data-sort="443">443</td>
         <td>Vulnerable JS Library</td>
         <td>CVE-2019-11358, CVE-2020-11022</td>
+        <td></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -357,6 +400,7 @@
         <td class="num" data-sort="443">443</td>
         <td>Cookie without SameSite Attribute</td>
         <td></td>
+        <td>A01</td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -370,6 +414,7 @@
         <td class="num" data-sort="80">80</td>
         <td>Application Error Disclosure</td>
         <td></td>
+        <td>A04</td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -382,6 +427,7 @@
         <td>10.0.0.6</td>
         <td class="num" data-sort="3306">3306</td>
         <td>Open port 3306/tcp</td>
+        <td></td>
         <td></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="-1"></td>
@@ -396,6 +442,7 @@
         <td class="num" data-sort="22">22</td>
         <td>Open port 22/tcp</td>
         <td></td>
+        <td></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -409,6 +456,7 @@
         <td class="num" data-sort="443">443</td>
         <td>Timestamp Disclosure - Unix</td>
         <td></td>
+        <td>A01</td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -422,6 +470,7 @@
         <td class="num" data-sort="80">80</td>
         <td>Open port 80/tcp</td>
         <td></td>
+        <td></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="0"></td>
@@ -434,6 +483,7 @@
         <td>10.0.0.6</td>
         <td class="num" data-sort="443">443</td>
         <td>Open port 443/tcp</td>
+        <td></td>
         <td></td>
         <td class="num" data-sort="-1"></td>
         <td class="num" data-sort="-1"></td>

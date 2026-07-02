@@ -80,6 +80,28 @@ def test_non_kev_finding_has_no_exploited_marker() -> None:
     assert "known-exploited" not in md  # headline omits the KEV clause
 
 
+def test_owasp_table_lists_mapped_categories() -> None:
+    findings = [
+        make_finding(
+            source="zap",
+            host="app.example.com",
+            title="SQL Injection",
+            severity=Severity.HIGH,
+            cwe_ids=["CWE-89"],
+        ),
+        make_finding(source="zap", host="app.example.com", title="No CWE", severity=Severity.LOW),
+    ]
+    md = render_markdown(findings)
+    assert "## OWASP Top 10" in md
+    assert "| A03 Injection | 1 |" in md
+    assert "| _Not mapped_ | 1 |" in md
+
+
+def test_owasp_table_omitted_when_nothing_maps() -> None:
+    md = render_markdown(_findings())  # fixture findings carry no CWE references
+    assert "## OWASP Top 10" not in md
+
+
 def test_empty_report_renders_placeholder() -> None:
     md = render_markdown([])
     assert "**0 findings across 0 hosts**" in md

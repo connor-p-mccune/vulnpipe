@@ -1,16 +1,16 @@
-fingerprint,severity,risk_score,source,host,port,title,cvss_score,epss_score,kev,cve_ids,cwe_ids,plugin_id,confidence,url
-741786901e8421eee27c8d50d3a4bae704b85aa3962fb01a9fcc16bb4ccdb3fc,critical,98,nmap,10.0.0.5,80,CVE-2021-42013,9.8,,true,CVE-2021-42013,,vulners,medium,
-f37cb98d3b2212fa16226f86a9019754ab4215c1475c877e04d2956e53f7cf13,high,75,nmap,10.0.0.5,80,CVE-2021-41773,7.5,,true,CVE-2021-41773,,vulners,medium,
-6ef44ce5d33d4cec342a312a5b3c84c8ec0e0cd344430a969f7772ffd66d8272,high,54,nmap,10.0.0.6,443,CVE-2021-23017,7.7,,false,CVE-2021-23017,,vulners,medium,
-28117601fe8900a3a3c8e231099e3f35451701a4cd79b42e048bda07fd4c829a,high,52,nmap,10.0.0.5,22,CVE-2016-10009,7.5,,false,CVE-2016-10009,,vulners,medium,
-0e096605545602affffbf5f4c5081b3e631a8ccac3eef245bfcf78aafa368eff,high,56,zap,app.lab.example.com,8443,SQL Injection,,,false,,CWE-89,40018,high,https://app.lab.example.com:8443/api/items?id=1
-fd10993a87c649472e1adeec1e96ca4e7c5d081628383a8cfdf52e5453a37167,high,56,zap,app.lab.example.com,443,Cross Site Scripting (Reflected),,,false,,CWE-79,40012,medium,https://app.lab.example.com/search?q=test
-bd4a889c2d91caed3a4bb547717850deb1266263069a5c8290abf3b420d616dd,medium,37,nmap,10.0.0.5,22,CVE-2018-15473,5.3,,false,CVE-2018-15473,,vulners,medium,
-7f9050ff0a493d68a20078794b9cfc062f391ea93162bab46fdc835ba571fa05,medium,35,zap,app.lab.example.com,443,Vulnerable JS Library,,,false,CVE-2019-11358;CVE-2020-11022,,10003,high,https://app.lab.example.com/static/jquery-1.7.1.min.js
-710e0b5de4829b47cb6bd09eed10ef40f4d2a16569c2284e676747e5b8a31f82,low,14,zap,vpn.corp.example.net,443,Cookie without SameSite Attribute,,,false,,CWE-1275,10054,low,https://vpn.corp.example.net/login
-f307e1d545187788b7f169f6ef5a34efe4d588c6dbc6058f433c7947b3d3607a,low,14,zap,app.lab.example.com,80,Application Error Disclosure,,,false,,CWE-209,90022,medium,http://app.lab.example.com/old/report
-08537141eb8c834aa41779825e5dcd047d92ea55396ccd7fc0ea7cfd1f4ab5b1,informational,0,nmap,10.0.0.6,3306,Open port 3306/tcp,,,false,,,,confirmed,
-4cb8433b7b6432e9194541bf1c13f61f26ec8744ff1a437e74944baceb1a821c,informational,0,nmap,10.0.0.5,22,Open port 22/tcp,,,false,,,,confirmed,
-97b8367c9b79aaf7c604fd0cbb742ad46a7705d814df79f61e8f21a2e313abc8,informational,0,zap,app.lab.example.com,443,Timestamp Disclosure - Unix,,,false,,CWE-200,10096,low,https://app.lab.example.com/
-aff65577ab386610faee85cb221b47b224e8decd613ebcc383daf29937432443,informational,0,nmap,10.0.0.5,80,Open port 80/tcp,,,false,,,,confirmed,
-ec68726b1dd17d377b77a3962d5e126f97da3c30d1d86a7916f2c9864419dad7,informational,0,nmap,10.0.0.6,443,Open port 443/tcp,,,false,,,,confirmed,
+fingerprint,severity,risk_score,source,host,port,title,cvss_score,epss_score,kev,cve_ids,cwe_ids,owasp,plugin_id,confidence,url
+741786901e8421eee27c8d50d3a4bae704b85aa3962fb01a9fcc16bb4ccdb3fc,critical,98,nmap,10.0.0.5,80,CVE-2021-42013,9.8,,true,CVE-2021-42013,,,vulners,medium,
+f37cb98d3b2212fa16226f86a9019754ab4215c1475c877e04d2956e53f7cf13,high,75,nmap,10.0.0.5,80,CVE-2021-41773,7.5,,true,CVE-2021-41773,,,vulners,medium,
+6ef44ce5d33d4cec342a312a5b3c84c8ec0e0cd344430a969f7772ffd66d8272,high,54,nmap,10.0.0.6,443,CVE-2021-23017,7.7,,false,CVE-2021-23017,,,vulners,medium,
+28117601fe8900a3a3c8e231099e3f35451701a4cd79b42e048bda07fd4c829a,high,52,nmap,10.0.0.5,22,CVE-2016-10009,7.5,,false,CVE-2016-10009,,,vulners,medium,
+0e096605545602affffbf5f4c5081b3e631a8ccac3eef245bfcf78aafa368eff,high,56,zap,app.lab.example.com,8443,SQL Injection,,,false,,CWE-89,A03,40018,high,https://app.lab.example.com:8443/api/items?id=1
+fd10993a87c649472e1adeec1e96ca4e7c5d081628383a8cfdf52e5453a37167,high,56,zap,app.lab.example.com,443,Cross Site Scripting (Reflected),,,false,,CWE-79,A03,40012,medium,https://app.lab.example.com/search?q=test
+bd4a889c2d91caed3a4bb547717850deb1266263069a5c8290abf3b420d616dd,medium,37,nmap,10.0.0.5,22,CVE-2018-15473,5.3,,false,CVE-2018-15473,,,vulners,medium,
+7f9050ff0a493d68a20078794b9cfc062f391ea93162bab46fdc835ba571fa05,medium,35,zap,app.lab.example.com,443,Vulnerable JS Library,,,false,CVE-2019-11358;CVE-2020-11022,,,10003,high,https://app.lab.example.com/static/jquery-1.7.1.min.js
+710e0b5de4829b47cb6bd09eed10ef40f4d2a16569c2284e676747e5b8a31f82,low,14,zap,vpn.corp.example.net,443,Cookie without SameSite Attribute,,,false,,CWE-1275,A01,10054,low,https://vpn.corp.example.net/login
+f307e1d545187788b7f169f6ef5a34efe4d588c6dbc6058f433c7947b3d3607a,low,14,zap,app.lab.example.com,80,Application Error Disclosure,,,false,,CWE-209,A04,90022,medium,http://app.lab.example.com/old/report
+08537141eb8c834aa41779825e5dcd047d92ea55396ccd7fc0ea7cfd1f4ab5b1,informational,0,nmap,10.0.0.6,3306,Open port 3306/tcp,,,false,,,,,confirmed,
+4cb8433b7b6432e9194541bf1c13f61f26ec8744ff1a437e74944baceb1a821c,informational,0,nmap,10.0.0.5,22,Open port 22/tcp,,,false,,,,,confirmed,
+97b8367c9b79aaf7c604fd0cbb742ad46a7705d814df79f61e8f21a2e313abc8,informational,0,zap,app.lab.example.com,443,Timestamp Disclosure - Unix,,,false,,CWE-200,A01,10096,low,https://app.lab.example.com/
+aff65577ab386610faee85cb221b47b224e8decd613ebcc383daf29937432443,informational,0,nmap,10.0.0.5,80,Open port 80/tcp,,,false,,,,,confirmed,
+ec68726b1dd17d377b77a3962d5e126f97da3c30d1d86a7916f2c9864419dad7,informational,0,nmap,10.0.0.6,443,Open port 443/tcp,,,false,,,,,confirmed,

@@ -20,8 +20,10 @@ from rich.table import Table
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.reporting.summary import (
     SEVERITY_DISPLAY_ORDER,
+    StandardsSummary,
     group_by_host,
     summarize,
+    summarize_standards,
 )
 
 #: Fixed render width so the string output is stable regardless of the real terminal.
@@ -53,6 +55,18 @@ def _severity_table(by_severity: dict[Severity, int]) -> Table:
     table.add_column("Count", justify="right")
     for severity in SEVERITY_DISPLAY_ORDER:
         table.add_row(_severity_cell(severity.value), str(by_severity[severity]))
+    return table
+
+
+def _owasp_table(standards: StandardsSummary) -> Table:
+    table = Table(title="OWASP Top 10 (2021)", title_justify="left", expand=False)
+    table.add_column("Category")
+    table.add_column("Findings", justify="right")
+    for category, count in standards.owasp.items():
+        if count:
+            table.add_row(category.label, str(count))
+    if standards.uncategorized:
+        table.add_row("[dim]not mapped[/]", str(standards.uncategorized))
     return table
 
 
@@ -105,6 +119,9 @@ def render_stats(findings: Iterable[Finding]) -> str:
     if kev_count:
         console.print(f"[red]{kev_count} known-exploited (in the CISA KEV catalog)[/]")
     console.print(_severity_table(summary.by_severity))
+    standards = summarize_standards(items)
+    if standards.any_mapped:
+        console.print(_owasp_table(standards))
     if items:
         console.print(_top_risks_table(items))
         console.print(_top_hosts_table(items))

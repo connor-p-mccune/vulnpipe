@@ -12,6 +12,15 @@
 | 🟡 Low | 2 |
 | 🔵 Info | 5 |
 
+## OWASP Top 10
+
+| OWASP Top 10 (2021) | Findings |
+| --- | ---: |
+| A01 Broken Access Control | 2 |
+| A03 Injection | 2 |
+| A04 Insecure Design | 1 |
+| _Not mapped_ | 10 |
+
 ## Findings
 
 | # | Severity | Risk | Source | Host | Finding | CVSS | EPSS | Exploited |

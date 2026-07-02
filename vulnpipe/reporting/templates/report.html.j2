@@ -38,6 +38,17 @@
     .card.kev .num { color: #c62828; }
     .card.kev.zero { border-color: #e0e0e0; }
     .card.kev.zero .num { color: #1b1b1b; }
+    .card.top25 { border-color: #ef6c00; }
+    .card.top25 .num { color: #ef6c00; }
+    .card.top25.zero { border-color: #e0e0e0; }
+    .card.top25.zero .num { color: #1b1b1b; }
+    .badge-owasp { background: #37474f; }
+    ul.owasp-list { list-style: none; padding: 0; margin: .5rem 0 0; max-width: 34rem; }
+    ul.owasp-list li {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .3rem 0; border-top: 1px solid #f0f0f0;
+    }
+    ul.owasp-list li .count { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
     svg { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: .5rem; }
     .chart-label { font-size: 13px; fill: #1b1b1b; }
     .chart-count { font-size: 13px; fill: #1b1b1b; font-weight: 600; }
@@ -86,6 +97,9 @@
     <div class="card kev{{ '' if kev_count else ' zero' }}" title="CVEs in the CISA Known Exploited Vulnerabilities catalog">
       <div class="num">{{ kev_count }}</div><div class="muted">known-exploited</div>
     </div>
+    <div class="card top25{{ '' if standards.cwe_top_25 else ' zero' }}" title="Findings citing a 2023 CWE Top 25 Most Dangerous Weakness">
+      <div class="num">{{ standards.cwe_top_25 }}</div><div class="muted">CWE Top 25</div>
+    </div>
   </div>
   <div class="badges">
     {% for severity in severity_order %}
@@ -101,6 +115,26 @@
     <text x="{{ bar.count_x }}" y="{{ bar.text_y }}" class="chart-count">{{ bar.count }}</text>
     {% endfor %}
   </svg>
+
+  <h2>OWASP Top 10 (2021)</h2>
+  {% if standards.any_mapped %}
+  <ul class="owasp-list">
+    {% for category, count in standards.owasp.items() %}
+    {% if count %}
+    <li>
+      <span class="badge badge-owasp">{{ category.short }}</span>
+      <span>{{ category.title }}</span>
+      <span class="count">{{ count }}</span>
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+  {% if standards.uncategorized %}
+  <p class="muted">{{ standards.uncategorized }} finding{{ "s" if standards.uncategorized != 1 else "" }} not mapped to an OWASP Top 10 category.</p>
+  {% endif %}
+  {% else %}
+  <p class="empty">No findings map to an OWASP Top 10 category.</p>
+  {% endif %}
 
   <h2>Per-host breakdown</h2>
   {% if host_groups %}
@@ -152,6 +186,7 @@
         <th data-type="number">Port</th>
         <th data-type="text">Title</th>
         <th data-type="text">CVEs</th>
+        <th data-type="text">OWASP</th>
         <th data-type="number">CVSS</th>
         <th data-type="number">EPSS</th>
         <th data-type="number">KEV</th>
@@ -168,6 +203,7 @@
         <td class="num" data-sort="{{ finding.port if finding.port is not none else -1 }}">{{ finding.port if finding.port is not none else "" }}</td>
         <td>{{ finding.title }}</td>
         <td>{{ finding.cve_ids | join(", ") }}</td>
+        <td>{{ finding_owasp(finding) | map(attribute="short") | join(", ") }}</td>
         <td class="num" data-sort="{{ finding.cvss_score if finding.cvss_score is not none else -1 }}">{{ "%.1f" | format(finding.cvss_score) if finding.cvss_score is not none else "" }}</td>
         <td class="num" data-sort="{{ finding.epss_score if finding.epss_score is not none else -1 }}">{{ "%.1f%%" | format(finding.epss_score * 100) if finding.epss_score is not none else "" }}</td>
         <td class="num" data-sort="{{ 1 if finding.kev else 0 }}">{% if finding.kev %}<span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888;</span>{% endif %}</td>

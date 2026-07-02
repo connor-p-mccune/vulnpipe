@@ -15,6 +15,12 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from vulnpipe.core.models import Finding, Severity
+from vulnpipe.core.standards import (
+    OWASP_TOP_10_2021,
+    OwaspCategory,
+    cwe_top_25,
+    owasp_categories,
+)
 
 #: Severities in display order: most severe first. Reporters iterate this so the
 #: summary always lists every band (including zero counts) in a stable order.
@@ -63,6 +69,52 @@ def summarize(findings: Iterable[Finding]) -> ReportSummary:
     )
 
 
+def finding_owasp(finding: Finding) -> tuple[OwaspCategory, ...]:
+    """The OWASP Top 10 categories ``finding``'s CWE references map to, in rank order.
+
+    Empty when the finding has no CWE references or none of them are in the curated
+    OWASP mapping -- an unmapped finding is reported as such, never forced into a
+    category.
+    """
+    return owasp_categories(finding.cwe_ids)
+
+
+@dataclass(frozen=True)
+class StandardsSummary:
+    """How findings distribute over the OWASP Top 10 2021 and the 2023 CWE Top 25.
+
+    ``owasp`` holds every category in rank order (zeros included) so reporters can
+    render a fixed-shape breakdown. A finding citing CWEs from several categories is
+    counted in each of them; ``uncategorized`` counts findings that map to none.
+    """
+
+    owasp: dict[OwaspCategory, int]
+    uncategorized: int
+    cwe_top_25: int
+
+    @property
+    def any_mapped(self) -> bool:
+        """Whether at least one finding maps to an OWASP Top 10 category."""
+        return any(self.owasp.values())
+
+
+def summarize_standards(findings: Iterable[Finding]) -> StandardsSummary:
+    """Compute the :class:`StandardsSummary` for ``findings`` (pure and deterministic)."""
+    counts: dict[OwaspCategory, int] = dict.fromkeys(OWASP_TOP_10_2021, 0)
+    uncategorized = 0
+    top_25 = 0
+    for finding in findings:
+        categories = owasp_categories(finding.cwe_ids)
+        if categories:
+            for category in categories:
+                counts[category] += 1
+        else:
+            uncategorized += 1
+        if cwe_top_25(finding.cwe_ids):
+            top_25 += 1
+    return StandardsSummary(owasp=counts, uncategorized=uncategorized, cwe_top_25=top_25)
+
+
 @dataclass(frozen=True)
 class HostGroup:
     """The findings for one host, with its per-severity counts and worst severity."""
@@ -102,8 +154,11 @@ __all__ = [
     "SEVERITY_DISPLAY_ORDER",
     "HostGroup",
     "ReportSummary",
+    "StandardsSummary",
     "count_hosts",
+    "finding_owasp",
     "group_by_host",
     "severity_counts",
     "summarize",
+    "summarize_standards",
 ]

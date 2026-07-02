@@ -29,9 +29,12 @@ from vulnpipe.reporting.stats import render_stats
 from vulnpipe.reporting.summary import (
     SEVERITY_DISPLAY_ORDER,
     ReportSummary,
+    StandardsSummary,
+    finding_owasp,
     group_by_host,
     severity_counts,
     summarize,
+    summarize_standards,
 )
 
 _REPORTERS: dict[str, type[BaseReporter]] = {
@@ -74,9 +77,11 @@ __all__ = [
     "PrometheusReporter",
     "ReportSummary",
     "SarifReporter",
+    "StandardsSummary",
     "available_formats",
     "build_report",
     "build_sarif",
+    "finding_owasp",
     "get_reporter",
     "group_by_host",
     "load_findings",
@@ -88,4 +93,5 @@ __all__ = [
     "report_to_findings",
     "severity_counts",
     "summarize",
+    "summarize_standards",
 ]

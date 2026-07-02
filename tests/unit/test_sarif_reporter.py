@@ -104,9 +104,22 @@ def test_security_severity_prefers_real_cvss_then_band_floor() -> None:
     assert rules["zap/40012"]["properties"]["security-severity"] == "7.0"
 
 
-def test_rule_tags_include_security_marker_and_cwes() -> None:
+def test_rule_tags_include_security_marker_cwes_and_owasp() -> None:
     rules = {r["id"]: r for r in _document()["runs"][0]["tool"]["driver"]["rules"]}
-    assert rules["zap/40012"]["properties"]["tags"] == ["security", "external/cwe/CWE-79"]
+    # CWE-79 maps to A03:2021 Injection, so the rule carries both external tags.
+    assert rules["zap/40012"]["properties"]["tags"] == [
+        "security",
+        "external/cwe/CWE-79",
+        "external/owasp/a03:2021",
+    ]
+
+
+def test_result_properties_carry_owasp_categories() -> None:
+    by_rule = {r["ruleId"]: r for r in _document()["runs"][0]["results"]}
+    assert by_rule["zap/40012"]["properties"]["owasp"] == ["A03:2021"]
+    assert by_rule["nmap/vulners"]["properties"]["owasp"] == ["A08:2021"]  # CWE-502
+    # The timestamp-disclosure finding cites no CWE, so no owasp property is fabricated.
+    assert "owasp" not in by_rule["zap/10096"]["properties"]
 
 
 def test_locations_use_url_then_host_port() -> None:

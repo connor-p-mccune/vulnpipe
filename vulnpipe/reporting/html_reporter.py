@@ -24,9 +24,11 @@ from vulnpipe.core.models import Finding, Severity
 from vulnpipe.reporting.base import BaseReporter
 from vulnpipe.reporting.summary import (
     SEVERITY_DISPLAY_ORDER,
+    finding_owasp,
     group_by_host,
     severity_counts,
     summarize,
+    summarize_standards,
 )
 
 
@@ -162,6 +164,8 @@ def render_html(findings: Iterable[Finding]) -> str:
         findings=items,
         kev_count=sum(1 for finding in items if finding.kev),
         risk_css=risk_css,
+        standards=summarize_standards(items),
+        finding_owasp=finding_owasp,
     )
 
 

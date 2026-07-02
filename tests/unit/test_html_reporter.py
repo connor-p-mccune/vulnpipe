@@ -168,3 +168,28 @@ def test_render_marks_kev_rows() -> None:
     html = render_html([_kev_finding()])
     assert 'data-kev="1"' in html
     assert 'data-severity="critical"' in html
+
+
+# --------------------------------------------------------------------------- #
+# OWASP Top 10 / CWE Top 25 surfacing
+# --------------------------------------------------------------------------- #
+def test_render_owasp_section_and_top25_card() -> None:
+    finding = make_finding(
+        source="zap",
+        host="app.lab.example.com",
+        title="Cross Site Scripting (Reflected)",
+        severity=Severity.HIGH,
+        plugin_id="40012",
+        cwe_ids=["CWE-79"],
+    )
+    html = render_html([finding])
+    assert "OWASP Top 10 (2021)" in html
+    assert "badge-owasp" in html and ">A03<" in html
+    assert "Injection" in html
+    assert "CWE Top 25" in html  # CWE-79 is a Top 25 weakness -> the card counts it
+    assert ">A03</td>" in html  # the findings-table OWASP column
+
+
+def test_render_owasp_empty_state_when_nothing_maps() -> None:
+    html = render_html(_findings())  # fixture findings carry no CWE references
+    assert "No findings map to an OWASP Top 10 category." in html

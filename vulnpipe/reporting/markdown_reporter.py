@@ -17,7 +17,13 @@ from collections.abc import Iterable
 from vulnpipe import __version__
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.reporting.base import BaseReporter
-from vulnpipe.reporting.summary import SEVERITY_DISPLAY_ORDER, ReportSummary, summarize
+from vulnpipe.reporting.summary import (
+    SEVERITY_DISPLAY_ORDER,
+    ReportSummary,
+    StandardsSummary,
+    summarize,
+    summarize_standards,
+)
 
 _TITLE = "vulnpipe security report"
 
@@ -67,6 +73,17 @@ def _severity_table(summary: ReportSummary) -> list[str]:
     return rows
 
 
+def _owasp_table(standards: StandardsSummary) -> list[str]:
+    """The OWASP Top 10 breakdown table (nonzero categories, rank order)."""
+    rows = ["| OWASP Top 10 (2021) | Findings |", "| --- | ---: |"]
+    for category, count in standards.owasp.items():
+        if count:
+            rows.append(f"| {category.label} | {count} |")
+    if standards.uncategorized:
+        rows.append(f"| _Not mapped_ | {standards.uncategorized} |")
+    return rows
+
+
 def _findings_table(findings: list[Finding]) -> list[str]:
     rows = [
         "| # | Severity | Risk | Source | Host | Finding | CVSS | EPSS | Exploited |",
@@ -96,6 +113,10 @@ def render_markdown(findings: Iterable[Finding]) -> str:
 
     lines = [f"# {_TITLE}", "", _summary_line(summary, kev_count), "", "## Severity summary", ""]
     lines.extend(_severity_table(summary))
+    standards = summarize_standards(items)
+    if standards.any_mapped:
+        lines.extend(["", "## OWASP Top 10", ""])
+        lines.extend(_owasp_table(standards))
     lines.extend(["", "## Findings", ""])
     if items:
         lines.extend(_findings_table(items))

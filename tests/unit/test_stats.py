@@ -69,6 +69,20 @@ def test_no_kev_line_when_none_flagged() -> None:
     assert "known-exploited" not in out
 
 
+def test_owasp_table_present_when_cwes_map() -> None:
+    finding = make_finding(
+        source="zap", host="h", title="XSS", severity=Severity.HIGH, cwe_ids=["CWE-79"]
+    )
+    out = render_stats([finding])
+    assert "OWASP Top 10 (2021)" in out
+    assert "A03 Injection" in out
+
+
+def test_owasp_table_absent_when_nothing_maps() -> None:
+    out = render_stats(_findings())  # fixture findings carry no CWE references
+    assert "OWASP Top 10" not in out
+
+
 def test_empty_findings() -> None:
     out = render_stats([])
     assert "0 findings across 0 hosts" in out

@@ -29,6 +29,7 @@ from typing import Any
 
 from vulnpipe import __version__
 from vulnpipe.core.models import Finding, Severity
+from vulnpipe.core.standards import owasp_categories
 from vulnpipe.reporting.base import BaseReporter
 
 SARIF_VERSION = "2.1.0"
@@ -97,8 +98,13 @@ def _location(finding: Finding) -> dict[str, Any]:
 
 
 def _rule_tags(finding: Finding) -> list[str]:
-    """Rule tags: the ``security`` marker GitHub keys on, plus any CWE references."""
-    return ["security", *(f"external/cwe/{cwe}" for cwe in finding.cwe_ids)]
+    """Rule tags: the ``security`` marker GitHub keys on, CWE references, and the
+    OWASP Top 10 categories those CWEs map to (in the ``external/...`` convention)."""
+    tags = ["security", *(f"external/cwe/{cwe}" for cwe in finding.cwe_ids)]
+    tags.extend(
+        f"external/owasp/{category.id.lower()}" for category in owasp_categories(finding.cwe_ids)
+    )
+    return tags
 
 
 def _build_rule(rule_id: str, finding: Finding, security_severity: float) -> dict[str, Any]:
@@ -137,6 +143,9 @@ def _build_result(finding: Finding, rule_id: str, rule_index: int) -> dict[str, 
         properties["epssScore"] = finding.epss_score
     if finding.cve_ids:
         properties["cves"] = list(finding.cve_ids)
+    categories = owasp_categories(finding.cwe_ids)
+    if categories:
+        properties["owasp"] = [category.id for category in categories]
     return {
         "ruleId": rule_id,
         "ruleIndex": rule_index,

@@ -73,6 +73,21 @@ def test_row_values_and_computed_fields() -> None:
     assert row["kev"] == "true"
     assert row["cve_ids"] == "CVE-2021-42013"
     assert row["cwe_ids"] == "CWE-22"
+    assert row["owasp"] == "A01"  # CWE-22 (path traversal) -> Broken Access Control
+
+
+def test_owasp_column_joins_categories_and_stays_empty_when_unmapped() -> None:
+    mapped = make_finding(
+        source="zap",
+        host="h",
+        title="Mixed",
+        severity=Severity.HIGH,
+        cwe_ids=["CWE-918", "CWE-79"],
+    )
+    unmapped = make_finding(source="zap", host="h", title="Plain", severity=Severity.LOW)
+    rows = _parse(render_csv([mapped, unmapped]))
+    assert rows[0]["owasp"] == "A03;A10"
+    assert rows[1]["owasp"] == ""
 
 
 def test_missing_values_render_empty() -> None:
