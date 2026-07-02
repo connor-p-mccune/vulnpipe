@@ -127,6 +127,31 @@ def test_stats_invalid_input_exits_nonzero(tmp_path: Path) -> None:
     assert result.exit_code == 2
 
 
+def test_badge_renders_svg_to_stdout(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["badge", "-i", str(_write_report(tmp_path))])
+    assert result.exit_code == 0
+    assert result.stdout.startswith("<svg")
+    assert "1 high" in result.stdout
+
+
+def test_badge_writes_file_with_custom_label(tmp_path: Path) -> None:
+    out = tmp_path / "badge.svg"
+    result = runner.invoke(
+        app,
+        ["badge", "-i", str(_write_report(tmp_path)), "-o", str(out), "--label", "security"],
+    )
+    assert result.exit_code == 0
+    svg = out.read_text(encoding="utf-8")
+    assert "security" in svg and svg.startswith("<svg")
+
+
+def test_badge_invalid_input_exits_two(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text("{ not json", encoding="utf-8")
+    result = runner.invoke(app, ["badge", "-i", str(bad)])
+    assert result.exit_code == 2
+
+
 # --------------------------------------------------------------------------- #
 # notify
 # --------------------------------------------------------------------------- #

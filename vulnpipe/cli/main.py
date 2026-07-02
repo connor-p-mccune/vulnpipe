@@ -67,6 +67,7 @@ from vulnpipe.reporting import (
     available_formats,
     get_reporter,
     load_findings,
+    render_badge,
     render_stats,
     severity_counts,
 )
@@ -428,6 +429,37 @@ def stats(
         log.error("Failed to read findings from %s: %s", input_path, exc)
         raise typer.Exit(code=2) from exc
     _emit(render_stats(findings))
+
+
+@app.command()
+def badge(
+    input_path: Annotated[
+        Path,
+        typer.Option(
+            "--input", "-i", exists=True, dir_okay=False, help="Findings JSON to summarize."
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", dir_okay=False, help="SVG file to write (default stdout)."),
+    ] = None,
+    label: Annotated[
+        str,
+        typer.Option("--label", help="Badge label text."),
+    ] = "vulnpipe",
+) -> None:
+    """Render a findings JSON into a shields-style SVG status badge."""
+    try:
+        findings = load_findings(input_path)
+    except (OSError, ValueError) as exc:
+        log.error("Failed to read findings from %s: %s", input_path, exc)
+        raise typer.Exit(code=2) from exc
+    svg = render_badge(findings, label=label)
+    if output is not None:
+        _write(output, svg)
+        log.info("wrote badge: %s", output)
+    else:
+        _emit(svg)
 
 
 @app.command()

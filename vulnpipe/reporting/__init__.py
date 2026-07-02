@@ -12,6 +12,7 @@ All are deterministic for fixed input.
 e.g. the ``report`` CLI command -- can stay format-agnostic.
 """
 
+from vulnpipe.reporting.badge import badge_value, render_badge
 from vulnpipe.reporting.base import BaseReporter
 from vulnpipe.reporting.csv_reporter import CsvReporter, render_csv
 from vulnpipe.reporting.html_reporter import HtmlReporter, render_html
@@ -79,12 +80,14 @@ __all__ = [
     "SarifReporter",
     "StandardsSummary",
     "available_formats",
+    "badge_value",
     "build_report",
     "build_sarif",
     "finding_owasp",
     "get_reporter",
     "group_by_host",
     "load_findings",
+    "render_badge",
     "render_csv",
     "render_html",
     "render_markdown",
