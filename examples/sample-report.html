@@ -61,6 +61,12 @@
     ul.host-findings li.kev { border-left: 3px solid #c62828; padding-left: .5rem; }
     .evidence { margin: .2rem 0 0 .25rem; font-size: .85rem; color: #444; }
     .evidence code { background: #f3f3f3; padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
+    details.finding-details { margin: .35rem 0 0 .25rem; font-size: .85rem; }
+    details.finding-details summary { cursor: pointer; color: #1565c0; user-select: none; }
+    details.finding-details p { margin: .35rem 0; }
+    details.finding-details code { background: #f3f3f3; padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
+    ul.refs { margin: .25rem 0 0; padding-left: 1.25rem; }
+    ul.refs li { word-break: break-all; }
     .toolbar {
       display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: .25rem 0 .75rem;
     }
@@ -161,27 +167,45 @@
         <li class="kev">
           <span class="badge sev-critical">Critical</span>
           <span class="badge risk-badge sev-critical" title="Composite risk score (0-100)">98</span>
-<span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888; Known-exploited</span>          <strong>CVE-2021-42013</strong> <span class="muted">:80</span>        </li>
+<span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888; Known-exploited</span>          <strong>CVE-2021-42013</strong> <span class="muted">:80</span>          <details class="finding-details">
+            <summary>Details</summary>
+<p>CVE-2021-42013 reported by the Nmap vulners script for http (Apache httpd 2.4.49).</p>          </details>
+        </li>
         <li class="kev">
           <span class="badge sev-high">High</span>
           <span class="badge risk-badge sev-high" title="Composite risk score (0-100)">75</span>
-<span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888; Known-exploited</span>          <strong>CVE-2021-41773</strong> <span class="muted">:80</span>        </li>
+<span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888; Known-exploited</span>          <strong>CVE-2021-41773</strong> <span class="muted">:80</span>          <details class="finding-details">
+            <summary>Details</summary>
+<p>CVE-2021-41773 reported by the Nmap vulners script for http (Apache httpd 2.4.49).</p>          </details>
+        </li>
         <li>
           <span class="badge sev-high">High</span>
           <span class="badge risk-badge sev-medium" title="Composite risk score (0-100)">52</span>
-          <strong>CVE-2016-10009</strong> <span class="muted">:22</span>        </li>
+          <strong>CVE-2016-10009</strong> <span class="muted">:22</span>          <details class="finding-details">
+            <summary>Details</summary>
+<p>CVE-2016-10009 reported by the Nmap vulners script for ssh (OpenSSH 7.4).</p>          </details>
+        </li>
         <li>
           <span class="badge sev-medium">Medium</span>
           <span class="badge risk-badge sev-low" title="Composite risk score (0-100)">37</span>
-          <strong>CVE-2018-15473</strong> <span class="muted">:22</span>        </li>
+          <strong>CVE-2018-15473</strong> <span class="muted">:22</span>          <details class="finding-details">
+            <summary>Details</summary>
+<p>CVE-2018-15473 reported by the Nmap vulners script for ssh (OpenSSH 7.4).</p>          </details>
+        </li>
         <li>
           <span class="badge sev-informational">Informational</span>
           <span class="badge risk-badge sev-informational" title="Composite risk score (0-100)">0</span>
-          <strong>Open port 22/tcp</strong> <span class="muted">:22</span>        </li>
+          <strong>Open port 22/tcp</strong> <span class="muted">:22</span>          <details class="finding-details">
+            <summary>Details</summary>
+<p>ssh (OpenSSH 7.4)</p>          </details>
+        </li>
         <li>
           <span class="badge sev-informational">Informational</span>
           <span class="badge risk-badge sev-informational" title="Composite risk score (0-100)">0</span>
-          <strong>Open port 80/tcp</strong> <span class="muted">:80</span>        </li>
+          <strong>Open port 80/tcp</strong> <span class="muted">:80</span>          <details class="finding-details">
+            <summary>Details</summary>
+<p>http (Apache httpd 2.4.49)</p>          </details>
+        </li>
       </ul>
     </section>
     <section class="host">
@@ -194,15 +218,24 @@
         <li>
           <span class="badge sev-high">High</span>
           <span class="badge risk-badge sev-medium" title="Composite risk score (0-100)">54</span>
-          <strong>CVE-2021-23017</strong> <span class="muted">:443</span>        </li>
+          <strong>CVE-2021-23017</strong> <span class="muted">:443</span>          <details class="finding-details">
+            <summary>Details</summary>
+<p>CVE-2021-23017 reported by the Nmap vulners script for https (nginx 1.18.0).</p>          </details>
+        </li>
         <li>
           <span class="badge sev-informational">Informational</span>
           <span class="badge risk-badge sev-informational" title="Composite risk score (0-100)">0</span>
-          <strong>Open port 3306/tcp</strong> <span class="muted">:3306</span>        </li>
+          <strong>Open port 3306/tcp</strong> <span class="muted">:3306</span>          <details class="finding-details">
+            <summary>Details</summary>
+<p>mysql (MySQL 8.0.27)</p>          </details>
+        </li>
         <li>
           <span class="badge sev-informational">Informational</span>
           <span class="badge risk-badge sev-informational" title="Composite risk score (0-100)">0</span>
-          <strong>Open port 443/tcp</strong> <span class="muted">:443</span>        </li>
+          <strong>Open port 443/tcp</strong> <span class="muted">:443</span>          <details class="finding-details">
+            <summary>Details</summary>
+<p>https (nginx 1.18.0)</p>          </details>
+        </li>
       </ul>
     </section>
     <section class="host">
@@ -217,23 +250,52 @@
         <li>
           <span class="badge sev-high">High</span>
           <span class="badge risk-badge sev-medium" title="Composite risk score (0-100)">56</span>
-          <strong>SQL Injection</strong> <span class="muted">:8443</span>        </li>
+          <strong>SQL Injection</strong> <span class="muted">:8443</span>          <details class="finding-details">
+            <summary>Details</summary>
+<p>SQL injection may be possible in the id parameter.</p><p><strong>Remediation:</strong> Use parameterized queries / prepared statements.</p>            <ul class="refs">
+              <li><a href="https://owasp.org/www-community/attacks/SQL_Injection" rel="noopener noreferrer">https://owasp.org/www-community/attacks/SQL_Injection</a></li>
+              <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html" rel="noopener noreferrer">https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html</a></li>
+            </ul>
+          </details>
+        </li>
         <li>
           <span class="badge sev-high">High</span>
           <span class="badge risk-badge sev-medium" title="Composite risk score (0-100)">56</span>
-          <strong>Cross Site Scripting (Reflected)</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>&lt;script&gt;alert(1)&lt;/script&gt;</code></div>        </li>
+          <strong>Cross Site Scripting (Reflected)</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>&lt;script&gt;alert(1)&lt;/script&gt;</code></div>          <details class="finding-details">
+            <summary>Details</summary>
+<p>Reflected cross-site scripting was identified in the q parameter.</p><p><strong>Remediation:</strong> Validate input and contextually encode user-supplied data on output.</p>            <ul class="refs">
+              <li><a href="https://owasp.org/www-community/attacks/xss/" rel="noopener noreferrer">https://owasp.org/www-community/attacks/xss/</a></li>
+            </ul>
+          </details>
+        </li>
         <li>
           <span class="badge sev-medium">Medium</span>
           <span class="badge risk-badge sev-low" title="Composite risk score (0-100)">35</span>
-          <strong>Vulnerable JS Library</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>/*! jQuery v1.7.1</code></div>        </li>
+          <strong>Vulnerable JS Library</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>/*! jQuery v1.7.1</code></div>          <details class="finding-details">
+            <summary>Details</summary>
+<p>The identified library jquery, version 1.7.1, is vulnerable.</p><p><strong>Remediation:</strong> Upgrade to the latest version of jquery.</p>            <ul class="refs">
+              <li><a href="https://github.com/jquery/jquery/issues/2432" rel="noopener noreferrer">https://github.com/jquery/jquery/issues/2432</a></li>
+              <li><a href="https://blog.jquery.com/2016/01/08/jquery-2-2-and-1-12-released/" rel="noopener noreferrer">https://blog.jquery.com/2016/01/08/jquery-2-2-and-1-12-released/</a></li>
+            </ul>
+          </details>
+        </li>
         <li>
           <span class="badge sev-low">Low</span>
           <span class="badge risk-badge sev-low" title="Composite risk score (0-100)">14</span>
-          <strong>Application Error Disclosure</strong> <span class="muted">:80</span><div class="evidence">Evidence: <code>Internal Server Error</code></div>        </li>
+          <strong>Application Error Disclosure</strong> <span class="muted">:80</span><div class="evidence">Evidence: <code>Internal Server Error</code></div>          <details class="finding-details">
+            <summary>Details</summary>
+<p>An application error message was disclosed by the server.</p><p><strong>Remediation:</strong> Configure the application to return generic error pages.</p>            <ul class="refs">
+              <li><a href="https://cwe.mitre.org/data/definitions/209.html" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/209.html</a></li>
+            </ul>
+          </details>
+        </li>
         <li>
           <span class="badge sev-informational">Informational</span>
           <span class="badge risk-badge sev-informational" title="Composite risk score (0-100)">0</span>
-          <strong>Timestamp Disclosure - Unix</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>1700000000</code></div>        </li>
+          <strong>Timestamp Disclosure - Unix</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>1700000000</code></div>          <details class="finding-details">
+            <summary>Details</summary>
+<p>A timestamp was disclosed by the application/web server.</p><p><strong>Remediation:</strong> Manually confirm that the timestamp data is not sensitive.</p>          </details>
+        </li>
       </ul>
     </section>
     <section class="host">
@@ -245,7 +307,13 @@
         <li>
           <span class="badge sev-low">Low</span>
           <span class="badge risk-badge sev-low" title="Composite risk score (0-100)">14</span>
-          <strong>Cookie without SameSite Attribute</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>Set-Cookie: session</code></div>        </li>
+          <strong>Cookie without SameSite Attribute</strong> <span class="muted">:443</span><div class="evidence">Evidence: <code>Set-Cookie: session</code></div>          <details class="finding-details">
+            <summary>Details</summary>
+<p>A cookie has been set without the SameSite attribute.</p><p><strong>Remediation:</strong> Set the SameSite attribute on sensitive cookies.</p>            <ul class="refs">
+              <li><a href="https://owasp.org/www-community/SameSite" rel="noopener noreferrer">https://owasp.org/www-community/SameSite</a></li>
+            </ul>
+          </details>
+        </li>
       </ul>
     </section>
 

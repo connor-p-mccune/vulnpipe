@@ -61,6 +61,12 @@
     ul.host-findings li.kev { border-left: 3px solid #c62828; padding-left: .5rem; }
     .evidence { margin: .2rem 0 0 .25rem; font-size: .85rem; color: #444; }
     .evidence code { background: #f3f3f3; padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
+    details.finding-details { margin: .35rem 0 0 .25rem; font-size: .85rem; }
+    details.finding-details summary { cursor: pointer; color: #1565c0; user-select: none; }
+    details.finding-details p { margin: .35rem 0; }
+    details.finding-details code { background: #f3f3f3; padding: .05rem .3rem; border-radius: 4px; word-break: break-all; }
+    ul.refs { margin: .25rem 0 0; padding-left: 1.25rem; }
+    ul.refs li { word-break: break-all; }
     .toolbar {
       display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: .25rem 0 .75rem;
     }
@@ -156,6 +162,22 @@
           {% if finding.kev %}<span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888; Known-exploited</span>{% endif %}
           <strong>{{ finding.title }}</strong>{% if finding.port is not none %} <span class="muted">:{{ finding.port }}</span>{% endif %}
           {% if finding.evidence %}<div class="evidence">Evidence: <code>{{ finding.evidence }}</code></div>{% endif %}
+          {% if finding.description or finding.solution or finding.cvss_vector or finding.references %}
+          <details class="finding-details">
+            <summary>Details</summary>
+            {% if finding.description %}<p>{{ finding.description }}</p>{% endif %}
+            {% if finding.solution %}<p><strong>Remediation:</strong> {{ finding.solution }}</p>{% endif %}
+            {% if finding.cvss_vector %}<p class="muted">CVSS vector: <code>{{ finding.cvss_vector }}</code></p>{% endif %}
+            {% if finding.references %}
+            <ul class="refs">
+              {% for ref in finding.references[:5] %}
+              <li>{% if ref.startswith("https://") or ref.startswith("http://") %}<a href="{{ ref }}" rel="noopener noreferrer">{{ ref }}</a>{% else %}{{ ref }}{% endif %}</li>
+              {% endfor %}
+            </ul>
+            {% if finding.references | length > 5 %}<p class="muted">+ {{ finding.references | length - 5 }} more reference(s)</p>{% endif %}
+            {% endif %}
+          </details>
+          {% endif %}
         </li>
         {% endfor %}
       </ul>

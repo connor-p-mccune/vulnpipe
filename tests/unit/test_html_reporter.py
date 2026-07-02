@@ -193,3 +193,46 @@ def test_render_owasp_section_and_top25_card() -> None:
 def test_render_owasp_empty_state_when_nothing_maps() -> None:
     html = render_html(_findings())  # fixture findings carry no CWE references
     assert "No findings map to an OWASP Top 10 category." in html
+
+
+# --------------------------------------------------------------------------- #
+# Expandable finding details
+# --------------------------------------------------------------------------- #
+def test_details_disclosure_renders_description_solution_and_links() -> None:
+    finding = make_finding(
+        source="zap",
+        host="app.lab.example.com",
+        title="SQL Injection",
+        severity=Severity.HIGH,
+        plugin_id="40018",
+        description="User input reaches the query unparameterized.",
+        solution="Use parameterized statements.",
+        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        references=["https://owasp.org/www-community/attacks/SQL_Injection", "see vendor notes"],
+    )
+    html = render_html([finding])
+    assert "<details" in html and "<summary>Details</summary>" in html
+    assert "User input reaches the query unparameterized." in html
+    assert "Remediation:" in html and "Use parameterized statements." in html
+    assert "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" in html
+    # https references become links; a non-URL reference stays plain text.
+    assert 'href="https://owasp.org/www-community/attacks/SQL_Injection"' in html
+    assert "see vendor notes" in html
+    assert 'href="see vendor notes"' not in html
+
+
+def test_details_reference_list_is_capped() -> None:
+    refs = [f"https://example.com/ref/{index}" for index in range(8)]
+    finding = make_finding(
+        source="nmap", host="10.0.0.5", title="CVE-0000-0000 style", references=refs
+    )
+    html = render_html([finding])
+    assert "https://example.com/ref/4" in html  # the first five render
+    assert "https://example.com/ref/5" not in html
+    assert "+ 3 more reference(s)" in html
+
+
+def test_details_absent_without_detail_fields() -> None:
+    finding = make_finding(source="nmap", host="10.0.0.5", title="Open port 22/tcp")
+    html = render_html([finding])
+    assert "<details" not in html
