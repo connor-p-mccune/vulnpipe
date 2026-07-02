@@ -26,6 +26,7 @@ from vulnpipe.core.models import Finding, Severity
 from vulnpipe.core.orchestrator import PipelineResult
 from vulnpipe.processing.normalizer import make_finding
 from vulnpipe.reporting.json_reporter import JsonReporter
+from vulnpipe.sbom import SbomError
 
 runner = CliRunner()
 
@@ -225,6 +226,83 @@ def test_report_invalid_json_exits_nonzero(tmp_path: Path) -> None:
     bad = tmp_path / "bad.json"
     bad.write_text("{ not json", encoding="utf-8")
     result = runner.invoke(app, ["report", "-i", str(bad), "-f", "json"])
+    assert result.exit_code == 2
+
+
+# --------------------------------------------------------------------------- #
+# sbom (standalone supply-chain analysis; pipeline stubbed)
+# --------------------------------------------------------------------------- #
+def _write_cyclonedx(tmp_path: Path) -> Path:
+    path = tmp_path / "sbom.json"
+    path.write_text(
+        json.dumps(
+            {
+                "bomFormat": "CycloneDX",
+                "components": [
+                    {"name": "requests", "version": "2.19.0", "purl": "pkg:pypi/requests@2.19.0"}
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _sbom_finding() -> Finding:
+    return make_finding(
+        source="sbom",
+        host="acme-webapp",
+        title="GHSA-x84v-xcm2-53pg: requests 2.19.0",
+        severity=Severity.HIGH,
+        plugin_id="GHSA-x84v-xcm2-53pg",
+        cve_ids=["CVE-2018-18074"],
+        cvss_score=7.5,
+    )
+
+
+def test_sbom_renders_findings_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli_main, "run_sbom_pipeline", lambda *a, **k: [_sbom_finding()])
+    result = runner.invoke(app, ["sbom", "-i", str(_write_cyclonedx(tmp_path))])
+    assert result.exit_code == 0
+    assert '"schema_version"' in result.stdout
+    assert "GHSA-x84v-xcm2-53pg: requests 2.19.0" in result.stdout
+
+
+def test_sbom_writes_output_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli_main, "run_sbom_pipeline", lambda *a, **k: [_sbom_finding()])
+    out = tmp_path / "results"
+    result = runner.invoke(
+        app, ["sbom", "-i", str(_write_cyclonedx(tmp_path)), "-o", str(out), "-f", "markdown"]
+    )
+    assert result.exit_code == 0
+    assert (out / "sbom.json").is_file()
+    assert "# vulnpipe security report" in result.stdout  # markdown to stdout
+
+
+def test_sbom_passes_no_enrich_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def _capture(_path: object, **kwargs: object) -> list[Finding]:
+        captured.update(kwargs)
+        return []
+
+    monkeypatch.setattr(cli_main, "run_sbom_pipeline", _capture)
+    result = runner.invoke(app, ["sbom", "-i", str(_write_cyclonedx(tmp_path)), "--no-enrich"])
+    assert result.exit_code == 0
+    assert captured["enrich"] is False
+
+
+def test_sbom_unknown_format_exits_two(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["sbom", "-i", str(_write_cyclonedx(tmp_path)), "-f", "pdf"])
+    assert result.exit_code == 2
+
+
+def test_sbom_bad_file_exits_two(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def _boom(*_a: object, **_k: object) -> list[Finding]:
+        raise SbomError("Unsupported SBOM format: 'SPDX'")
+
+    monkeypatch.setattr(cli_main, "run_sbom_pipeline", _boom)
+    result = runner.invoke(app, ["sbom", "-i", str(_write_cyclonedx(tmp_path))])
     assert result.exit_code == 2
 
 

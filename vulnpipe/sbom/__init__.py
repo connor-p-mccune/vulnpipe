@@ -19,8 +19,10 @@ from vulnpipe.sbom.osv_client import (
     OsvVulnerability,
     parse_osv_response,
 )
+from vulnpipe.sbom.pipeline import DEFAULT_CACHE_DIR, run_sbom_pipeline
 
 __all__ = [
+    "DEFAULT_CACHE_DIR",
     "DEFAULT_OSV_URL",
     "SOURCE",
     "Component",
@@ -32,4 +34,5 @@ __all__ = [
     "load_sbom",
     "parse_cyclonedx",
     "parse_osv_response",
+    "run_sbom_pipeline",
 ]

@@ -8,6 +8,7 @@ orchestrator and the CI stage. Commands:
   exit non-zero when the gate trips on a newly introduced severe finding;
 * ``gate`` -- re-evaluate the CI gate (severity threshold or a policy file) over an
   existing findings JSON without rescanning;
+* ``sbom`` -- analyze a CycloneDX SBOM for known-vulnerable dependencies (OSV.dev);
 * ``report`` -- render a findings JSON into JSON / HTML / SARIF on stdout;
 * ``diff`` -- classify a findings JSON against a baseline (new / persisting /
   resolved);
@@ -69,6 +70,7 @@ from vulnpipe.reporting import (
     render_stats,
     severity_counts,
 )
+from vulnpipe.sbom import SbomError, run_sbom_pipeline
 
 app = typer.Typer(
     add_completion=False,
@@ -319,6 +321,64 @@ def validate(
         log.warning("required environment variable(s) not set: %s", ", ".join(unset))
     if not plan.is_valid:
         raise typer.Exit(code=1)
+
+
+@app.command()
+def sbom(
+    input_path: Annotated[
+        Path,
+        typer.Option(
+            "--input",
+            "-i",
+            exists=True,
+            dir_okay=False,
+            help="CycloneDX JSON SBOM to analyze for known-vulnerable components.",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            file_okay=False,
+            help="Directory to write sbom.json into (in addition to any stdout render).",
+        ),
+    ] = None,
+    fmt: Annotated[
+        str,
+        typer.Option("--format", "-f", help="Render format for stdout: any report format."),
+    ] = "json",
+    no_enrich: Annotated[
+        bool,
+        typer.Option("--no-enrich", help="Skip EPSS + CISA KEV enrichment (offline / faster)."),
+    ] = False,
+    cache_dir: Annotated[
+        str,
+        typer.Option("--cache-dir", help="Directory for the OSV / enrichment response cache."),
+    ] = ".cache",
+) -> None:
+    """Analyze a CycloneDX SBOM against OSV.dev and report vulnerable dependencies.
+
+    Passive supply-chain analysis: it reads the SBOM and queries public advisory
+    data, never touching the described software, so it needs no scope or
+    authorization.
+    """
+    try:
+        reporter = get_reporter(fmt)
+    except KeyError as exc:
+        log.error("Unknown format %r; choose one of: %s", fmt, ", ".join(available_formats()))
+        raise typer.Exit(code=2) from exc
+    try:
+        findings = run_sbom_pipeline(input_path, enrich=not no_enrich, cache_dir=cache_dir)
+    except SbomError as exc:
+        log.error("%s", exc)
+        raise typer.Exit(code=2) from exc
+    log.info("sbom analysis: %d finding(s) from %s", len(findings), input_path)
+    if output is not None:
+        json_path = output / "sbom.json"
+        _write(json_path, get_reporter("json").render(findings))
+        log.info("wrote SBOM findings JSON: %s", json_path)
+    _emit(reporter.render(findings))
 
 
 @app.command()

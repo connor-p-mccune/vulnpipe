@@ -73,6 +73,87 @@ def test_vulnerability_defaults() -> None:
     assert vuln.aliases == () and vuln.fixed_versions == () and vuln.cvss_vector is None
 
 
+def test_parse_tolerates_malformed_nested_shapes() -> None:
+    payload = {
+        "vulns": [
+            {
+                "id": "OSV-MALFORMED",
+                "severity": "not-a-list",
+                "aliases": ["CVE-2020-0001", "CVE-2020-0001", 123],  # dupe + wrong type
+                "references": "not-a-list",
+                "affected": [
+                    "not-a-mapping",
+                    {
+                        "package": {"purl": "pkg:pypi/other"},  # different package -> ignored
+                        "ranges": [{"events": [{"fixed": "9.9.9"}]}],
+                    },
+                    {
+                        "package": {"purl": "pkg:pypi/requests"},
+                        "ranges": "not-a-list",
+                    },
+                    {
+                        "package": {"purl": "pkg:pypi/requests"},
+                        "ranges": ["not-a-mapping", {"events": "not-a-list"}],
+                    },
+                ],
+            }
+        ]
+    }
+    vuln = parse_osv_response(payload, purl="pkg:pypi/requests@2.19.0")[0]
+    assert vuln.cvss_vector is None  # severity was not a list
+    assert vuln.aliases == ("CVE-2020-0001",)  # de-duped, non-strings dropped
+    assert vuln.references == ()
+    assert vuln.fixed_versions == ()  # the 9.9.9 fix was for a different package
+
+
+def test_parse_worst_cvss_vector_skips_non_mappings() -> None:
+    payload = {
+        "vulns": [
+            {
+                "id": "OSV-SEV",
+                "severity": [
+                    "not-a-mapping",
+                    {"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"},
+                    {"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"},
+                ],
+            }
+        ]
+    }
+    vuln = parse_osv_response(payload, purl="pkg:pypi/x@1")[0]
+    # The higher-scoring vector (C:H) wins over the lower (C:L).
+    assert vuln.cvss_vector == "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+
+
+def test_parse_references_dedup_and_non_mapping() -> None:
+    payload = {
+        "vulns": [
+            {
+                "id": "OSV-REF",
+                "references": [
+                    "not-a-mapping",
+                    {"url": "https://a.example"},
+                    {"url": "https://a.example"},
+                    {"nourl": True},
+                ],
+            }
+        ]
+    }
+    assert parse_osv_response(payload, purl="pkg:pypi/x@1")[0].references == ("https://a.example",)
+
+
+def test_fixed_versions_included_when_affected_has_no_purl() -> None:
+    payload = {
+        "vulns": [
+            {
+                "id": "OSV-NOPURL",
+                "affected": [{"ranges": [{"events": [{"fixed": "1.2.3"}, {"fixed": "1.2.3"}]}]}],
+            }
+        ]
+    }
+    # No purl on the affected entry: it is trusted (the record answered this query).
+    assert parse_osv_response(payload, purl="pkg:pypi/x")[0].fixed_versions == ("1.2.3",)
+
+
 # --------------------------------------------------------------------------- #
 # query: cached POST
 # --------------------------------------------------------------------------- #
