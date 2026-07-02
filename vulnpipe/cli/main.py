@@ -41,6 +41,7 @@ from vulnpipe.ci.differ import Diff, diff_findings, diff_to_payload
 from vulnpipe.ci.gate import DEFAULT_GATE_SEVERITY
 from vulnpipe.ci.junit import GateVerdict, build_junit_xml
 from vulnpipe.ci.policy import (
+    GatePolicy,
     PolicyError,
     PolicyResult,
     evaluate_policy,
@@ -65,6 +66,7 @@ from vulnpipe.processing import FalsePositiveConfig, load_false_positive_config
 from vulnpipe.reporting import (
     SEVERITY_DISPLAY_ORDER,
     available_formats,
+    build_report_schema,
     get_reporter,
     load_findings,
     render_badge,
@@ -177,10 +179,23 @@ def version() -> None:
 
 
 @app.command()
-def schema() -> None:
-    """Print the JSON Schema for the targets/scope configuration (for editor validation)."""
-    document = Config.model_json_schema()
-    _emit(json.dumps(document, indent=2, ensure_ascii=False) + "\n")
+def schema(
+    kind: Annotated[
+        str,
+        typer.Argument(help="Which schema to print: config, report, or policy."),
+    ] = "config",
+) -> None:
+    """Print a JSON Schema: the targets/scope config, the findings report, or a gate policy."""
+    builders = {
+        "config": Config.model_json_schema,
+        "report": build_report_schema,
+        "policy": GatePolicy.model_json_schema,
+    }
+    builder = builders.get(kind)
+    if builder is None:
+        log.error("Unknown schema kind %r; choose one of: %s", kind, ", ".join(sorted(builders)))
+        raise typer.Exit(code=2)
+    _emit(json.dumps(builder(), indent=2, ensure_ascii=False) + "\n")
 
 
 @app.command()

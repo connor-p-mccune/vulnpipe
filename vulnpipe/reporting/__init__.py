@@ -20,6 +20,7 @@ from vulnpipe.reporting.json_reporter import (
     REPORT_SCHEMA_VERSION,
     JsonReporter,
     build_report,
+    build_report_schema,
     load_findings,
     report_to_findings,
 )
@@ -82,6 +83,7 @@ __all__ = [
     "available_formats",
     "badge_value",
     "build_report",
+    "build_report_schema",
     "build_sarif",
     "finding_owasp",
     "get_reporter",

@@ -70,6 +70,31 @@ def test_schema_outputs_config_json_schema() -> None:
     assert "targets" in document["properties"]
 
 
+def test_schema_report_kind_describes_the_envelope() -> None:
+    result = runner.invoke(app, ["schema", "report"])
+    assert result.exit_code == 0
+    document = json.loads(result.stdout)
+    assert document["properties"]["schema_version"] == {"const": "1.0"}
+    assert document["properties"]["findings"]["items"] == {"$ref": "#/$defs/Finding"}
+    finding = document["$defs"]["Finding"]
+    # Serialization mode: the computed fields are part of the contract.
+    assert "fingerprint" in finding["properties"]
+    assert "risk_score" in finding["properties"]
+
+
+def test_schema_policy_kind_describes_gate_policy() -> None:
+    result = runner.invoke(app, ["schema", "policy"])
+    assert result.exit_code == 0
+    document = json.loads(result.stdout)
+    assert "max_new" in document["properties"]
+    assert "block_kev" in document["properties"]
+
+
+def test_schema_unknown_kind_exits_two() -> None:
+    result = runner.invoke(app, ["schema", "nonsense"])
+    assert result.exit_code == 2
+
+
 def test_report_json(tmp_path: Path) -> None:
     result = runner.invoke(app, ["report", "--input", str(_write_report(tmp_path)), "-f", "json"])
     assert result.exit_code == 0

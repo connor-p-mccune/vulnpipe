@@ -53,6 +53,54 @@ def build_report(findings: Iterable[Finding]) -> dict[str, Any]:
     }
 
 
+def build_report_schema() -> dict[str, Any]:
+    """Build the JSON Schema for the report envelope :func:`build_report` emits.
+
+    The findings item schema comes from the pydantic model in serialization mode,
+    so the computed ``fingerprint`` / ``risk_score`` fields appear exactly as they
+    do in real output. Consumers can validate reports against this contract; the
+    ``schema`` CLI command prints it.
+    """
+    finding_schema = Finding.model_json_schema(mode="serialization")
+    defs: dict[str, Any] = dict(finding_schema.pop("$defs", {}))
+    defs["Finding"] = finding_schema
+    severity_counts = {
+        severity.value: {"type": "integer", "minimum": 0} for severity in SEVERITY_DISPLAY_ORDER
+    }
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "vulnpipe findings report",
+        "description": "The canonical JSON report envelope written by `vulnpipe scan`.",
+        "type": "object",
+        "required": ["schema_version", "tool", "summary", "findings"],
+        "properties": {
+            "schema_version": {"const": REPORT_SCHEMA_VERSION},
+            "tool": {
+                "type": "object",
+                "required": ["name", "version"],
+                "properties": {
+                    "name": {"type": "string"},
+                    "version": {"type": "string"},
+                },
+            },
+            "summary": {
+                "type": "object",
+                "required": ["total", "hosts", "by_severity"],
+                "properties": {
+                    "total": {"type": "integer", "minimum": 0},
+                    "hosts": {"type": "integer", "minimum": 0},
+                    "by_severity": {
+                        "type": "object",
+                        "properties": severity_counts,
+                    },
+                },
+            },
+            "findings": {"type": "array", "items": {"$ref": "#/$defs/Finding"}},
+        },
+        "$defs": defs,
+    }
+
+
 def report_to_findings(payload: dict[str, Any]) -> list[Finding]:
     """Reconstruct findings from a JSON report payload produced by :func:`build_report`.
 
@@ -101,6 +149,7 @@ __all__ = [
     "REPORT_SCHEMA_VERSION",
     "JsonReporter",
     "build_report",
+    "build_report_schema",
     "load_findings",
     "report_to_findings",
 ]
