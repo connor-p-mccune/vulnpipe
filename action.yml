@@ -26,6 +26,12 @@ inputs:
     description: Also fail on a new finding with a composite risk score at or above this (0-100; empty to skip).
     required: false
     default: ""
+  policy:
+    description: >-
+      Gate-policy YAML (severity budgets, KEV block, risk threshold). When set it
+      decides the verdict instead of gate-severity / gate-risk-score.
+    required: false
+    default: ""
   baseline:
     description: Baseline file to diff and gate against (optional; gate only on regressions).
     required: false
@@ -81,6 +87,7 @@ runs:
         VP_AUTHORIZED: ${{ inputs.authorized }}
         VP_GATE: ${{ inputs.gate-severity }}
         VP_GATE_RISK: ${{ inputs.gate-risk-score }}
+        VP_POLICY: ${{ inputs.policy }}
         VP_BASELINE: ${{ inputs.baseline }}
         VP_FALSE_POSITIVES: ${{ inputs.false-positives }}
         VP_SARIF: ${{ inputs.sarif }}
@@ -90,6 +97,7 @@ runs:
         args=(scan --config "$VP_CONFIG" --output "$VP_OUTPUT" --gate-severity "$VP_GATE")
         if [ "$VP_AUTHORIZED" = "true" ]; then args+=(--authorized); fi
         if [ -n "$VP_GATE_RISK" ]; then args+=(--gate-risk-score "$VP_GATE_RISK"); fi
+        if [ -n "$VP_POLICY" ]; then args+=(--policy "$VP_POLICY"); fi
         if [ -n "$VP_BASELINE" ]; then args+=(--baseline "$VP_BASELINE"); fi
         if [ -n "$VP_FALSE_POSITIVES" ]; then args+=(--false-positives "$VP_FALSE_POSITIVES"); fi
         if [ -n "$VP_SARIF" ]; then args+=(--sarif "$VP_SARIF"); fi
