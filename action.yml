@@ -52,6 +52,10 @@ inputs:
     description: Path to also write a Markdown report, e.g. for a job summary (empty to skip).
     required: false
     default: ""
+  vex:
+    description: Path to also write an OpenVEX document (empty to skip).
+    required: false
+    default: ""
   python-version:
     description: Python version to set up for the run.
     required: false
@@ -92,6 +96,7 @@ runs:
         VP_FALSE_POSITIVES: ${{ inputs.false-positives }}
         VP_SARIF: ${{ inputs.sarif }}
         VP_MARKDOWN: ${{ inputs.markdown }}
+        VP_VEX: ${{ inputs.vex }}
       run: |
         set -euo pipefail
         args=(scan --config "$VP_CONFIG" --output "$VP_OUTPUT" --gate-severity "$VP_GATE")
@@ -102,4 +107,5 @@ runs:
         if [ -n "$VP_FALSE_POSITIVES" ]; then args+=(--false-positives "$VP_FALSE_POSITIVES"); fi
         if [ -n "$VP_SARIF" ]; then args+=(--sarif "$VP_SARIF"); fi
         if [ -n "$VP_MARKDOWN" ]; then args+=(--markdown "$VP_MARKDOWN"); fi
+        if [ -n "$VP_VEX" ]; then args+=(--vex "$VP_VEX"); fi
         vulnpipe "${args[@]}"
