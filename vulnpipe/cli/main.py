@@ -131,9 +131,11 @@ def _write_reports(
     sarif: Path | None,
     html: Path | None,
     markdown: Path | None,
+    vex: Path | None,
     junit: Path | None,
 ) -> None:
-    """Write the canonical JSON report plus any requested SARIF / HTML / Markdown / JUnit."""
+    """Write the canonical JSON report plus any requested SARIF / HTML / Markdown /
+    OpenVEX / JUnit artifacts."""
     findings = list(result.findings)
     json_path = output / "latest.json"
     _write(json_path, get_reporter("json").render(findings))
@@ -147,6 +149,9 @@ def _write_reports(
     if markdown is not None:
         _write(markdown, get_reporter("markdown").render(findings))
         log.info("wrote Markdown report: %s", markdown)
+    if vex is not None:
+        _write(vex, get_reporter("vex").render(findings))
+        log.info("wrote OpenVEX document: %s", vex)
     if junit is not None:
         _write(junit, build_junit_xml(result.diff, verdict))
         log.info("wrote JUnit report: %s", junit)
@@ -268,6 +273,10 @@ def scan(
         Path | None,
         typer.Option("--markdown", dir_okay=False, help="Also write a Markdown report here."),
     ] = None,
+    vex: Annotated[
+        Path | None,
+        typer.Option("--vex", dir_okay=False, help="Also write an OpenVEX document here."),
+    ] = None,
     junit: Annotated[
         Path | None,
         typer.Option("--junit", dir_okay=False, help="Also write a JUnit gate report here."),
@@ -302,7 +311,14 @@ def scan(
     if gate_policy is not None:
         verdict = evaluate_policy(result.diff, gate_policy)
     _write_reports(
-        result, verdict, output=output, sarif=sarif, html=html, markdown=markdown, junit=junit
+        result,
+        verdict,
+        output=output,
+        sarif=sarif,
+        html=html,
+        markdown=markdown,
+        vex=vex,
+        junit=junit,
     )
     _log_summary(result, verdict)
 
@@ -408,11 +424,11 @@ def report(
         typer.Option(
             "--format",
             "-f",
-            help="Report format: json, html, markdown, csv, prometheus, or sarif.",
+            help="Report format: json, html, markdown, csv, prometheus, sarif, or vex.",
         ),
     ] = "html",
 ) -> None:
-    """Render a findings JSON into JSON, HTML, Markdown, CSV, Prometheus, or SARIF on stdout."""
+    """Render a findings JSON into any report format (HTML, SARIF, OpenVEX, ...) on stdout."""
     try:
         reporter = get_reporter(fmt)
     except KeyError as exc:

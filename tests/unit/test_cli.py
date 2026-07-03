@@ -115,6 +115,34 @@ def test_report_sarif(tmp_path: Path) -> None:
     assert '"version": "2.1.0"' in result.stdout
 
 
+def test_report_vex(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "1700000000")  # keep the stamp deterministic
+    findings = _findings_file(
+        tmp_path,
+        "findings.json",
+        [
+            make_finding(
+                source="nmap",
+                host="10.0.0.5",
+                title="Apache httpd 2.4.49 path traversal",
+                severity=Severity.CRITICAL,
+                port=80,
+                plugin_id="vulners",
+                cve_ids=["CVE-2021-41773"],
+                solution="Upgrade Apache httpd to 2.4.51 or later.",
+            )
+        ],
+    )
+    result = runner.invoke(app, ["report", "-i", str(findings), "-f", "vex"])
+    assert result.exit_code == 0
+    document = json.loads(result.stdout)
+    assert document["@context"] == "https://openvex.dev/ns/v0.2.0"
+    assert document["timestamp"] == "2023-11-14T22:13:20Z"
+    statement = document["statements"][0]
+    assert statement["vulnerability"]["name"] == "CVE-2021-41773"
+    assert statement["status"] == "affected"
+
+
 def test_report_markdown(tmp_path: Path) -> None:
     result = runner.invoke(app, ["report", "-i", str(_write_report(tmp_path)), "-f", "markdown"])
     assert result.exit_code == 0
@@ -504,6 +532,8 @@ def test_scan_writes_reports_and_passes(tmp_path: Path, monkeypatch: pytest.Monk
             str(out / "report.html"),
             "--markdown",
             str(out / "report.md"),
+            "--vex",
+            str(out / "report.vex.json"),
         ],
     )
     assert result.exit_code == 0
@@ -512,6 +542,8 @@ def test_scan_writes_reports_and_passes(tmp_path: Path, monkeypatch: pytest.Monk
     assert (out / "junit.xml").is_file()
     assert (out / "report.html").is_file()
     assert (out / "report.md").is_file()
+    vex_doc = json.loads((out / "report.vex.json").read_text(encoding="utf-8"))
+    assert vex_doc["@context"] == "https://openvex.dev/ns/v0.2.0"
 
 
 def test_scan_accepts_gate_risk_score(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
