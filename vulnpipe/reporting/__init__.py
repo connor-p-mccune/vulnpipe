@@ -4,12 +4,14 @@ Each reporter subclasses :class:`~vulnpipe.reporting.base.BaseReporter` and turn
 list of findings into a serialized report string. JSON is the canonical, lossless
 artifact (round-trippable via :func:`report_to_findings`); HTML is the human view;
 Markdown drops into a pull-request comment or Slack; CSV drops into a spreadsheet;
-Prometheus text feeds observability tooling; SARIF feeds code-scanning dashboards.
-All are deterministic for fixed input.
+Prometheus text feeds observability tooling; SARIF feeds code-scanning dashboards;
+OpenVEX feeds exploitability-exchange tooling. All are deterministic for fixed
+input (the OpenVEX publication timestamp is the one documented, spec-mandated
+exception -- see :mod:`vulnpipe.reporting.vex_reporter`).
 
 :func:`get_reporter` resolves a format name (``"json"`` / ``"html"`` / ``"markdown"``
-/ ``"csv"`` / ``"prometheus"`` / ``"sarif"``) to a reporter instance so callers --
-e.g. the ``report`` CLI command -- can stay format-agnostic.
+/ ``"csv"`` / ``"prometheus"`` / ``"sarif"`` / ``"vex"``) to a reporter instance so
+callers -- e.g. the ``report`` CLI command -- can stay format-agnostic.
 """
 
 from vulnpipe.reporting.badge import badge_value, render_badge
@@ -38,6 +40,7 @@ from vulnpipe.reporting.summary import (
     summarize,
     summarize_standards,
 )
+from vulnpipe.reporting.vex_reporter import VexReporter, build_vex, render_vex
 
 _REPORTERS: dict[str, type[BaseReporter]] = {
     JsonReporter.name: JsonReporter,
@@ -46,6 +49,7 @@ _REPORTERS: dict[str, type[BaseReporter]] = {
     CsvReporter.name: CsvReporter,
     PrometheusReporter.name: PrometheusReporter,
     SarifReporter.name: SarifReporter,
+    VexReporter.name: VexReporter,
 }
 
 
@@ -80,11 +84,13 @@ __all__ = [
     "ReportSummary",
     "SarifReporter",
     "StandardsSummary",
+    "VexReporter",
     "available_formats",
     "badge_value",
     "build_report",
     "build_report_schema",
     "build_sarif",
+    "build_vex",
     "finding_owasp",
     "get_reporter",
     "group_by_host",
@@ -95,6 +101,7 @@ __all__ = [
     "render_markdown",
     "render_prometheus",
     "render_stats",
+    "render_vex",
     "report_to_findings",
     "severity_counts",
     "summarize",
