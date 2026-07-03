@@ -275,3 +275,27 @@ e.g. via `vexctl` merging vulnpipe's document with a curated one. Library output
 remains snapshot-testable and CI output byte-reproducible under a pinned epoch;
 the cost is that CLI VEX output varies run-to-run by default, which is exactly
 what a publication timestamp is supposed to do.
+
+## ADR-0017 — Suppressions are time-boxed risk acceptances
+
+**Context.** A false-positive allowlist quietly accumulates: entries added for a
+good reason outlive the reason, and nothing ever forces a review. In practice a
+suppression is a *risk acceptance*, and risk acceptances have owners, rationale,
+and review dates.
+
+**Decision.** Every allowlist entry (fingerprint, plugin, host) accepts an
+optional `reason` and an optional, **inclusive** `expires` date ("accepted until
+2026-09-30" suppresses through that day). Expiry is evaluated against an
+injectable `today` so the filter stays a pure, pinnable function; the
+orchestrator resolves the real date once per run. A lapsed entry does not error
+and is not deleted — it simply stops suppressing, the finding resurfaces in
+reports and the gate, and the run logs a warning naming the entry. Bare-string
+entries remain valid (indefinite acceptance) for backward compatibility. The
+`min_confidence` floor never expires: it is a quality bar, not an acceptance.
+
+**Consequences.** Expired acceptances self-enforce their review: the finding
+comes back and the gate can fail, which is the correct pressure. The audit
+trail (why was this accepted?) lives in the allowlist file under version
+control. The trade-off is that filter output now depends on the run date when
+expiring entries are present — deliberate, bounded to entries that opt in, and
+tests pin the date explicitly.
