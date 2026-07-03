@@ -39,7 +39,8 @@ intake → nmap scan → zap scan → enrich (cvss/nvd/epss)
    confidence floor (`configs/false_positives.example.yaml`), and prioritization
    orders by severity, then known-exploited (KEV) status, then CVSS, then EPSS, then
    asset criticality.
-6. **report** (`reporting/`) — JSON (canonical), HTML (human), SARIF (CI/dashboards).
+6. **report** (`reporting/`) — JSON (canonical), HTML (human), SARIF (CI/dashboards),
+   OpenVEX (exploitability exchange).
 7. **ci diff + gate** (`ci/`) — diff against a baseline (new / persisting /
    resolved) and decide the exit status from a severity policy.
 
@@ -58,7 +59,7 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `scanners/` | `BaseScanner` + the registry, and the Nmap (network) and ZAP (web) integrations. Each `scan()` returns `list[Finding]`. |
 | `enrichment/` | CVSS parsing/scoring, cached NVD / EPSS lookups, and CISA KEV cross-referencing that fill — never fabricate — the `cvss_*` / `epss_*` / `kev` fields. |
 | `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize. |
-| `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF renderers, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
+| `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF / OpenVEX renderers, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
 | `ci/` | The baseline store, the differ, the severity gate, the policy-as-code gate (`policy.py`), JUnit XML output, and multi-scan trend analysis. |
 | `sbom/` | Supply-chain analysis: CycloneDX parsing, the OSV.dev advisory client, and the analyzer that normalizes advisories into findings. Passive (reads a file, queries a public API); never probes the described software. |
 | `auth/` | ZAP authentication-context construction (form / header-JWT / script). |
@@ -130,11 +131,13 @@ mutating, one underlying issue keeps a single stable identity across the whole r
 ## Reporting
 
 Reporters (`reporting/`) each subclass `BaseReporter` and turn `list[Finding]` into
-a serialized string. All three are **deterministic for fixed input** — findings are
+a serialized string. All are **deterministic for fixed input** — findings are
 emitted in the order given (the prioritized order), enum/severity ordering is fixed,
 and no wall-clock timestamp is embedded — so report output and snapshot tests are
-stable across runs. Shared, pure view-model helpers (`reporting/summary.py`) compute
-the severity/host counts once so the formats cannot drift.
+stable across runs. (The OpenVEX publication timestamp is the one spec-mandated
+exception; see its bullet below.) Shared, pure view-model helpers
+(`reporting/summary.py`) compute the severity/host counts once so the formats
+cannot drift.
 
 - **JSON** (`json_reporter.py`) is the canonical, lossless artifact: an envelope of
   `schema_version`, tool identity, a summary, and every finding serialized with its
@@ -155,6 +158,18 @@ the severity/host counts once so the formats cannot drift.
   hint (the real CVSS score when known, otherwise the severity band floor — never
   written back onto the finding), and the composite `riskScore` plus a `kev` flag in
   each result's properties so those signals travel to SARIF consumers too.
+- **OpenVEX** (`vex_reporter.py`) emits an [OpenVEX](https://openvex.dev) 0.2.0
+  document for exploitability-exchange tooling. A statement is produced only for a
+  finding that cites a real vulnerability identifier — a CVE, or a GHSA/OSV id from
+  the SBOM layer — and only with the `affected` status: `not_affected` / `fixed`
+  are human exploitability judgements the pipeline never fabricates. Statements
+  group by `(vulnerability, action)` with sorted products (a purl for SBOM
+  findings, `host[:port]` for network/web ones), KEV listings surface in
+  `status_notes`, and the document `@id` is content-addressed. The spec-required
+  publication `timestamp` is the one non-derivable field: the pure
+  `build_vex`/`render_vex` functions omit it unless given one, while the registered
+  reporter stamps real UTC time, honoring `SOURCE_DATE_EPOCH` (the
+  reproducible-builds convention) so CI can emit byte-identical documents.
 
 `get_reporter(fmt)` resolves a format name to a reporter; the `report` CLI command
 loads a findings JSON and renders it to any format on stdout.

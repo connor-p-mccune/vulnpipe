@@ -111,7 +111,7 @@ vulnpipe/
 ├── scanners/     base.py, nmap_scanner.py, zap_scanner.py, registry.py
 ├── enrichment/   cvss.py, nvd_client.py, epss_client.py, kev_client.py
 ├── processing/   normalizer.py, deduplicator.py, false_positive.py, prioritizer.py
-├── reporting/    json/html/markdown/csv/prometheus/sarif reporters, badge.py, templates/
+├── reporting/    json/html/markdown/csv/prometheus/sarif/vex reporters, badge.py, templates/
 ├── ci/           baseline.py, differ.py, gate.py, policy.py, junit.py, trends.py
 ├── sbom/         cyclonedx.py, osv_client.py, analyzer.py, pipeline.py
 ├── auth/         auth_contexts.py
@@ -294,9 +294,9 @@ vulnpipe scan --config configs/targets.yaml --authorized
 ```
 
 This runs the full pipeline and writes the canonical report to
-`results/latest.json`. Add `--html`, `--markdown`, `--sarif`, and/or `--junit` to also
-write those formats, `--baseline baseline.json` to diff and gate against a baseline,
-and `--gate-severity` to set the gate threshold (default `high`).
+`results/latest.json`. Add `--html`, `--markdown`, `--sarif`, `--vex`, and/or
+`--junit` to also write those formats, `--baseline baseline.json` to diff and gate
+against a baseline, and `--gate-severity` to set the gate threshold (default `high`).
 
 A run logs a concise summary:
 
@@ -340,9 +340,10 @@ requires no scope file and no `--authorized` flag. Nothing is probed.
 
 ## Reports
 
-vulnpipe renders three formats from the same findings; all are **deterministic** for
+vulnpipe renders every format from the same findings; all are **deterministic** for
 fixed input (no embedded wall-clock timestamp), so report output and snapshot tests
-are stable across runs.
+are stable across runs. The one spec-mandated exception is the OpenVEX publication
+timestamp — pin it with `SOURCE_DATE_EPOCH` for byte-identical CI output.
 
 | Format | Use |
 | --- | --- |
@@ -352,6 +353,7 @@ are stable across runs.
 | **CSV** | One row per finding for a spreadsheet or data-frame — columns mirror the JSON fields (plus fingerprint, risk score, and OWASP categories). |
 | **Prometheus** | Text-exposition gauges (findings by severity/source, known-exploited count, peak risk) for the node_exporter textfile collector or a Pushgateway. |
 | **SARIF** | SARIF 2.1.0 for the GitHub code-scanning / Security tab. |
+| **OpenVEX** | [OpenVEX](https://openvex.dev) 0.2.0 `affected` statements for every finding that cites a real CVE / OSV id, for exploitability-exchange tooling (`vexctl`, scanner VEX inputs, policy engines). |
 
 Render any format from a findings JSON to stdout:
 
@@ -359,7 +361,16 @@ Render any format from a findings JSON to stdout:
 vulnpipe report --input results/latest.json --format html     > report.html
 vulnpipe report --input results/latest.json --format markdown > report.md
 vulnpipe report --input results/latest.json --format sarif    > vulnpipe.sarif
+vulnpipe report --input results/latest.json --format vex      > vulnpipe.vex.json
 ```
+
+The OpenVEX output stays honest by construction: only findings citing a real
+vulnerability identifier produce statements (hygiene alerts emit nothing), only the
+`affected` status is asserted — `not_affected` / `fixed` are human judgements the
+pipeline does not fabricate — and a CVE in the CISA KEV catalog is flagged in
+`status_notes`. Combined with the SBOM command this closes the supply-chain loop:
+`vulnpipe sbom -i sbom.json -f vex` turns a component inventory into a
+machine-readable exploitability document.
 
 ### Sample report
 
@@ -554,7 +565,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `sbom` | Analyze a CycloneDX SBOM against OSV.dev and emit standard findings — passive supply-chain analysis, no scope/authorization needed (`--input`, `--output`, `--format`, `--no-enrich`). |
 | `gate` | Re-evaluate the CI gate over an existing findings JSON without rescanning — policy file or severity/risk options (`--current`, `--baseline`, `--policy`, `--format text\|json`). |
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
-| `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF on stdout (`--input`, `--format`). |
+| `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / OpenVEX on stdout (`--input`, `--format`). |
 | `stats` | Print a terminal summary of a findings JSON — severity breakdown, OWASP Top 10, top risks, and worst-affected hosts (`--input`). |
 | `badge` | Render a findings JSON into a shields-style SVG status badge (`--input`, `--output`, `--label`). |
 | `notify` | Post a findings summary to a Slack-compatible webhook (URL resolved from the environment via `--webhook-url-env`). |

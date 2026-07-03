@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **OpenVEX report format** — `report --format vex`, `scan --vex`, and
+  `sbom --format vex` emit an [OpenVEX](https://openvex.dev) 0.2.0 document for
+  exploitability-exchange tooling. Statements are produced only for findings citing
+  a real CVE / OSV id and assert only the `affected` status (`not_affected` /
+  `fixed` are human judgements, never fabricated); KEV listings surface in
+  `status_notes`, products carry purls for SBOM findings, the document `@id` is
+  content-addressed, and the publication timestamp honors `SOURCE_DATE_EPOCH` for
+  reproducible builds. The GitHub Action gains a matching `vex` input, and
+  `examples/sample-vex.json` shows the output shape.
 - **SBOM as a scan layer** — a scan config can list CycloneDX SBOMs under `sbom:`,
   and the orchestrator analyzes them against OSV.dev through the same injectable
   seam as the network and web layers, so supply-chain findings enrich, dedup,
