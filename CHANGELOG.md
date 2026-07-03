@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Time-boxed risk acceptances** — false-positive allowlist entries accept an
+  optional `reason` (the audit trail lives with the rule) and an inclusive
+  `expires` date. A lapsed entry stops suppressing — the finding resurfaces in
+  reports and the gate — and the scan logs a warning naming the expired
+  acceptance, so suppressions get revisited instead of becoming silently
+  permanent. Bare-string entries remain valid and accept indefinitely.
 - **OpenVEX report format** — `report --format vex`, `scan --vex`, and
   `sbom --format vex` emit an [OpenVEX](https://openvex.dev) 0.2.0 document for
   exploitability-exchange tooling. Statements are produced only for findings citing

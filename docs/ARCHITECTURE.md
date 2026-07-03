@@ -117,7 +117,11 @@ its fingerprint never changes from birth to report:
 3. **deduplicated** — findings sharing a fingerprint are merged into the single
    richest finding (`processing/deduplicator`).
 4. **filtered** — the false-positive stage drops allowlisted findings and anything
-   below the configured confidence floor.
+   below the configured confidence floor. Allowlist entries are time-boxable risk
+   acceptances (optional `reason` + inclusive `expires` date, evaluated against an
+   injectable date so tests stay pinned); a lapsed entry stops suppressing and the
+   orchestrator warns about it, so the finding resurfaces rather than staying
+   silently accepted forever.
 5. **prioritized** — the survivors are ordered most-actionable-first
    (severity → CVSS → EPSS → asset criticality → fingerprint).
 6. **reported** — emitted to JSON / HTML / SARIF in that prioritized order.

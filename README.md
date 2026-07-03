@@ -205,7 +205,11 @@ cp configs/targets.example.yaml configs/targets.yaml   # gitignored
   required and live in your targets file).
 - [`configs/false_positives.example.yaml`](configs/false_positives.example.yaml) —
   an optional allowlist that suppresses known-benign findings and sets a minimum
-  confidence threshold; pass it with `--false-positives`.
+  confidence threshold; pass it with `--false-positives`. Every entry accepts an
+  optional `reason` (the audit trail lives with the rule) and `expires` date, so a
+  suppression is a **time-boxed risk acceptance**: when it lapses, the finding
+  resurfaces in reports and the gate, and the scan warns about the expired entry —
+  acceptances get revisited instead of becoming silently permanent.
 
 ### Scope (the authorization allowlist)
 
