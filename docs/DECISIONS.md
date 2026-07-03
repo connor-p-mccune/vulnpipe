@@ -249,3 +249,29 @@ needs no scope file. The trade-offs are deliberate: subject-level identity means
 two SBOMs analyzed under the same subject share a namespace, and severity for
 unscored advisories understates risk until enrichment/risk scoring lifts it —
 both preferred over inventing identity or severity.
+
+## ADR-0016 — OpenVEX output: only `affected`, only real identifiers
+
+**Context.** VEX (Vulnerability Exploitability eXchange) is how tooling ingests
+"is this product affected by this vulnerability" machine-readably; OpenVEX is its
+lightweight open spec, consumed by `vexctl`, scanners, and policy engines. Two
+tensions: a VEX statement asserts an exploitability *judgement* vulnpipe does not
+make, and the spec requires a publication `timestamp` while every vulnpipe
+reporter is deterministic by convention.
+
+**Decision.** Emit statements only for findings that cite a real vulnerability
+identifier (a CVE, else the SBOM layer's OSV id — hygiene alerts emit nothing),
+and assert only the `affected` status: every finding *is* a detection, whereas
+`not_affected` / `fixed` would fabricate an assessment. KEV listings ride along as
+`status_notes`. The document `@id` is content-addressed from the statements. For
+the timestamp, split by purity: `build_vex` / `render_vex` omit it unless one is
+passed, while the registered reporter (the CLI publication path) stamps real UTC
+time and honors `SOURCE_DATE_EPOCH`, the reproducible-builds convention.
+
+**Consequences.** A scan or SBOM run can feed the VEX ecosystem directly
+(`sbom -f vex` closes the supply-chain loop), and downstream triage decisions
+(`not_affected` with a justification) stay where they belong — with a human,
+e.g. via `vexctl` merging vulnpipe's document with a curated one. Library output
+remains snapshot-testable and CI output byte-reproducible under a pinned epoch;
+the cost is that CLI VEX output varies run-to-run by default, which is exactly
+what a publication timestamp is supposed to do.
