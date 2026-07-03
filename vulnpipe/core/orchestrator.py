@@ -31,6 +31,7 @@ import threading
 from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from datetime import date
 
 import vulnpipe.scanners  # noqa: F401  (import for scanner registration side effect)
 from vulnpipe.ci.baseline import Baseline
@@ -51,6 +52,7 @@ from vulnpipe.enrichment._http import open_cache
 from vulnpipe.processing import (
     FalsePositiveConfig,
     deduplicate,
+    expired_entries,
     filter_false_positives,
     prioritize,
 )
@@ -304,7 +306,16 @@ def run_pipeline(
 
     enriched = _enrich(config, raw, enrichment)
     deduped = deduplicate(enriched)
-    filtered = filter_false_positives(deduped, allowlist or FalsePositiveConfig())
+    active_allowlist = allowlist or FalsePositiveConfig()
+    run_date = date.today()
+    for entry in expired_entries(active_allowlist, today=run_date):
+        log_event(
+            _log,
+            logging.WARNING,
+            "false-positive acceptance expired; no longer suppressing",
+            entry=entry,
+        )
+    filtered = filter_false_positives(deduped, active_allowlist, today=run_date)
     prioritized = prioritize(filtered, criticality=config.prioritization.criticality_for)
 
     effective_baseline = baseline if baseline is not None else Baseline()

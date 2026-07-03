@@ -6,6 +6,7 @@ enforcement, baseline diffing and gating, and the bounded web pool with its ZAP
 concurrency cap.
 """
 
+import logging
 import threading
 from collections.abc import Sequence
 from pathlib import Path
@@ -327,6 +328,31 @@ def test_run_pipeline_applies_false_positive_filter() -> None:
         run_web=lambda _c, _u: _zap_findings(),  # suppressed by the allowlist
     )
     assert result.findings == ()
+
+
+def test_run_pipeline_expired_acceptance_resurfaces_and_warns(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from datetime import date
+
+    # The package logger does not propagate (it owns its rich handler); re-enable
+    # propagation so caplog's root handler can observe the warning.
+    monkeypatch.setattr(logging.getLogger("vulnpipe"), "propagate", True)
+    allowlist = FalsePositiveConfig(
+        plugins=(PluginRule(id="40012", expires=date(2020, 1, 1)),)  # long lapsed
+    )
+    with caplog.at_level(logging.WARNING, logger="vulnpipe"):
+        result = orchestrator.run_pipeline(
+            _config(),
+            authorized=True,
+            allowlist=allowlist,
+            enrichment=orchestrator.EnrichmentClients(),
+            run_network=lambda _c: [],
+            run_web=lambda _c, _u: _zap_findings(),
+        )
+    # The lapsed acceptance no longer suppresses, and the run says why.
+    assert [f.plugin_id for f in result.findings] == ["40012"]
+    assert any("acceptance expired" in record.getMessage() for record in caplog.records)
 
 
 def test_run_pipeline_dedupes_across_scanners() -> None:
