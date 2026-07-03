@@ -11,7 +11,10 @@ kept beside the filter it configures.
 from vulnpipe.processing.deduplicator import deduplicate, merge_findings
 from vulnpipe.processing.false_positive import (
     FalsePositiveConfig,
+    FingerprintRule,
+    HostRule,
     PluginRule,
+    expired_entries,
     filter_false_positives,
     is_false_positive,
     load_false_positive_config,
@@ -22,8 +25,11 @@ from vulnpipe.processing.prioritizer import CriticalityResolver, prioritize
 __all__ = [
     "CriticalityResolver",
     "FalsePositiveConfig",
+    "FingerprintRule",
+    "HostRule",
     "PluginRule",
     "deduplicate",
+    "expired_entries",
     "filter_false_positives",
     "is_false_positive",
     "load_false_positive_config",

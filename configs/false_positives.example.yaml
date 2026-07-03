@@ -1,19 +1,28 @@
 # Example false-positive allowlist (consumed by processing/false_positive.py).
 #
 # Entries suppress known-benign findings. Prefer fingerprints (most precise);
-# plugin/host rules are coarser. The minimum confidence threshold drops noisy
-# low-confidence findings before reporting.
+# plugin/host rules are coarser. Every entry form accepts an optional `reason`
+# (why this is accepted -- keep the audit trail with the rule) and `expires`
+# (the last day the acceptance holds, inclusive). An expired entry stops
+# suppressing and is surfaced as a scan-time warning, so risk acceptances get
+# revisited instead of becoming silently permanent.
 
 min_confidence: low        # one of: false_positive, low, medium, high, confirmed
 
-# Suppress specific findings by their stable fingerprint.
+# Suppress specific findings by their stable fingerprint. A bare string accepts
+# the finding indefinitely; the mapping form documents and time-boxes it.
 fingerprints:
   - "0000000000000000000000000000000000000000000000000000000000000000"
+  - fingerprint: "1111111111111111111111111111111111111111111111111111111111111111"
+    reason: "Self-signed TLS certificate on the lab gateway is by design."
+    expires: 2027-01-31
 
 # Suppress by scanner plugin / alert id (optionally scoped to a host).
 plugins:
   - id: "10096"            # e.g. ZAP "Timestamp Disclosure"
     host: "10.0.0.10"
+    reason: "Build metadata timestamps on the static marketing page."
+    expires: 2026-12-31
 
 # Suppress everything for a host (use sparingly).
 hosts: []
