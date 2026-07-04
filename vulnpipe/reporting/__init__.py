@@ -4,19 +4,21 @@ Each reporter subclasses :class:`~vulnpipe.reporting.base.BaseReporter` and turn
 list of findings into a serialized report string. JSON is the canonical, lossless
 artifact (round-trippable via :func:`report_to_findings`); HTML is the human view;
 Markdown drops into a pull-request comment or Slack; CSV drops into a spreadsheet;
-Prometheus text feeds observability tooling; SARIF feeds code-scanning dashboards;
-OpenVEX feeds exploitability-exchange tooling. All are deterministic for fixed
-input (the OpenVEX publication timestamp is the one documented, spec-mandated
-exception -- see :mod:`vulnpipe.reporting.vex_reporter`).
+Prometheus text feeds observability tooling; SARIF feeds the GitHub code-scanning
+dashboard and GitLab the GitLab Vulnerability Report; OpenVEX feeds
+exploitability-exchange tooling. All are deterministic for fixed input (the OpenVEX
+and GitLab scan timestamps are the documented, spec-mandated exceptions -- see the
+respective reporter modules).
 
 :func:`get_reporter` resolves a format name (``"json"`` / ``"html"`` / ``"markdown"``
-/ ``"csv"`` / ``"prometheus"`` / ``"sarif"`` / ``"vex"``) to a reporter instance so
-callers -- e.g. the ``report`` CLI command -- can stay format-agnostic.
+/ ``"csv"`` / ``"prometheus"`` / ``"sarif"`` / ``"gitlab"`` / ``"vex"``) to a reporter
+instance so callers -- e.g. the ``report`` CLI command -- can stay format-agnostic.
 """
 
 from vulnpipe.reporting.badge import badge_value, render_badge
 from vulnpipe.reporting.base import BaseReporter
 from vulnpipe.reporting.csv_reporter import CsvReporter, render_csv
+from vulnpipe.reporting.gitlab_reporter import GitlabReporter, build_gitlab_report, render_gitlab
 from vulnpipe.reporting.html_reporter import HtmlReporter, render_html
 from vulnpipe.reporting.json_reporter import (
     REPORT_SCHEMA_VERSION,
@@ -56,6 +58,7 @@ _REPORTERS: dict[str, type[BaseReporter]] = {
     CsvReporter.name: CsvReporter,
     PrometheusReporter.name: PrometheusReporter,
     SarifReporter.name: SarifReporter,
+    GitlabReporter.name: GitlabReporter,
     VexReporter.name: VexReporter,
 }
 
@@ -95,6 +98,7 @@ __all__ = [
     "SEVERITY_DISPLAY_ORDER",
     "BaseReporter",
     "CsvReporter",
+    "GitlabReporter",
     "HtmlReporter",
     "JsonReporter",
     "MarkdownReporter",
@@ -106,6 +110,7 @@ __all__ = [
     "VexReporter",
     "available_formats",
     "badge_value",
+    "build_gitlab_report",
     "build_report",
     "build_report_schema",
     "build_sarif",
@@ -119,6 +124,7 @@ __all__ = [
     "remediation_to_payload",
     "render_badge",
     "render_csv",
+    "render_gitlab",
     "render_html",
     "render_markdown",
     "render_prometheus",

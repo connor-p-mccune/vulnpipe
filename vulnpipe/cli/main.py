@@ -461,11 +461,11 @@ def report(
         typer.Option(
             "--format",
             "-f",
-            help="Report format: json, html, markdown, csv, prometheus, sarif, or vex.",
+            help="Report format: json, html, markdown, csv, prometheus, sarif, gitlab, or vex.",
         ),
     ] = "html",
 ) -> None:
-    """Render a findings JSON into any report format (HTML, SARIF, OpenVEX, ...) on stdout."""
+    """Render a findings JSON into any report format (HTML, SARIF, GitLab, ...) on stdout."""
     try:
         reporter = get_reporter(fmt)
     except KeyError as exc:
