@@ -40,6 +40,7 @@ class ScanPlan:
     secret_env_names: tuple[str, ...]
     nmap_enabled: bool
     zap_enabled: bool
+    nuclei_enabled: bool
 
     @property
     def scope_is_empty(self) -> bool:
@@ -115,6 +116,7 @@ def build_scan_plan(config: Config) -> ScanPlan:
         secret_env_names=tuple(secrets),
         nmap_enabled=config.nmap.enabled,
         zap_enabled=config.zap.enabled,
+        nuclei_enabled=config.nuclei.enabled,
     )
 
 
@@ -126,6 +128,7 @@ def render_plan(plan: ScanPlan) -> str:
     )
     lines.append(f"nmap:         {'enabled' if plan.nmap_enabled else 'disabled'}")
     lines.append(f"zap:          {'enabled' if plan.zap_enabled else 'disabled'}")
+    lines.append(f"nuclei:       {'enabled' if plan.nuclei_enabled else 'disabled'}")
     lines.append(f"enrichment:   {', '.join(plan.enrichment_sources) or 'none'}")
 
     lines.append("")

@@ -5,6 +5,7 @@ from vulnpipe.core.config import (
     EnrichmentConfig,
     FormAuth,
     HeaderAuth,
+    NucleiConfig,
     Scope,
     ScriptAuth,
     Target,
@@ -82,6 +83,15 @@ def test_plan_script_auth_secret_names() -> None:
     assert plan.web_targets[0].auth == "script"
     assert "SCRIPT_USER" in plan.secret_env_names
     assert "SCRIPT_PASS" in plan.secret_env_names
+
+
+def test_plan_reports_nuclei_layer() -> None:
+    off = build_scan_plan(_config())
+    assert off.nuclei_enabled is False
+    assert "nuclei:       disabled" in render_plan(off)
+    on = build_scan_plan(_config(nuclei=NucleiConfig(enabled=True)))
+    assert on.nuclei_enabled is True
+    assert "nuclei:       enabled" in render_plan(on)
 
 
 def test_plan_enrichment_sources_reflect_flags() -> None:
