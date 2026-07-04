@@ -341,6 +341,17 @@ def test_trend_json(tmp_path: Path) -> None:
     assert payload["scans"][0]["label"] == "s1"
 
 
+def test_trend_html(tmp_path: Path) -> None:
+    a = _findings_file(tmp_path, "s1.json", [_f("RCE", severity=Severity.HIGH)])
+    b = _findings_file(
+        tmp_path, "s2.json", [_f("RCE", severity=Severity.HIGH), _f("SQLi", severity=Severity.HIGH)]
+    )
+    result = runner.invoke(app, ["trend", "--format", "html", str(a), str(b)])
+    assert result.exit_code == 0
+    assert result.stdout.lstrip().startswith("<!DOCTYPE html>")
+    assert "<svg" in result.stdout and "Risk trend:" in result.stdout
+
+
 def test_diff_markdown_format(tmp_path: Path) -> None:
     baseline_path = tmp_path / "baseline.json"
     save_baseline(build_baseline([_f("kept")]), baseline_path)

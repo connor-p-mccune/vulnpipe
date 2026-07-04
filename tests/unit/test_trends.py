@@ -3,6 +3,8 @@
 from vulnpipe.ci.trends import (
     Snapshot,
     build_trend,
+    build_trend_chart,
+    render_trend_html,
     render_trend_text,
     trend_to_payload,
 )
@@ -105,3 +107,57 @@ def test_render_text_table_and_summary() -> None:
 def test_render_is_deterministic() -> None:
     snaps = _snapshots()
     assert render_trend_text(build_trend(snaps)) == render_trend_text(build_trend(snaps))
+
+
+# --------------------------------------------------------------------------- #
+# HTML chart geometry + rendering
+# --------------------------------------------------------------------------- #
+def test_chart_has_one_column_per_scan_with_stacked_segments() -> None:
+    chart = build_trend_chart(build_trend(_snapshots()))
+    assert len(chart.columns) == 2
+    # Scan A has critical + high + informational -> three non-empty segments.
+    assert len(chart.columns[0].segments) == 3
+    # Columns advance left to right; the baseline sits below every bar.
+    assert chart.columns[0].center_x < chart.columns[1].center_x
+    for column in chart.columns:
+        for segment in column.segments:
+            assert segment.y + segment.height <= chart.baseline_y
+
+
+def test_chart_bars_scale_to_the_busiest_scan() -> None:
+    a = [_f(f"a{i}", severity=Severity.HIGH) for i in range(4)]
+    b = [_f("b", severity=Severity.HIGH)]
+    chart = build_trend_chart(build_trend([("t0", a), ("t1", b)]))
+    busiest = chart.columns[0].segments[0].height
+    smaller = chart.columns[1].segments[0].height
+    assert busiest == 220  # the max total fills the plot height
+    assert smaller == busiest // 4
+
+
+def test_chart_empty_series_still_valid() -> None:
+    chart = build_trend_chart(build_trend([]))
+    assert chart.columns == ()
+    assert chart.width >= 160 and chart.height > 0
+
+
+def test_render_html_is_self_contained_and_escaped() -> None:
+    scan = [_f("CVE-2021-42013", severity=Severity.CRITICAL, kev=True)]
+    trend = build_trend([("<script>", scan)])
+    html = render_trend_html(trend)
+    assert html.lstrip().startswith("<!DOCTYPE html>")
+    assert "<svg" in html and "<rect" in html
+    assert "Risk trend:" in html
+    # The scan label is escaped, never live markup.
+    assert "&lt;script&gt;" in html
+    assert "<script>" not in html
+
+
+def test_render_html_reports_direction_class() -> None:
+    html = render_trend_html(build_trend(_snapshots()))
+    assert 'class="direction worsening"' in html
+    assert "2026-06-01" in html and "2026-06-15" in html
+
+
+def test_render_html_is_deterministic() -> None:
+    snaps = _snapshots()
+    assert render_trend_html(build_trend(snaps)) == render_trend_html(build_trend(snaps))

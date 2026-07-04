@@ -59,7 +59,12 @@ from vulnpipe.ci.policy import (
     policy_from_threshold,
     policy_result_to_payload,
 )
-from vulnpipe.ci.trends import build_trend, render_trend_text, trend_to_payload
+from vulnpipe.ci.trends import (
+    build_trend,
+    render_trend_html,
+    render_trend_text,
+    trend_to_payload,
+)
 from vulnpipe.core.config import (
     Config,
     ConfigError,
@@ -779,12 +784,12 @@ def trend(
         typer.Argument(help="Findings JSON files, oldest first (the time axis)."),
     ],
     fmt: Annotated[
-        str, typer.Option("--format", "-f", help="Output format: text or json.")
+        str, typer.Option("--format", "-f", help="Output format: text, json, or html.")
     ] = "text",
 ) -> None:
     """Analyze how findings evolve across a chronological series of scan reports."""
-    if fmt not in {"text", "json"}:
-        log.error("Unknown trend format %r; choose text or json", fmt)
+    if fmt not in {"text", "json", "html"}:
+        log.error("Unknown trend format %r; choose text, json, or html", fmt)
         raise typer.Exit(code=2)
     if not inputs:
         log.error("Provide at least one findings JSON file")
@@ -797,6 +802,8 @@ def trend(
     result = build_trend(snapshots)
     if fmt == "json":
         typer.echo(json.dumps(trend_to_payload(result), indent=2, ensure_ascii=False))
+    elif fmt == "html":
+        _emit(render_trend_html(result))
     else:
         _emit(render_trend_text(result))
 
