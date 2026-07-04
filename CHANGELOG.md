@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`merge` command** — combine findings JSONs from separate runs (a network
+  scan plus an SBOM analysis, or scans of different segments) into one
+  deduplicated, re-prioritized report, so a single baseline, diff, and gate can
+  cover everything. Findings sharing a fingerprint collapse into the richest
+  instance, exactly as the in-pipeline deduplicator does.
+- **`schema false-positives`** — the `schema` command now also prints the JSON
+  Schema for the false-positive allowlist, covering the time-boxed acceptance
+  fields (`reason`, `expires`) for editor validation.
 - **Plugin discovery via entry points** — installed packages can advertise extra
   scanners and report formats under the `vulnpipe.scanners` / `vulnpipe.reporters`
   entry-point groups; they are discovered and registered at CLI startup and listed

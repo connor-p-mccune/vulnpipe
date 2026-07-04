@@ -324,7 +324,10 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
 - `gate` — re-evaluate the CI gate over an existing findings JSON without
   rescanning, using a policy file or the severity/risk options (text or JSON
   verdict, non-zero exit on violation).
-- `report` — render a findings JSON to JSON / HTML / Markdown / CSV / SARIF on stdout.
+- `report` — render a findings JSON to any report format on stdout.
+- `merge` — combine findings JSONs from separate runs (network scan + SBOM
+  analysis, or per-segment scans) into one deduplicated, re-prioritized report,
+  so a single baseline and gate can cover everything.
 - `stats` — print a terminal summary of a findings JSON (severity breakdown, top
   risks, worst-affected hosts) via a fixed-width Rich render.
 - `badge` — render a findings JSON into a shields-style SVG status badge.

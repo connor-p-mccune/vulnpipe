@@ -570,13 +570,14 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `gate` | Re-evaluate the CI gate over an existing findings JSON without rescanning — policy file or severity/risk options (`--current`, `--baseline`, `--policy`, `--format text\|json`). |
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
 | `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / OpenVEX on stdout (`--input`, `--format`). |
+| `merge` | Combine findings JSONs from separate runs (e.g. a network scan + an SBOM analysis) into one deduplicated, re-prioritized report (`--input` repeated, `--output`, `--format`). |
 | `stats` | Print a terminal summary of a findings JSON — severity breakdown, OWASP Top 10, top risks, and worst-affected hosts (`--input`). |
 | `badge` | Render a findings JSON into a shields-style SVG status badge (`--input`, `--output`, `--label`). |
 | `notify` | Post a findings summary to a Slack-compatible webhook (URL resolved from the environment via `--webhook-url-env`). |
 | `trend` | Analyze how findings evolve across a chronological series of scan JSONs — totals, severity mix, and introduced/resolved deltas (text or JSON). |
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json`). |
 | `baseline` | Create or update a baseline from a findings JSON (`--input`, `--output`, `--update`). |
-| `schema` | Print the JSON Schema for the targets/scope config, for editor validation and autocomplete. |
+| `schema` | Print the JSON Schema for the targets/scope config, the report envelope, a gate policy, or the false-positive allowlist — for editor validation and autocomplete (`config` / `report` / `policy` / `false-positives`). |
 | `plugins` | List third-party scanner/reporter plugins discovered via entry points. |
 | `version` | Print the vulnpipe version. |
 
