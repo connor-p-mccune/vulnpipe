@@ -41,6 +41,7 @@ payloads.
 - [Configuration](#configuration)
 - [Run a scan](#run-a-scan)
 - [Reports](#reports)
+- [Remediation plan](#remediation-plan)
 - [CI usage: baseline, diff, gate](#ci-usage-baseline-diff-gate)
 - [Run via Docker](#run-via-docker)
 - [CLI reference](#cli-reference)
@@ -68,15 +69,21 @@ Point vulnpipe at an authorized, in-scope range and it will:
   NSE scripts;
 - **scan** the web services it finds (or URLs you declare) with a running OWASP ZAP
   daemon — spider + active scan, with optional authenticated sessions;
+- **check** those same web targets with [Nuclei](https://github.com/projectdiscovery/nuclei)
+  (optional) — template-based CVE / misconfiguration / exposure detection that
+  complements ZAP;
 - **normalize** everything into a single `Finding` model with a stable fingerprint;
 - **enrich** findings with CVSS scores/vectors (NVD), EPSS exploit-probability, and
   CISA **KEV** (known-exploited-in-the-wild) status — cached on disk, and never
   fabricated (a failed lookup leaves the field unknown);
 - **filter** false positives via an allowlist plus a confidence threshold;
 - **prioritize** by severity → known-exploited (KEV) → CVSS → EPSS → asset criticality;
+- **plan** remediation — collapse the findings into a ranked, deduplicated worklist
+  (patch this service, upgrade that dependency) ordered by the risk each fix removes;
 - **map** findings onto the **OWASP Top 10** and the **CWE Top 25** (curated
   official mappings; unmapped findings stay unmapped, never forced into a category);
-- **report** to JSON (canonical), HTML (human), and SARIF (the GitHub Security tab);
+- **report** to JSON (canonical), HTML (human), SARIF (the GitHub Security tab), and
+  a **GitLab** security report (the GitLab Vulnerability Report);
 - **gate** CI by diffing against a baseline and failing only on *new* severe findings —
   or against a reviewable **policy-as-code** YAML (severity budgets, KEV block,
   risk threshold).
@@ -108,10 +115,10 @@ flowchart LR
 ```
 vulnpipe/
 ├── core/         models.py, config.py, orchestrator.py, standards.py, logging.py
-├── scanners/     base.py, nmap_scanner.py, zap_scanner.py, registry.py
+├── scanners/     base.py, nmap_scanner.py, zap_scanner.py, nuclei_scanner.py, registry.py
 ├── enrichment/   cvss.py, nvd_client.py, epss_client.py, kev_client.py
 ├── processing/   normalizer.py, deduplicator.py, false_positive.py, prioritizer.py
-├── reporting/    json/html/markdown/csv/prometheus/sarif/vex reporters, badge.py, templates/
+├── reporting/    json/html/markdown/csv/prometheus/sarif/gitlab/vex reporters, remediation.py, badge.py, templates/
 ├── ci/           baseline.py, differ.py, gate.py, policy.py, junit.py, trends.py
 ├── sbom/         cyclonedx.py, osv_client.py, analyzer.py, pipeline.py
 ├── auth/         auth_contexts.py
@@ -127,6 +134,8 @@ and the diff/gate model — is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - The **`nmap`** binary on `PATH` (for the network layer)
 - A running **OWASP ZAP daemon** (for the web layer) — easiest via the bundled
   [Docker stack](#run-via-docker)
+- Optional: the **`nuclei`** binary on `PATH` (enables the template-based detection
+  layer; off unless `nuclei.enabled` is set)
 - Optional: an **NVD API key** (raises enrichment rate limits)
 
 The network and web layers are independent: with no ZAP daemon you still get the
@@ -357,6 +366,7 @@ timestamp — pin it with `SOURCE_DATE_EPOCH` for byte-identical CI output.
 | **CSV** | One row per finding for a spreadsheet or data-frame — columns mirror the JSON fields (plus fingerprint, risk score, and OWASP categories). |
 | **Prometheus** | Text-exposition gauges (findings by severity/source, known-exploited count, peak risk) for the node_exporter textfile collector or a Pushgateway. |
 | **SARIF** | SARIF 2.1.0 for the GitHub code-scanning / Security tab. |
+| **GitLab** | A GitLab-compatible security report (`report --format gitlab`) for the GitLab Vulnerability Report and the merge-request security widget — a DAST-style export with stable ids, CVE/CWE identifiers, and the report-schema scan block. |
 | **OpenVEX** | [OpenVEX](https://openvex.dev) 0.2.0 `affected` statements for every finding that cites a real CVE / OSV id, for exploitability-exchange tooling (`vexctl`, scanner VEX inputs, policy engines). |
 
 Render any format from a findings JSON to stdout:
@@ -433,6 +443,29 @@ every finding with its fingerprint and computed risk score:
   ]
 }
 ```
+
+## Remediation plan
+
+A findings list says *what* is wrong; `vulnpipe remediate` says *what to fix first*.
+It collapses findings onto the action that resolves them — one patch clears several
+CVEs on a service, one upgrade clears a dependency's advisories, one fix clears a
+weakness class across endpoints — and ranks those actions by the risk each removes:
+
+```console
+$ vulnpipe remediate --input results/latest.json
+vulnpipe remediation plan — 10 actions resolving 15 finding(s)
+  #   Risk   Worst      Fixes   KEV   Action
+  1    173   critical       3    !    Patch Apache httpd 2.4.49 on 10.0.0.5
+  2     89   high           3         Patch OpenSSH 7.4 on 10.0.0.5
+  3     56   high           1         Remediate: SQL Injection
+  …
+```
+
+The recommendation reuses the scanner's own fix text when it offered one and never
+invents a version otherwise. It reads the canonical findings JSON, so it composes
+with `scan`, `sbom`, and `merge`; `--format markdown` drops a worklist into a pull
+request and `--format json` feeds automation. The HTML report shows the same plan
+as a panel under the summary.
 
 ## CI usage: baseline, diff, gate
 
@@ -569,7 +602,8 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `sbom` | Analyze a CycloneDX SBOM against OSV.dev and emit standard findings — passive supply-chain analysis, no scope/authorization needed (`--input`, `--output`, `--format`, `--no-enrich`). |
 | `gate` | Re-evaluate the CI gate over an existing findings JSON without rescanning — policy file or severity/risk options (`--current`, `--baseline`, `--policy`, `--format text\|json`). |
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
-| `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / OpenVEX on stdout (`--input`, `--format`). |
+| `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX on stdout (`--input`, `--format`). |
+| `remediate` | Group a findings JSON into a ranked, deduplicated remediation plan — fix these first — as text / JSON / Markdown (`--input`, `--format`, `--top`). |
 | `merge` | Combine findings JSONs from separate runs (e.g. a network scan + an SBOM analysis) into one deduplicated, re-prioritized report (`--input` repeated, `--output`, `--format`). |
 | `stats` | Print a terminal summary of a findings JSON — severity breakdown, OWASP Top 10, top risks, and worst-affected hosts (`--input`). |
 | `badge` | Render a findings JSON into a shields-style SVG status badge (`--input`, `--output`, `--label`). |
