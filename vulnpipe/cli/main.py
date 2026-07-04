@@ -58,12 +58,17 @@ from vulnpipe.core.config import (
     load_config,
 )
 from vulnpipe.core.logging import configure_logging, get_logger
-from vulnpipe.core.models import Severity
+from vulnpipe.core.models import Finding, Severity
 from vulnpipe.core.orchestrator import PipelineResult, run_pipeline
 from vulnpipe.core.planner import build_scan_plan, render_plan
 from vulnpipe.notify import NotifyError, post_webhook
 from vulnpipe.plugins import REPORTER_GROUP, SCANNER_GROUP, load_plugins, loaded_plugins
-from vulnpipe.processing import FalsePositiveConfig, load_false_positive_config
+from vulnpipe.processing import (
+    FalsePositiveConfig,
+    deduplicate,
+    load_false_positive_config,
+    prioritize,
+)
 from vulnpipe.reporting import (
     SEVERITY_DISPLAY_ORDER,
     available_formats,
@@ -191,7 +196,7 @@ def version() -> None:
 def schema(
     kind: Annotated[
         str,
-        typer.Argument(help="Which schema to print: config, report, or policy."),
+        typer.Argument(help="Which schema to print: config, report, policy, or false-positives."),
     ] = "config",
 ) -> None:
     """Print a JSON Schema: the targets/scope config, the findings report, or a gate policy."""
@@ -199,6 +204,7 @@ def schema(
         "config": Config.model_json_schema,
         "report": build_report_schema,
         "policy": GatePolicy.model_json_schema,
+        "false-positives": FalsePositiveConfig.model_json_schema,
     }
     builder = builders.get(kind)
     if builder is None:
@@ -460,6 +466,61 @@ def report(
         log.error("Failed to read findings from %s: %s", input_path, exc)
         raise typer.Exit(code=2) from exc
     _emit(reporter.render(findings))
+
+
+@app.command()
+def merge(
+    input_paths: Annotated[
+        list[Path],
+        typer.Option(
+            "--input",
+            "-i",
+            exists=True,
+            dir_okay=False,
+            help="A findings JSON to merge (repeat the option for each report).",
+        ),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output", "-o", dir_okay=False, help="Also write the merged canonical JSON here."
+        ),
+    ] = None,
+    fmt: Annotated[
+        str,
+        typer.Option("--format", "-f", help="Render format for stdout: any report format."),
+    ] = "json",
+) -> None:
+    """Merge findings JSONs from separate runs into one deduplicated report.
+
+    Lets independent runs -- a network scan, an SBOM analysis, scans of two
+    network segments -- feed a single report, baseline, and gate. Findings
+    sharing a fingerprint collapse into the richest instance (the same rule the
+    in-pipeline deduplicator applies), and the result is re-prioritized.
+    """
+    try:
+        reporter = get_reporter(fmt)
+    except KeyError as exc:
+        log.error("Unknown format %r; choose one of: %s", fmt, ", ".join(available_formats()))
+        raise typer.Exit(code=2) from exc
+    combined: list[Finding] = []
+    try:
+        for path in input_paths:
+            combined.extend(load_findings(path))
+    except (OSError, ValueError) as exc:
+        log.error("Failed to read findings: %s", exc)
+        raise typer.Exit(code=2) from exc
+    merged = prioritize(deduplicate(combined))
+    log.info(
+        "merged %d report(s): %d finding(s) in, %d after dedup",
+        len(input_paths),
+        len(combined),
+        len(merged),
+    )
+    if output is not None:
+        _write(output, get_reporter("json").render(merged))
+        log.info("wrote merged findings JSON: %s", output)
+    _emit(reporter.render(merged))
 
 
 @app.command()

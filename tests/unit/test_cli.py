@@ -95,11 +95,60 @@ def test_schema_unknown_kind_exits_two() -> None:
     assert result.exit_code == 2
 
 
+def test_schema_false_positives_kind_describes_the_allowlist() -> None:
+    result = runner.invoke(app, ["schema", "false-positives"])
+    assert result.exit_code == 0
+    document = json.loads(result.stdout)
+    assert "fingerprints" in document["properties"]
+    assert "min_confidence" in document["properties"]
+    # The rule objects carry the risk-acceptance fields.
+    assert "expires" in document["$defs"]["FingerprintRule"]["properties"]
+    assert "reason" in document["$defs"]["PluginRule"]["properties"]
+
+
 def test_plugins_reports_none_discovered() -> None:
     result = runner.invoke(app, ["plugins"])
     assert result.exit_code == 0
     assert "no third-party plugins discovered" in result.stdout
     assert "vulnpipe.scanners" in result.stdout  # points at the entry-point groups
+
+
+# --------------------------------------------------------------------------- #
+# merge
+# --------------------------------------------------------------------------- #
+def test_merge_dedupes_across_reports_and_writes_output(tmp_path: Path) -> None:
+    shared = _f("Seen in both runs", severity=Severity.HIGH)
+    first = _findings_file(tmp_path, "network.json", [shared, _f("Network only")])
+    second = _findings_file(tmp_path, "sbom.json", [shared, _f("Supply chain only")])
+    out = tmp_path / "merged.json"
+    result = runner.invoke(app, ["merge", "-i", str(first), "-i", str(second), "-o", str(out)])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    titles = {finding["title"] for finding in payload["findings"]}
+    assert titles == {"Seen in both runs", "Network only", "Supply chain only"}
+    assert payload["summary"]["total"] == 3  # the duplicate collapsed
+    # The written file matches what was emitted.
+    assert json.loads(out.read_text(encoding="utf-8")) == payload
+
+
+def test_merge_renders_any_report_format(tmp_path: Path) -> None:
+    first = _findings_file(tmp_path, "a.json", [_f("Issue A")])
+    result = runner.invoke(app, ["merge", "-i", str(first), "-f", "markdown"])
+    assert result.exit_code == 0
+    assert "Issue A" in result.stdout
+
+
+def test_merge_unknown_format_exits_two(tmp_path: Path) -> None:
+    first = _findings_file(tmp_path, "a.json", [_f("Issue A")])
+    result = runner.invoke(app, ["merge", "-i", str(first), "-f", "docx"])
+    assert result.exit_code == 2
+
+
+def test_merge_unreadable_input_exits_two(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not json", encoding="utf-8")
+    result = runner.invoke(app, ["merge", "-i", str(bad)])
+    assert result.exit_code == 2
 
 
 def test_report_json(tmp_path: Path) -> None:
