@@ -325,3 +325,70 @@ integration or the canonical `json` format — a deliberate supply-chain guard;
 anyone who truly wants to swap a built-in must do it in code, visibly. The cost
 is a process-global registry mutated at startup, mitigated by determinism and
 the idempotence guarantee.
+
+## ADR-0019 — Remediation planning as a re-view of the report, not new data
+
+**Context.** A prioritized findings list still leaves an operator asking "so what
+do I *do*, and in what order?" Several findings usually share one fix — three CVEs
+on one Apache build, a dozen advisories on one dependency — so a flat list overstates
+the work and hides the highest-leverage actions.
+
+**Decision.** `reporting/remediation.plan_remediations` (pure) groups findings by the
+action that resolves them — a dependency by **package**, a network service by
+**product-per-host**, everything else by **weakness class** — and ranks the groups by
+known-exploited status, then severity, then the total composite risk each removes,
+then count. An action's instruction reuses the scanner's own `solution` text when it
+exists and otherwise uses a template that never names a fixed version. The one planner
+backs the `remediate` command, the HTML panel, and the `stats` table.
+
+**Consequences.** The plan is genuinely actionable ("patch this, upgrade that") and
+invents nothing — every number traces to a finding it contains, and a missing fix is
+stated as such rather than fabricated. Grouping keys are heuristics over metadata
+(`package` / `product`), so a scanner that omits that metadata falls back to the
+per-title class grouping; that is a graceful degradation, not a wrong answer. Because
+it is a pure view over existing findings, it needs no new model field and cannot drift
+from the report.
+
+## ADR-0020 — Nuclei as an opt-in third scanner, detection-only
+
+**Context.** Nmap (network) and ZAP (web) leave gaps that ProjectDiscovery's Nuclei —
+a fast, community-templated scanner — fills well: known-CVE checks, misconfigurations,
+and exposures. But Nuclei can also run fuzzing / exploitation templates, which would
+violate the project's detection-only rule, and adding a third scanner by default would
+change every existing run.
+
+**Decision.** Add `NucleiScanner` through the same registry + injectable-seam path as
+the other scanners, wired as an optional orchestrator layer over the same in-scope web
+URLs as ZAP. It is **off unless `nuclei.enabled`**, and the integration runs only
+detection templates: it passes no fuzzing/exploitation flags and carries the match
+location and evidence onto a finding but never a replayable payload. Severity, CVE/CWE,
+and CVSS come verbatim from the template classification.
+
+**Consequences.** vulnpipe gains modern template-based coverage without special-casing
+anything in the orchestrator, and existing runs are byte-for-byte unchanged because the
+layer defaults off. Keeping it detection-only preserves the hard rule at the cost of not
+surfacing Nuclei's exploitation templates — the right trade for a detect-and-report tool.
+Overlap with ZAP on the same URLs is deliberate: the two find different classes of issue,
+and dedup collapses any genuine duplicates by fingerprint.
+
+## ADR-0021 — Export to the CI platform's native format (SARIF and GitLab)
+
+**Context.** SARIF already lands findings in the GitHub Security tab. GitLab — the other
+dominant CI platform — does not read SARIF for its Vulnerability Report; it ingests its
+own security-report JSON. Meeting teams where they already triage matters more than
+adding a novel format.
+
+**Decision.** Add a `gitlab` reporter emitting a GitLab-compatible security report.
+vulnpipe is a dynamic scanner, so it exports a DAST-style report: the vulnerability `id`
+is the stable fingerprint (GitLab tracks the same issue across pipelines), `identifiers`
+carry the real CVEs/CWEs plus a vulnpipe rule id so the list is never empty, and severity
+maps onto GitLab's vocabulary. The schema-required `scan.start_time` / `end_time` are
+handled exactly like the OpenVEX timestamp: the pure builder omits them (snapshot-stable)
+while the registered reporter stamps them, honoring `SOURCE_DATE_EPOCH`.
+
+**Consequences.** A single scan now surfaces natively in either GitHub or GitLab with no
+extra tooling. The cost is a second machine format to keep honest, but it reuses the same
+finding fields and the same reproducible-timestamp discipline as SARIF and OpenVEX, so the
+marginal maintenance is small. The report is framed as one scan type (DAST) rather than
+splitting network/web/SBOM findings across GitLab's report types — a pragmatic choice that
+keeps every finding in one ingestible document.
