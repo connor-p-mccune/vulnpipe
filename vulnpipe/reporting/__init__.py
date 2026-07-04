@@ -28,6 +28,13 @@ from vulnpipe.reporting.json_reporter import (
 )
 from vulnpipe.reporting.markdown_reporter import MarkdownReporter, render_markdown
 from vulnpipe.reporting.prometheus_reporter import PrometheusReporter, render_prometheus
+from vulnpipe.reporting.remediation import (
+    RemediationAction,
+    plan_remediations,
+    remediation_to_payload,
+    render_remediation_markdown,
+    render_remediation_text,
+)
 from vulnpipe.reporting.sarif_reporter import SarifReporter, build_sarif
 from vulnpipe.reporting.stats import render_stats
 from vulnpipe.reporting.summary import (
@@ -92,6 +99,7 @@ __all__ = [
     "JsonReporter",
     "MarkdownReporter",
     "PrometheusReporter",
+    "RemediationAction",
     "ReportSummary",
     "SarifReporter",
     "StandardsSummary",
@@ -106,12 +114,16 @@ __all__ = [
     "get_reporter",
     "group_by_host",
     "load_findings",
+    "plan_remediations",
     "register_reporter",
+    "remediation_to_payload",
     "render_badge",
     "render_csv",
     "render_html",
     "render_markdown",
     "render_prometheus",
+    "render_remediation_markdown",
+    "render_remediation_text",
     "render_stats",
     "render_vex",
     "report_to_findings",
