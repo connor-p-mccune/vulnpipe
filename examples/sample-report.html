@@ -76,6 +76,15 @@
     a { color: var(--link); }
     ul.refs { margin: .25rem 0 0; padding-left: 1.25rem; }
     ul.refs li { word-break: break-all; }
+    ol.remediation {
+      padding-left: 1.5rem; margin: .5rem 0 0; background: var(--card-bg);
+      border: 1px solid var(--border); border-radius: 8px;
+    }
+    ol.remediation li { padding: .5rem .5rem .5rem 0; border-top: 1px solid var(--border-soft); }
+    ol.remediation li:first-child { border-top: none; }
+    ol.remediation li.kev { border-left: 3px solid #c62828; }
+    .remediation-detail { margin: .25rem 0 0; font-size: .9rem; }
+    .remediation-meta { margin: .1rem 0 0; font-size: .82rem; }
     .toolbar {
       display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: .25rem 0 .75rem;
     }
@@ -124,6 +133,80 @@
     <span class="badge sev-low">Low: 2</span>
     <span class="badge sev-informational">Informational: 5</span>
   </div>
+
+  <h2>Remediation plan</h2>
+  <ol class="remediation">
+    <li class="kev">
+      <span class="badge risk-badge sev-critical" title="Worst composite risk score among the resolved findings">98</span>
+      <span class="badge sev-critical">Critical</span>
+<span class="badge badge-kev" title="Resolves an actively-exploited (CISA KEV) finding">&#9888; Known-exploited</span>      <strong>Patch Apache httpd 2.4.49 on 10.0.0.5</strong>
+      <span class="muted">&mdash; resolves 3 findings across 1 host</span>
+      <div class="remediation-detail">Apply vendor updates for Apache httpd 2.4.49 on 10.0.0.5.</div>
+<div class="muted remediation-meta">CVE-2021-41773, CVE-2021-42013</div>    </li>
+    <li>
+      <span class="badge risk-badge sev-medium" title="Worst composite risk score among the resolved findings">52</span>
+      <span class="badge sev-high">High</span>
+      <strong>Patch OpenSSH 7.4 on 10.0.0.5</strong>
+      <span class="muted">&mdash; resolves 3 findings across 1 host</span>
+      <div class="remediation-detail">Apply vendor updates for OpenSSH 7.4 on 10.0.0.5.</div>
+<div class="muted remediation-meta">CVE-2016-10009, CVE-2018-15473</div>    </li>
+    <li>
+      <span class="badge risk-badge sev-medium" title="Worst composite risk score among the resolved findings">56</span>
+      <span class="badge sev-high">High</span>
+      <strong>Remediate: Cross Site Scripting (Reflected)</strong>
+      <span class="muted">&mdash; resolves 1 finding across 1 host</span>
+      <div class="remediation-detail">Validate input and contextually encode user-supplied data on output.</div>
+    </li>
+    <li>
+      <span class="badge risk-badge sev-medium" title="Worst composite risk score among the resolved findings">56</span>
+      <span class="badge sev-high">High</span>
+      <strong>Remediate: SQL Injection</strong>
+      <span class="muted">&mdash; resolves 1 finding across 1 host</span>
+      <div class="remediation-detail">Use parameterized queries / prepared statements.</div>
+    </li>
+    <li>
+      <span class="badge risk-badge sev-medium" title="Worst composite risk score among the resolved findings">54</span>
+      <span class="badge sev-high">High</span>
+      <strong>Patch nginx 1.18.0 on 10.0.0.6</strong>
+      <span class="muted">&mdash; resolves 2 findings across 1 host</span>
+      <div class="remediation-detail">Apply vendor updates for nginx 1.18.0 on 10.0.0.6.</div>
+<div class="muted remediation-meta">CVE-2021-23017</div>    </li>
+    <li>
+      <span class="badge risk-badge sev-low" title="Worst composite risk score among the resolved findings">35</span>
+      <span class="badge sev-medium">Medium</span>
+      <strong>Remediate: Vulnerable JS Library</strong>
+      <span class="muted">&mdash; resolves 1 finding across 1 host</span>
+      <div class="remediation-detail">Upgrade to the latest version of jquery.</div>
+<div class="muted remediation-meta">CVE-2019-11358, CVE-2020-11022</div>    </li>
+    <li>
+      <span class="badge risk-badge sev-low" title="Worst composite risk score among the resolved findings">14</span>
+      <span class="badge sev-low">Low</span>
+      <strong>Remediate: Application Error Disclosure</strong>
+      <span class="muted">&mdash; resolves 1 finding across 1 host</span>
+      <div class="remediation-detail">Configure the application to return generic error pages.</div>
+    </li>
+    <li>
+      <span class="badge risk-badge sev-low" title="Worst composite risk score among the resolved findings">14</span>
+      <span class="badge sev-low">Low</span>
+      <strong>Remediate: Cookie without SameSite Attribute</strong>
+      <span class="muted">&mdash; resolves 1 finding across 1 host</span>
+      <div class="remediation-detail">Set the SameSite attribute on sensitive cookies.</div>
+    </li>
+    <li>
+      <span class="badge risk-badge sev-informational" title="Worst composite risk score among the resolved findings">0</span>
+      <span class="badge sev-informational">Informational</span>
+      <strong>Remediate: Timestamp Disclosure - Unix</strong>
+      <span class="muted">&mdash; resolves 1 finding across 1 host</span>
+      <div class="remediation-detail">Manually confirm that the timestamp data is not sensitive.</div>
+    </li>
+    <li>
+      <span class="badge risk-badge sev-informational" title="Worst composite risk score among the resolved findings">0</span>
+      <span class="badge sev-informational">Informational</span>
+      <strong>Patch MySQL 8.0.27 on 10.0.0.6</strong>
+      <span class="muted">&mdash; resolves 1 finding across 1 host</span>
+      <div class="remediation-detail">Apply vendor updates for MySQL 8.0.27 on 10.0.0.6.</div>
+    </li>
+  </ol>
 
   <h2>Severity breakdown</h2>
   <svg width="488" height="150" role="img" aria-label="Findings by severity">

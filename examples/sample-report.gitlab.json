@@ -1,0 +1,400 @@
+{
+  "version": "15.0.6",
+  "scan": {
+    "analyzer": {
+      "id": "vulnpipe",
+      "name": "vulnpipe",
+      "version": "0.4.0",
+      "vendor": {
+        "name": "vulnpipe"
+      }
+    },
+    "scanner": {
+      "id": "vulnpipe",
+      "name": "vulnpipe",
+      "version": "0.4.0",
+      "vendor": {
+        "name": "vulnpipe"
+      }
+    },
+    "type": "dast",
+    "status": "success",
+    "start_time": "2026-01-01T00:00:00",
+    "end_time": "2026-01-01T00:00:00"
+  },
+  "vulnerabilities": [
+    {
+      "id": "741786901e8421eee27c8d50d3a4bae704b85aa3962fb01a9fcc16bb4ccdb3fc",
+      "name": "CVE-2021-42013",
+      "severity": "Critical",
+      "identifiers": [
+        {
+          "type": "cve",
+          "name": "CVE-2021-42013",
+          "value": "CVE-2021-42013",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-42013"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "nmap/vulners",
+          "value": "nmap/vulners"
+        }
+      ],
+      "location": {
+        "hostname": "10.0.0.5",
+        "path": "/"
+      },
+      "description": "CVE-2021-42013 reported by the Nmap vulners script for http (Apache httpd 2.4.49)."
+    },
+    {
+      "id": "f37cb98d3b2212fa16226f86a9019754ab4215c1475c877e04d2956e53f7cf13",
+      "name": "CVE-2021-41773",
+      "severity": "High",
+      "identifiers": [
+        {
+          "type": "cve",
+          "name": "CVE-2021-41773",
+          "value": "CVE-2021-41773",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-41773"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "nmap/vulners",
+          "value": "nmap/vulners"
+        }
+      ],
+      "location": {
+        "hostname": "10.0.0.5",
+        "path": "/"
+      },
+      "description": "CVE-2021-41773 reported by the Nmap vulners script for http (Apache httpd 2.4.49)."
+    },
+    {
+      "id": "6ef44ce5d33d4cec342a312a5b3c84c8ec0e0cd344430a969f7772ffd66d8272",
+      "name": "CVE-2021-23017",
+      "severity": "High",
+      "identifiers": [
+        {
+          "type": "cve",
+          "name": "CVE-2021-23017",
+          "value": "CVE-2021-23017",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-23017"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "nmap/vulners",
+          "value": "nmap/vulners"
+        }
+      ],
+      "location": {
+        "hostname": "10.0.0.6",
+        "path": "/"
+      },
+      "description": "CVE-2021-23017 reported by the Nmap vulners script for https (nginx 1.18.0)."
+    },
+    {
+      "id": "28117601fe8900a3a3c8e231099e3f35451701a4cd79b42e048bda07fd4c829a",
+      "name": "CVE-2016-10009",
+      "severity": "High",
+      "identifiers": [
+        {
+          "type": "cve",
+          "name": "CVE-2016-10009",
+          "value": "CVE-2016-10009",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2016-10009"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "nmap/vulners",
+          "value": "nmap/vulners"
+        }
+      ],
+      "location": {
+        "hostname": "10.0.0.5",
+        "path": "/"
+      },
+      "description": "CVE-2016-10009 reported by the Nmap vulners script for ssh (OpenSSH 7.4)."
+    },
+    {
+      "id": "0e096605545602affffbf5f4c5081b3e631a8ccac3eef245bfcf78aafa368eff",
+      "name": "SQL Injection",
+      "severity": "High",
+      "identifiers": [
+        {
+          "type": "cwe",
+          "name": "CWE-89",
+          "value": "89",
+          "url": "https://cwe.mitre.org/data/definitions/89.html"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "zap/40018",
+          "value": "zap/40018"
+        }
+      ],
+      "location": {
+        "hostname": "app.lab.example.com",
+        "path": "/api/items",
+        "method": "GET",
+        "param": "id"
+      },
+      "description": "SQL injection may be possible in the id parameter.",
+      "solution": "Use parameterized queries / prepared statements.",
+      "links": [
+        {
+          "url": "https://owasp.org/www-community/attacks/SQL_Injection"
+        },
+        {
+          "url": "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+        }
+      ]
+    },
+    {
+      "id": "fd10993a87c649472e1adeec1e96ca4e7c5d081628383a8cfdf52e5453a37167",
+      "name": "Cross Site Scripting (Reflected)",
+      "severity": "High",
+      "identifiers": [
+        {
+          "type": "cwe",
+          "name": "CWE-79",
+          "value": "79",
+          "url": "https://cwe.mitre.org/data/definitions/79.html"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "zap/40012",
+          "value": "zap/40012"
+        }
+      ],
+      "location": {
+        "hostname": "app.lab.example.com",
+        "path": "/search",
+        "method": "GET",
+        "param": "q"
+      },
+      "description": "Reflected cross-site scripting was identified in the q parameter.",
+      "solution": "Validate input and contextually encode user-supplied data on output.",
+      "links": [
+        {
+          "url": "https://owasp.org/www-community/attacks/xss/"
+        }
+      ]
+    },
+    {
+      "id": "bd4a889c2d91caed3a4bb547717850deb1266263069a5c8290abf3b420d616dd",
+      "name": "CVE-2018-15473",
+      "severity": "Medium",
+      "identifiers": [
+        {
+          "type": "cve",
+          "name": "CVE-2018-15473",
+          "value": "CVE-2018-15473",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2018-15473"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "nmap/vulners",
+          "value": "nmap/vulners"
+        }
+      ],
+      "location": {
+        "hostname": "10.0.0.5",
+        "path": "/"
+      },
+      "description": "CVE-2018-15473 reported by the Nmap vulners script for ssh (OpenSSH 7.4)."
+    },
+    {
+      "id": "7f9050ff0a493d68a20078794b9cfc062f391ea93162bab46fdc835ba571fa05",
+      "name": "Vulnerable JS Library",
+      "severity": "Medium",
+      "identifiers": [
+        {
+          "type": "cve",
+          "name": "CVE-2019-11358",
+          "value": "CVE-2019-11358",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-11358"
+        },
+        {
+          "type": "cve",
+          "name": "CVE-2020-11022",
+          "value": "CVE-2020-11022",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-11022"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "zap/10003",
+          "value": "zap/10003"
+        }
+      ],
+      "location": {
+        "hostname": "app.lab.example.com",
+        "path": "/static/jquery-1.7.1.min.js",
+        "method": "GET"
+      },
+      "description": "The identified library jquery, version 1.7.1, is vulnerable.",
+      "solution": "Upgrade to the latest version of jquery.",
+      "links": [
+        {
+          "url": "https://github.com/jquery/jquery/issues/2432"
+        },
+        {
+          "url": "https://blog.jquery.com/2016/01/08/jquery-2-2-and-1-12-released/"
+        }
+      ]
+    },
+    {
+      "id": "710e0b5de4829b47cb6bd09eed10ef40f4d2a16569c2284e676747e5b8a31f82",
+      "name": "Cookie without SameSite Attribute",
+      "severity": "Low",
+      "identifiers": [
+        {
+          "type": "cwe",
+          "name": "CWE-1275",
+          "value": "1275",
+          "url": "https://cwe.mitre.org/data/definitions/1275.html"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "zap/10054",
+          "value": "zap/10054"
+        }
+      ],
+      "location": {
+        "hostname": "vpn.corp.example.net",
+        "path": "/login",
+        "method": "POST",
+        "param": "session"
+      },
+      "description": "A cookie has been set without the SameSite attribute.",
+      "solution": "Set the SameSite attribute on sensitive cookies.",
+      "links": [
+        {
+          "url": "https://owasp.org/www-community/SameSite"
+        }
+      ]
+    },
+    {
+      "id": "f307e1d545187788b7f169f6ef5a34efe4d588c6dbc6058f433c7947b3d3607a",
+      "name": "Application Error Disclosure",
+      "severity": "Low",
+      "identifiers": [
+        {
+          "type": "cwe",
+          "name": "CWE-209",
+          "value": "209",
+          "url": "https://cwe.mitre.org/data/definitions/209.html"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "zap/90022",
+          "value": "zap/90022"
+        }
+      ],
+      "location": {
+        "hostname": "app.lab.example.com",
+        "path": "/old/report",
+        "method": "GET"
+      },
+      "description": "An application error message was disclosed by the server.",
+      "solution": "Configure the application to return generic error pages.",
+      "links": [
+        {
+          "url": "https://cwe.mitre.org/data/definitions/209.html"
+        }
+      ]
+    },
+    {
+      "id": "08537141eb8c834aa41779825e5dcd047d92ea55396ccd7fc0ea7cfd1f4ab5b1",
+      "name": "Open port 3306/tcp",
+      "severity": "Info",
+      "identifiers": [
+        {
+          "type": "vulnpipe_rule",
+          "name": "nmap/Open port 3306/tcp",
+          "value": "nmap/Open port 3306/tcp"
+        }
+      ],
+      "location": {
+        "hostname": "10.0.0.6",
+        "path": "/"
+      },
+      "description": "mysql (MySQL 8.0.27)"
+    },
+    {
+      "id": "4cb8433b7b6432e9194541bf1c13f61f26ec8744ff1a437e74944baceb1a821c",
+      "name": "Open port 22/tcp",
+      "severity": "Info",
+      "identifiers": [
+        {
+          "type": "vulnpipe_rule",
+          "name": "nmap/Open port 22/tcp",
+          "value": "nmap/Open port 22/tcp"
+        }
+      ],
+      "location": {
+        "hostname": "10.0.0.5",
+        "path": "/"
+      },
+      "description": "ssh (OpenSSH 7.4)"
+    },
+    {
+      "id": "97b8367c9b79aaf7c604fd0cbb742ad46a7705d814df79f61e8f21a2e313abc8",
+      "name": "Timestamp Disclosure - Unix",
+      "severity": "Info",
+      "identifiers": [
+        {
+          "type": "cwe",
+          "name": "CWE-200",
+          "value": "200",
+          "url": "https://cwe.mitre.org/data/definitions/200.html"
+        },
+        {
+          "type": "vulnpipe_rule",
+          "name": "zap/10096",
+          "value": "zap/10096"
+        }
+      ],
+      "location": {
+        "hostname": "app.lab.example.com",
+        "path": "/",
+        "method": "GET"
+      },
+      "description": "A timestamp was disclosed by the application/web server.",
+      "solution": "Manually confirm that the timestamp data is not sensitive."
+    },
+    {
+      "id": "aff65577ab386610faee85cb221b47b224e8decd613ebcc383daf29937432443",
+      "name": "Open port 80/tcp",
+      "severity": "Info",
+      "identifiers": [
+        {
+          "type": "vulnpipe_rule",
+          "name": "nmap/Open port 80/tcp",
+          "value": "nmap/Open port 80/tcp"
+        }
+      ],
+      "location": {
+        "hostname": "10.0.0.5",
+        "path": "/"
+      },
+      "description": "http (Apache httpd 2.4.49)"
+    },
+    {
+      "id": "ec68726b1dd17d377b77a3962d5e126f97da3c30d1d86a7916f2c9864419dad7",
+      "name": "Open port 443/tcp",
+      "severity": "Info",
+      "identifiers": [
+        {
+          "type": "vulnpipe_rule",
+          "name": "nmap/Open port 443/tcp",
+          "value": "nmap/Open port 443/tcp"
+        }
+      ],
+      "location": {
+        "hostname": "10.0.0.6",
+        "path": "/"
+      },
+      "description": "https (nginx 1.18.0)"
+    }
+  ]
+}

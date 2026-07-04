@@ -15,6 +15,8 @@ against a real system.
 | [`sample-report.html`](sample-report.html) | The human-readable HTML report (summary, inline SVG severity chart, per-host breakdown, and a filterable, sortable findings table). Open it in a browser. |
 | [`sample-report.md`](sample-report.md) | The Markdown report — a pull-request / Slack–friendly summary. |
 | [`sample-report.csv`](sample-report.csv) | The CSV report — one row per finding for a spreadsheet or data-frame. |
+| [`sample-report.gitlab.json`](sample-report.gitlab.json) | The GitLab security report — the JSON GitLab ingests to populate its Vulnerability Report and merge-request security widget. Its scan `start_time` / `end_time` are pinned so the committed sample stays deterministic. |
+| [`sample-remediation.md`](sample-remediation.md) | The remediation plan — findings collapsed into a ranked, deduplicated worklist (`vulnpipe remediate`), most impactful fix first. |
 | [`sample-badge.svg`](sample-badge.svg) | The SVG status badge — the worst outstanding severities at a glance, for a README or dashboard. |
 | [`sample-vex.json`](sample-vex.json) | The OpenVEX 0.2.0 document — machine-readable `affected` statements for every finding that cites a real CVE / OSV id, for exploitability-exchange tooling. Its publication `timestamp` is pinned so the committed sample stays deterministic. |
 

@@ -20,7 +20,13 @@ from pathlib import Path
 from vulnpipe.enrichment.enricher import enrich_findings
 from vulnpipe.enrichment.kev_client import KevEntry, parse_kev_catalog
 from vulnpipe.processing import deduplicate, prioritize
-from vulnpipe.reporting import get_reporter, render_badge, render_vex
+from vulnpipe.reporting import (
+    get_reporter,
+    render_badge,
+    render_gitlab,
+    render_remediation_markdown,
+    render_vex,
+)
 from vulnpipe.scanners.nmap_scanner import parse_nmap_xml
 from vulnpipe.scanners.zap_scanner import normalize_alerts
 
@@ -32,6 +38,10 @@ EXAMPLES = ROOT / "examples"
 # pinned to a fixed stamp so regeneration stays byte-for-byte deterministic; a real
 # run stamps the actual publication time (or honors SOURCE_DATE_EPOCH).
 _VEX_TIMESTAMP = "2026-01-01T00:00:00Z"
+
+# The GitLab security report likewise carries a scan timestamp; pin it for the
+# committed sample (a real run honors SOURCE_DATE_EPOCH or stamps the current time).
+_GITLAB_TIMESTAMP = "2026-01-01T00:00:00"
 
 # A real slice of the CISA KEV catalog covering the two Apache HTTP Server path
 # traversal CVEs present in the fixture scan (CVE-2021-41773 / CVE-2021-42013). Both
@@ -92,6 +102,14 @@ def main() -> None:
     vex = render_vex(findings, timestamp=_VEX_TIMESTAMP)
     (EXAMPLES / "sample-vex.json").write_text(vex, encoding="utf-8")
     print("wrote examples/sample-vex.json")
+
+    gitlab = render_gitlab(findings, timestamp=_GITLAB_TIMESTAMP)
+    (EXAMPLES / "sample-report.gitlab.json").write_text(gitlab, encoding="utf-8")
+    print("wrote examples/sample-report.gitlab.json")
+
+    remediation = render_remediation_markdown(findings)
+    (EXAMPLES / "sample-remediation.md").write_text(remediation, encoding="utf-8")
+    print("wrote examples/sample-remediation.md")
 
 
 if __name__ == "__main__":
