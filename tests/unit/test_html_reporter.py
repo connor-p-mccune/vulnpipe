@@ -10,11 +10,16 @@ from vulnpipe.processing.normalizer import make_finding
 from vulnpipe.reporting.html_reporter import (
     SEVERITY_STYLES,
     HtmlReporter,
+    build_owasp_chart,
     build_severity_chart,
     render_html,
     risk_css,
 )
-from vulnpipe.reporting.summary import SEVERITY_DISPLAY_ORDER, severity_counts
+from vulnpipe.reporting.summary import (
+    SEVERITY_DISPLAY_ORDER,
+    severity_counts,
+    summarize_standards,
+)
 
 _MAX_BAR_WIDTH = 320
 
@@ -191,7 +196,7 @@ def test_render_owasp_section_and_top25_card() -> None:
     )
     html = render_html([finding])
     assert "OWASP Top 10 (2021)" in html
-    assert "badge-owasp" in html and ">A03<" in html
+    assert "owasp-bar" in html and ">A03<" in html  # the ranked OWASP bar chart
     assert "Injection" in html
     assert "CWE Top 25" in html  # CWE-79 is a Top 25 weakness -> the card counts it
     assert ">A03</td>" in html  # the findings-table OWASP column
@@ -200,6 +205,45 @@ def test_render_owasp_section_and_top25_card() -> None:
 def test_render_owasp_empty_state_when_nothing_maps() -> None:
     html = render_html(_findings())  # fixture findings carry no CWE references
     assert "No findings map to an OWASP Top 10 category." in html
+
+
+def _owasp_finding(host: str, cwe: str) -> Finding:
+    return make_finding(source="zap", host=host, title=f"issue {cwe}", plugin_id=cwe, cwe_ids=[cwe])
+
+
+def test_owasp_chart_is_none_when_nothing_maps() -> None:
+    assert build_owasp_chart(summarize_standards(_findings())) is None
+
+
+def test_owasp_chart_ranks_categories_by_count_then_rank() -> None:
+    findings = [
+        _owasp_finding("h1", "CWE-89"),  # A03 Injection
+        _owasp_finding("h2", "CWE-79"),  # A03 Injection
+        _owasp_finding("h3", "CWE-287"),  # A07 Identification and Authentication Failures
+        _owasp_finding("h4", "CWE-22"),  # A01 Broken Access Control
+    ]
+    chart = build_owasp_chart(summarize_standards(findings))
+    assert chart is not None
+    # A03 has two findings so it leads; A01 and A07 tie at one and break by rank.
+    assert [bar.short for bar in chart.bars] == ["A03", "A01", "A07"]
+    assert [bar.count for bar in chart.bars] == [2, 1, 1]
+
+
+def test_owasp_chart_bars_scale_to_the_busiest_category() -> None:
+    findings = [_owasp_finding(f"a{i}", "CWE-89") for i in range(4)]
+    findings.append(_owasp_finding("b", "CWE-22"))  # A01, one finding
+    chart = build_owasp_chart(summarize_standards(findings))
+    assert chart is not None
+    bars = {bar.short: bar for bar in chart.bars}
+    assert bars["A03"].width == 200  # the max fills the track
+    assert bars["A01"].width == 50  # one quarter of four
+
+
+def test_owasp_chart_columns_align_and_size_to_rows() -> None:
+    chart = build_owasp_chart(summarize_standards([_owasp_finding("h", "CWE-89")]))
+    assert chart is not None
+    assert chart.bar_x < chart.count_x < chart.title_x < chart.width
+    assert chart.height == 28  # one row
 
 
 # --------------------------------------------------------------------------- #

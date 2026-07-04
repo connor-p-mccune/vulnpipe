@@ -56,14 +56,8 @@
     .card.top25 .num { color: #ef6c00; }
     .card.top25.zero { border-color: var(--border); }
     .card.top25.zero .num { color: var(--fg); }
-    .badge-owasp { background: #37474f; }
-    ul.owasp-list { list-style: none; padding: 0; margin: .5rem 0 0; max-width: 34rem; }
-    ul.owasp-list li {
-      display: flex; align-items: center; gap: .5rem;
-      padding: .3rem 0; border-top: 1px solid var(--border-soft);
-    }
-    ul.owasp-list li .count { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
     svg { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: .5rem; }
+    .owasp-bar { fill: #00838f; }
     .chart-label { font-size: 13px; fill: var(--fg); }
     .chart-count { font-size: 13px; fill: var(--fg); font-weight: 600; }
     section.host {
@@ -139,18 +133,15 @@
   </svg>
 
   <h2>OWASP Top 10 (2021)</h2>
-  {% if standards.any_mapped %}
-  <ul class="owasp-list">
-    {% for category, count in standards.owasp.items() %}
-    {% if count %}
-    <li>
-      <span class="badge badge-owasp">{{ category.short }}</span>
-      <span>{{ category.title }}</span>
-      <span class="count">{{ count }}</span>
-    </li>
-    {% endif %}
+  {% if owasp_chart %}
+  <svg width="{{ owasp_chart.width }}" height="{{ owasp_chart.height }}" role="img" aria-label="Findings by OWASP Top 10 category, most prevalent first">
+    {% for bar in owasp_chart.bars %}
+    <text x="0" y="{{ bar.text_y }}" class="chart-label">{{ bar.short }}</text>
+    <rect x="{{ owasp_chart.bar_x }}" y="{{ bar.rect_y }}" width="{{ bar.width }}" height="{{ bar.bar_height }}" rx="3" class="owasp-bar"><title>{{ bar.title }}: {{ bar.count }}</title></rect>
+    <text x="{{ owasp_chart.count_x }}" y="{{ bar.text_y }}" class="chart-count">{{ bar.count }}</text>
+    <text x="{{ owasp_chart.title_x }}" y="{{ bar.text_y }}" class="chart-label">{{ bar.title }}</text>
     {% endfor %}
-  </ul>
+  </svg>
   {% if standards.uncategorized %}
   <p class="muted">{{ standards.uncategorized }} finding{{ "s" if standards.uncategorized != 1 else "" }} not mapped to an OWASP Top 10 category.</p>
   {% endif %}

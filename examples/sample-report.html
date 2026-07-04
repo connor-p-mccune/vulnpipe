@@ -56,14 +56,8 @@
     .card.top25 .num { color: #ef6c00; }
     .card.top25.zero { border-color: var(--border); }
     .card.top25.zero .num { color: var(--fg); }
-    .badge-owasp { background: #37474f; }
-    ul.owasp-list { list-style: none; padding: 0; margin: .5rem 0 0; max-width: 34rem; }
-    ul.owasp-list li {
-      display: flex; align-items: center; gap: .5rem;
-      padding: .3rem 0; border-top: 1px solid var(--border-soft);
-    }
-    ul.owasp-list li .count { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
     svg { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: .5rem; }
+    .owasp-bar { fill: #00838f; }
     .chart-label { font-size: 13px; fill: var(--fg); }
     .chart-count { font-size: 13px; fill: var(--fg); font-weight: 600; }
     section.host {
@@ -151,23 +145,20 @@
   </svg>
 
   <h2>OWASP Top 10 (2021)</h2>
-  <ul class="owasp-list">
-    <li>
-      <span class="badge badge-owasp">A01</span>
-      <span>Broken Access Control</span>
-      <span class="count">2</span>
-    </li>
-    <li>
-      <span class="badge badge-owasp">A03</span>
-      <span>Injection</span>
-      <span class="count">2</span>
-    </li>
-    <li>
-      <span class="badge badge-owasp">A04</span>
-      <span>Insecure Design</span>
-      <span class="count">1</span>
-    </li>
-  </ul>
+  <svg width="612" height="84" role="img" aria-label="Findings by OWASP Top 10 category, most prevalent first">
+    <text x="0" y="19" class="chart-label">A01</text>
+    <rect x="44" y="4" width="200" height="20" rx="3" class="owasp-bar"><title>Broken Access Control: 2</title></rect>
+    <text x="254" y="19" class="chart-count">2</text>
+    <text x="292" y="19" class="chart-label">Broken Access Control</text>
+    <text x="0" y="47" class="chart-label">A03</text>
+    <rect x="44" y="32" width="200" height="20" rx="3" class="owasp-bar"><title>Injection: 2</title></rect>
+    <text x="254" y="47" class="chart-count">2</text>
+    <text x="292" y="47" class="chart-label">Injection</text>
+    <text x="0" y="75" class="chart-label">A04</text>
+    <rect x="44" y="60" width="100" height="20" rx="3" class="owasp-bar"><title>Insecure Design: 1</title></rect>
+    <text x="254" y="75" class="chart-count">1</text>
+    <text x="292" y="75" class="chart-label">Insecure Design</text>
+  </svg>
   <p class="muted">10 findings not mapped to an OWASP Top 10 category.</p>
 
   <h2>Per-host breakdown</h2>
