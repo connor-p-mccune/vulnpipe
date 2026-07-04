@@ -56,10 +56,10 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `core/config.py` | YAML + environment config loading, the strict pydantic schema, and the authorization/scope guards (`ensure_authorized`, `ensure_*_in_scope`). |
 | `core/orchestrator.py` | Runs the full pipeline end to end and returns the prioritized findings plus the diff and gate verdict. |
 | `core/logging.py` | The rich-backed structured logger used throughout (the project never uses `print`). |
-| `scanners/` | `BaseScanner` + the registry, and the Nmap (network) and ZAP (web) integrations. Each `scan()` returns `list[Finding]`. |
+| `scanners/` | `BaseScanner` + the registry, and the Nmap (network), ZAP (web), and Nuclei (template-based) integrations. Each `scan()` returns `list[Finding]`. |
 | `enrichment/` | CVSS parsing/scoring, cached NVD / EPSS lookups, and CISA KEV cross-referencing that fill — never fabricate — the `cvss_*` / `epss_*` / `kev` fields. |
 | `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize. |
-| `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF / OpenVEX renderers, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
+| `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX renderers, the remediation planner, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
 | `ci/` | The baseline store, the differ, the severity gate, the policy-as-code gate (`policy.py`), JUnit XML output, and multi-scan trend analysis. |
 | `sbom/` | Supply-chain analysis: CycloneDX parsing, the OSV.dev advisory client, and the analyzer that normalizes advisories into findings. Passive (reads a file, queries a public API); never probes the described software. |
 | `auth/` | ZAP authentication-context construction (form / header-JWT / script). |
@@ -162,6 +162,16 @@ cannot drift.
   hint (the real CVSS score when known, otherwise the severity band floor — never
   written back onto the finding), and the composite `riskScore` plus a `kev` flag in
   each result's properties so those signals travel to SARIF consumers too.
+- **GitLab** (`gitlab_reporter.py`) emits a GitLab-compatible security report for the
+  GitLab Vulnerability Report and the merge-request security widget — the other half
+  of the "surfaces natively in your CI platform" story SARIF starts. vulnpipe is a
+  dynamic scanner, so it exports a DAST-style report: the vulnerability `id` is the
+  stable fingerprint (GitLab tracks the same issue across pipelines), `identifiers`
+  carry the real CVEs/CWEs plus a vulnpipe rule id so the list is never empty, and
+  severity maps onto GitLab's vocabulary. The schema-required `scan.start_time` /
+  `end_time` are the one non-derivable field: the pure builder omits them (so snapshot
+  tests stay stable) while the reporter stamps them, honoring `SOURCE_DATE_EPOCH` —
+  the same reproducibility handling the OpenVEX timestamp gets.
 - **OpenVEX** (`vex_reporter.py`) emits an [OpenVEX](https://openvex.dev) 0.2.0
   document for exploitability-exchange tooling. A statement is produced only for a
   finding that cites a real vulnerability identifier — a CVE, or a GHSA/OSV id from
@@ -199,6 +209,20 @@ JSON, and a finding whose CWEs are absent from the curated map is reported as
 ``clean``), the color follows the report palette, and a leading ``!`` flags
 known-exploited findings. Deterministic like every renderer (fixed-width text
 approximation, no timestamp) and XML-escaped throughout.
+
+### Remediation planning
+
+`reporting/remediation.py` turns a flat findings list into a short, ordered
+*worklist*. `plan_remediations` (pure, deterministic) groups findings by the action
+that resolves them — a dependency by its **package** (one upgrade), a network service
+by **product-per-host** (one patch), everything else by **weakness class** across
+endpoints — and ranks the groups by known-exploited status, then severity, then the
+total composite risk each removes, then count. Each `RemediationAction` reuses the
+scanner's own `solution` text when it exists and otherwise falls back to a template
+that never invents a fixed version, so the plan stays honest. The same planner backs
+`vulnpipe remediate` (text / JSON / Markdown), a "Remediation plan" panel in the HTML
+report, and a "Top remediations" table in the terminal `stats` view — computed one
+way so the executive "what to fix first" reads identically everywhere.
 
 ## Authenticated scanning
 
@@ -305,10 +329,13 @@ The HTTP/HTTPS services it discovers are turned into URLs (`derive_web_targets`)
 together with URLs declared in config, handed to the web layer. The web layer is
 fanned out across a **bounded thread pool** (`run.max_workers`), with ZAP active-scan
 concurrency **capped separately** (`zap.max_concurrency`) via a semaphore, because
-active scans are resource-heavy. The combined findings then flow through enrich →
-dedup → false-positive filter → prioritize → diff → gate. Scanners are resolved by
-name through the registry and never special-cased; the per-layer scan callables are
-injectable so the pipeline is testable without real tools.
+active scans are resource-heavy. When `nuclei.enabled` is set, an optional Nuclei
+layer scans that same in-scope URL set with template-based CVE / misconfiguration
+checks, complementing ZAP; it is off by default so existing runs are unchanged. The
+combined findings then flow through enrich → dedup → false-positive filter →
+prioritize → diff → gate. Scanners are resolved by name through the registry and
+never special-cased; the per-layer scan callables are injectable so the pipeline is
+testable without real tools.
 
 The CLI (`cli/main.py`, Typer) exposes four commands:
 
@@ -326,6 +353,8 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
   rescanning, using a policy file or the severity/risk options (text or JSON
   verdict, non-zero exit on violation).
 - `report` — render a findings JSON to any report format on stdout.
+- `remediate` — group a findings JSON into a ranked, deduplicated remediation plan
+  (text / JSON / Markdown), most impactful fix first; `--top` limits the list.
 - `merge` — combine findings JSONs from separate runs (network scan + SBOM
   analysis, or per-segment scans) into one deduplicated, re-prioritized report,
   so a single baseline and gate can cover everything.
