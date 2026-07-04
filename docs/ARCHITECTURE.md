@@ -183,8 +183,9 @@ loads a findings JSON and renders it to any format on stdout.
 `core/standards.py` holds a curated copy of the official OWASP Top 10 2021 CWE
 mapping and the 2023 CWE Top 25 list -- pure reference data plus pure lookups. The
 shared view-model (`reporting/summary.summarize_standards`) distributes findings
-over those frameworks once, and every format surfaces it: the HTML report gets an
-OWASP breakdown section, a CWE Top 25 card, and an OWASP column; Markdown and the
+over those frameworks once, and every format surfaces it: the HTML report gets a
+ranked OWASP bar chart (most-prevalent weakness class first, pure SVG geometry
+from `build_owasp_chart`), a CWE Top 25 card, and an OWASP column; Markdown and the
 terminal `stats` view get an OWASP table; CSV gets an `owasp` column; SARIF rules
 carry `external/owasp/...` tags next to the CWE tags. The mapping is
 presentation-layer only -- it never enters the finding model or the canonical

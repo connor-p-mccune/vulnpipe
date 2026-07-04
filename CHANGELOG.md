@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Ranked OWASP Top 10 chart in the HTML report** — the flat OWASP list is now a
+  horizontal SVG bar chart ordered by prevalence (busiest weakness class first,
+  ties broken by OWASP rank), with the full category title and count per row. Pure,
+  unit-tested geometry (`build_owasp_chart`), deterministic like the severity chart.
 - **`merge` command** — combine findings JSONs from separate runs (a network
   scan plus an SBOM analysis, or scans of different segments) into one
   deduplicated, re-prioritized report, so a single baseline, diff, and gate can
