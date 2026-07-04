@@ -125,6 +125,19 @@ def test_evidence_is_html_escaped_not_live_markup() -> None:
     assert "<script>alert(1)</script>" not in html
 
 
+def test_render_includes_remediation_plan() -> None:
+    html = render_html(_findings())
+    assert "Remediation plan" in html
+    assert 'ol class="remediation"' in html
+    assert "resolves" in html  # each action summarizes how many findings it fixes
+
+
+def test_remediation_plan_surfaces_kev_action() -> None:
+    html = render_html([_kev_finding()])
+    assert "Remediation plan" in html
+    assert "Remediate: CVE-2021-42013" in html
+
+
 def test_render_is_deterministic() -> None:
     assert render_html(_findings()) == render_html(_findings())
 

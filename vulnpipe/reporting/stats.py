@@ -18,6 +18,7 @@ from rich.console import Console
 from rich.table import Table
 
 from vulnpipe.core.models import Finding, Severity
+from vulnpipe.reporting.remediation import plan_remediations
 from vulnpipe.reporting.summary import (
     SEVERITY_DISPLAY_ORDER,
     StandardsSummary,
@@ -106,6 +107,27 @@ def _top_hosts_table(findings: list[Finding]) -> Table:
     return table
 
 
+def _remediation_table(findings: list[Finding]) -> Table:
+    actions = plan_remediations(findings)
+    table = Table(title=f"Top {_TOP_N} remediations", title_justify="left", expand=False)
+    table.add_column("#", justify="right")
+    table.add_column("Risk", justify="right")
+    table.add_column("Fixes", justify="right")
+    table.add_column("Worst")
+    table.add_column("KEV", justify="center")
+    table.add_column("Action")
+    for index, action in enumerate(actions[:_TOP_N], start=1):
+        table.add_row(
+            str(index),
+            str(action.total_risk),
+            str(action.count),
+            _severity_cell(action.highest.value),
+            "[red]!" if action.kev else "",
+            action.title,
+        )
+    return table
+
+
 def render_stats(findings: Iterable[Finding]) -> str:
     """Render a deterministic, plain-text statistics summary for ``findings``."""
     items = list(findings)
@@ -125,6 +147,7 @@ def render_stats(findings: Iterable[Finding]) -> str:
     if items:
         console.print(_top_risks_table(items))
         console.print(_top_hosts_table(items))
+        console.print(_remediation_table(items))
     else:
         console.print("No findings.")
     return buffer.getvalue()

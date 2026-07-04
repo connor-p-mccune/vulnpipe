@@ -69,6 +69,12 @@ def test_no_kev_line_when_none_flagged() -> None:
     assert "known-exploited" not in out
 
 
+def test_remediation_table_present() -> None:
+    out = render_stats(_findings())
+    assert "Top 10 remediations" in out
+    assert "Remediate: SQL Injection" in out
+
+
 def test_owasp_table_present_when_cwes_map() -> None:
     finding = make_finding(
         source="zap", host="h", title="XSS", severity=Severity.HIGH, cwe_ids=["CWE-79"]

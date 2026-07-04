@@ -22,6 +22,7 @@ from jinja2 import Environment, PackageLoader, StrictUndefined, select_autoescap
 from vulnpipe import __version__
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.reporting.base import BaseReporter
+from vulnpipe.reporting.remediation import plan_remediations
 from vulnpipe.reporting.summary import (
     SEVERITY_DISPLAY_ORDER,
     StandardsSummary,
@@ -102,6 +103,10 @@ def risk_css(score: int) -> str:
         if score >= floor:
             return css_class
     return "sev-informational"
+
+
+#: How many remediation actions the report's "Remediation plan" panel lists.
+_REMEDIATION_TOP = 10
 
 
 # Ranked OWASP bar-chart layout (pixels). Fixed columns -- so the count and the
@@ -229,6 +234,7 @@ def render_html(findings: Iterable[Finding]) -> str:
     items = list(findings)
     counts = severity_counts(items)
     standards = summarize_standards(items)
+    actions = plan_remediations(items)
     template = _environment().get_template("report.html.j2")
     return template.render(
         tool_name="vulnpipe",
@@ -244,6 +250,8 @@ def render_html(findings: Iterable[Finding]) -> str:
         standards=standards,
         owasp_chart=build_owasp_chart(standards),
         finding_owasp=finding_owasp,
+        remediations=actions[:_REMEDIATION_TOP],
+        remediation_total=len(actions),
     )
 
 

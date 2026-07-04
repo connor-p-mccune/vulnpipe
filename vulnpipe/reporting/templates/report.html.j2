@@ -76,6 +76,15 @@
     a { color: var(--link); }
     ul.refs { margin: .25rem 0 0; padding-left: 1.25rem; }
     ul.refs li { word-break: break-all; }
+    ol.remediation {
+      padding-left: 1.5rem; margin: .5rem 0 0; background: var(--card-bg);
+      border: 1px solid var(--border); border-radius: 8px;
+    }
+    ol.remediation li { padding: .5rem .5rem .5rem 0; border-top: 1px solid var(--border-soft); }
+    ol.remediation li:first-child { border-top: none; }
+    ol.remediation li.kev { border-left: 3px solid #c62828; }
+    .remediation-detail { margin: .25rem 0 0; font-size: .9rem; }
+    .remediation-meta { margin: .1rem 0 0; font-size: .82rem; }
     .toolbar {
       display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: .25rem 0 .75rem;
     }
@@ -122,6 +131,25 @@
     <span class="badge {{ styles[severity].css_class }}">{{ styles[severity].label }}: {{ summary.by_severity[severity] }}</span>
     {% endfor %}
   </div>
+
+  <h2>Remediation plan{% if remediation_total > remediations | length %} <span class="muted">(top {{ remediations | length }} of {{ remediation_total }})</span>{% endif %}</h2>
+  {% if remediations %}
+  <ol class="remediation">
+    {% for action in remediations %}
+    <li{% if action.kev %} class="kev"{% endif %}>
+      <span class="badge risk-badge {{ risk_css(action.max_risk) }}" title="Worst composite risk score among the resolved findings">{{ action.max_risk }}</span>
+      <span class="badge {{ styles[action.highest].css_class }}">{{ styles[action.highest].label }}</span>
+      {% if action.kev %}<span class="badge badge-kev" title="Resolves an actively-exploited (CISA KEV) finding">&#9888; Known-exploited</span>{% endif %}
+      <strong>{{ action.title }}</strong>
+      <span class="muted">&mdash; resolves {{ action.count }} finding{{ "s" if action.count != 1 else "" }} across {{ action.hosts | length }} host{{ "s" if action.hosts | length != 1 else "" }}</span>
+      <div class="remediation-detail">{{ action.detail }}</div>
+      {% if action.cve_ids %}<div class="muted remediation-meta">{{ action.cve_ids | join(", ") }}</div>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="empty">No findings to remediate.</p>
+  {% endif %}
 
   <h2>Severity breakdown</h2>
   <svg width="{{ chart.width }}" height="{{ chart.height }}" role="img" aria-label="Findings by severity">
