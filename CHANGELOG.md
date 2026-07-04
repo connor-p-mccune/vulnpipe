@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-04
+
+Remediation intelligence, a modern template-based scanner, and CI-platform reach.
+
+### Added
+- **Remediation planning** (`reporting/remediation.py`, `remediate` command) —
+  collapse the findings list into a ranked, deduplicated worklist: findings are
+  grouped by the action that resolves them (a dependency by package, a network
+  service by product-per-host, everything else by weakness class) and ordered by
+  the risk each fix removes (known-exploited first, then severity, then total risk,
+  then count). The instruction reuses the scanner's own remediation text when it
+  exists and otherwise falls back to a template that never invents a fixed version.
+  Surfaced by `vulnpipe remediate` (text / JSON / Markdown, with `--top`), a
+  "Remediation plan" panel in the HTML report, and a "Top remediations" table in the
+  terminal `stats` view — all from one pure planner.
+- **Nuclei scanner** (`scanners/nuclei_scanner.py`) — an optional third detection
+  layer alongside Nmap and ZAP, driving ProjectDiscovery's `nuclei` over the same
+  in-scope web URLs with template-based CVE / misconfiguration / exposure checks. It
+  registers through the scanner registry, parses nuclei's JSONL (mapping template
+  severity, CVE/CWE classification, CVSS, and match location onto findings), and is
+  wired as an injectable orchestrator layer. Detection-only (no fuzzing/exploitation
+  flags, no replayable payload on a finding) and off by default (`nuclei.enabled`),
+  so existing runs are byte-for-byte unchanged; every failure mode degrades to a
+  logged warning. `validate` reports whether the layer is enabled.
+- **GitLab security report** (`report --format gitlab`) — a GitLab-compatible
+  security report for the GitLab Vulnerability Report and the merge-request security
+  widget, complementing SARIF's GitHub coverage. A DAST-style export: the
+  vulnerability id is the stable fingerprint (GitLab tracks issues across pipelines),
+  identifiers carry the real CVEs/CWEs plus a vulnpipe rule id so the list is never
+  empty, and severity maps onto GitLab's vocabulary. The schema-required scan times
+  honor `SOURCE_DATE_EPOCH` like the OpenVEX timestamp; the pure builder omits them
+  for snapshot stability.
+- `examples/sample-report.gitlab.json` and `examples/sample-remediation.md` join the
+  committed sample set, regenerated deterministically from the same fixtures.
+
 ## [0.4.0] - 2026-07-03
 
 Exploitability exchange (OpenVEX), extensibility (plugins), and reporting reach.
@@ -195,7 +230,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.1.0...v0.2.0
