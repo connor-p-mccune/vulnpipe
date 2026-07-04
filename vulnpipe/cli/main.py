@@ -10,6 +10,7 @@ orchestrator and the CI stage. Commands:
   existing findings JSON without rescanning;
 * ``sbom`` -- analyze a CycloneDX SBOM for known-vulnerable dependencies (OSV.dev);
 * ``report`` -- render a findings JSON into any report format on stdout;
+* ``remediate`` -- group a findings JSON into a ranked, deduplicated remediation plan;
 * ``merge`` -- combine findings JSONs from separate runs into one deduplicated report;
 * ``diff`` -- classify a findings JSON against a baseline (new / persisting /
   resolved) as text / JSON / Markdown / HTML;
@@ -84,7 +85,10 @@ from vulnpipe.reporting import (
     build_report_schema,
     get_reporter,
     load_findings,
+    remediation_to_payload,
     render_badge,
+    render_remediation_markdown,
+    render_remediation_text,
     render_stats,
     severity_counts,
 )
@@ -548,6 +552,40 @@ def stats(
         log.error("Failed to read findings from %s: %s", input_path, exc)
         raise typer.Exit(code=2) from exc
     _emit(render_stats(findings))
+
+
+@app.command()
+def remediate(
+    input_path: Annotated[
+        Path,
+        typer.Option(
+            "--input", "-i", exists=True, dir_okay=False, help="Findings JSON to plan fixes for."
+        ),
+    ],
+    fmt: Annotated[
+        str, typer.Option("--format", "-f", help="Output format: text, json, or markdown.")
+    ] = "text",
+    top: Annotated[
+        int | None,
+        typer.Option("--top", help="Show only the top N actions (default: all)."),
+    ] = None,
+) -> None:
+    """Group a findings JSON into a ranked remediation plan (fix these first)."""
+    if fmt not in {"text", "json", "markdown"}:
+        log.error("Unknown remediation format %r; choose text, json, or markdown", fmt)
+        raise typer.Exit(code=2)
+    try:
+        findings = load_findings(input_path)
+    except (OSError, ValueError) as exc:
+        log.error("Failed to read findings from %s: %s", input_path, exc)
+        raise typer.Exit(code=2) from exc
+    if fmt == "json":
+        payload = remediation_to_payload(findings, top=top)
+        typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+    elif fmt == "markdown":
+        _emit(render_remediation_markdown(findings, top=top))
+    else:
+        _emit(render_remediation_text(findings, top=top))
 
 
 @app.command()

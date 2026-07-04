@@ -236,6 +236,36 @@ def test_stats_invalid_input_exits_nonzero(tmp_path: Path) -> None:
     assert result.exit_code == 2
 
 
+def test_remediate_text_lists_a_plan(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["remediate", "-i", str(_write_report(tmp_path))])
+    assert result.exit_code == 0
+    assert "vulnpipe remediation plan" in result.stdout
+    assert "Recommended actions" in result.stdout
+
+
+def test_remediate_json_emits_actions(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["remediate", "-i", str(_write_report(tmp_path)), "-f", "json"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["summary"]["actions"] >= 1
+    assert payload["actions"][0]["rank"] == 1
+
+
+def test_remediate_markdown_and_top(tmp_path: Path) -> None:
+    findings = _findings_file(
+        tmp_path, "many.json", [_f("A", host="a"), _f("B", host="b"), _f("C", host="c")]
+    )
+    result = runner.invoke(app, ["remediate", "-i", str(findings), "-f", "markdown", "--top", "1"])
+    assert result.exit_code == 0
+    assert result.stdout.startswith("# vulnpipe remediation plan")
+    assert "more action(s)" in result.stdout
+
+
+def test_remediate_rejects_unknown_format(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["remediate", "-i", str(_write_report(tmp_path)), "-f", "xml"])
+    assert result.exit_code == 2
+
+
 def test_badge_renders_svg_to_stdout(tmp_path: Path) -> None:
     result = runner.invoke(app, ["badge", "-i", str(_write_report(tmp_path))])
     assert result.exit_code == 0
