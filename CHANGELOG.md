@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`diff --format html`** — render the baseline diff as a self-contained,
+  shareable HTML page: new/persisting/resolved headline and verdict, a table of
+  newly introduced findings (severity chips, risk score, KEV marker, CVEs), the
+  resolved ones, and the persisting ones behind a disclosure. Deterministic and
+  fully HTML-escaped, so it is safe to publish as a build artifact.
 - **Ranked OWASP Top 10 chart in the HTML report** — the flat OWASP list is now a
   horizontal SVG bar chart ordered by prevalence (busiest weakness class first,
   ties broken by OWASP rank), with the full category title and count per row. Pure,

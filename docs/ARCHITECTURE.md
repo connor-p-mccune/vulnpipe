@@ -332,7 +332,8 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
 - `stats` — print a terminal summary of a findings JSON (severity breakdown, top
   risks, worst-affected hosts) via a fixed-width Rich render.
 - `badge` — render a findings JSON into a shields-style SVG status badge.
-- `diff` — classify a findings JSON against a baseline (text or JSON output).
+- `diff` — classify a findings JSON against a baseline (text, JSON, Markdown for a
+  PR comment, or a self-contained HTML page).
 - `trend` — analyze a chronological series of findings JSONs: per-scan totals and
   severity mix, findings introduced/resolved between scans (matched by fingerprint),
   and whether the critical+high backlog is trending up or down (`ci/trends.py`, pure).
