@@ -6,6 +6,6 @@ model, enriches it with CVSS/CVE/EPSS data, filters false positives, and emits
 prioritized reports with a CI gate. It contains no exploit code.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = ["__version__"]

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-03
+
+Exploitability exchange (OpenVEX), extensibility (plugins), and reporting reach.
+
 ### Added
 - **`diff --format html`** — render the baseline diff as a self-contained,
   shareable HTML page: new/persisting/resolved headline and verdict, a table of
@@ -191,7 +195,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/connor-p-mccune/vulnpipe/releases/tag/v0.1.0
