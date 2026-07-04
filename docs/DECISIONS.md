@@ -299,3 +299,29 @@ trail (why was this accepted?) lives in the allowlist file under version
 control. The trade-off is that filter output now depends on the run date when
 expiring entries are present — deliberate, bounded to entries that opt in, and
 tests pin the date explicitly.
+
+## ADR-0018 — Plugin discovery through entry points, built-ins win
+
+**Context.** The scanner and reporter registries already decouple integrations
+from the orchestrator, but adding one still means editing this repository.
+Python's packaging metadata (entry points) is the standard way for installed
+packages to advertise extensions — it is how pytest, Flake8, and friends load
+plugins.
+
+**Decision.** `vulnpipe.plugins.load_plugins()` scans the `vulnpipe.scanners`
+and `vulnpipe.reporters` entry-point groups at CLI startup and registers valid
+classes (concrete `BaseScanner` / `BaseReporter` subclasses with a non-empty
+`name`). Three rules shape it: entry points are processed in sorted order
+(deterministic registration); any plugin failure — import error, wrong type,
+missing name — degrades to a logged warning, never an exception; and a plugin
+cannot shadow an already-registered name — built-ins are imported first and
+always win, with the collision warned about rather than silently resolved.
+Loading is idempotent, so repeated calls are safe.
+
+**Consequences.** A third party can ship `vulnpipe-nikto` or `vulnpipe-xlsx`
+without forking, and the orchestrator/CLI stay unchanged (they already resolve
+by name). Refusing overrides means a plugin cannot quietly replace the `nmap`
+integration or the canonical `json` format — a deliberate supply-chain guard;
+anyone who truly wants to swap a built-in must do it in code, visibly. The cost
+is a process-global registry mutated at startup, mitigated by determinism and
+the idempotence guarantee.
