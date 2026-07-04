@@ -4,18 +4,21 @@ Wires configuration loading and the authorization/scope guards to the pipeline
 orchestrator and the CI stage. Commands:
 
 * ``scan`` -- run the full pipeline (refusing to start without ``--authorized`` and
-  a scope file), write the JSON report (and optional SARIF / HTML / JUnit), and
-  exit non-zero when the gate trips on a newly introduced severe finding;
+  a scope file), write the JSON report (and optional SARIF / HTML / Markdown /
+  OpenVEX / JUnit), and exit non-zero when the gate trips on a new severe finding;
 * ``gate`` -- re-evaluate the CI gate (severity threshold or a policy file) over an
   existing findings JSON without rescanning;
 * ``sbom`` -- analyze a CycloneDX SBOM for known-vulnerable dependencies (OSV.dev);
-* ``report`` -- render a findings JSON into JSON / HTML / SARIF on stdout;
+* ``report`` -- render a findings JSON into any report format on stdout;
+* ``merge`` -- combine findings JSONs from separate runs into one deduplicated report;
 * ``diff`` -- classify a findings JSON against a baseline (new / persisting /
-  resolved);
-* ``baseline`` -- create or update a baseline from a findings JSON.
+  resolved) as text / JSON / Markdown / HTML;
+* ``baseline`` -- create or update a baseline from a findings JSON;
+* ``plugins`` -- list third-party scanner / reporter plugins discovered via entry points.
 
 The ``scan`` command is the authorization gate: it enforces the hard rules before
-any scanner runs.
+any scanner runs. Report formats (built-in and plugin-provided) resolve through the
+reporter registry, so ``report`` / ``sbom`` / ``merge`` stay format-agnostic.
 """
 
 import json
