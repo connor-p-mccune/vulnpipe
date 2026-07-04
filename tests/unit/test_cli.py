@@ -95,6 +95,13 @@ def test_schema_unknown_kind_exits_two() -> None:
     assert result.exit_code == 2
 
 
+def test_plugins_reports_none_discovered() -> None:
+    result = runner.invoke(app, ["plugins"])
+    assert result.exit_code == 0
+    assert "no third-party plugins discovered" in result.stdout
+    assert "vulnpipe.scanners" in result.stdout  # points at the entry-point groups
+
+
 def test_report_json(tmp_path: Path) -> None:
     result = runner.invoke(app, ["report", "--input", str(_write_report(tmp_path)), "-f", "json"])
     assert result.exit_code == 0

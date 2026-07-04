@@ -62,6 +62,7 @@ from vulnpipe.core.models import Severity
 from vulnpipe.core.orchestrator import PipelineResult, run_pipeline
 from vulnpipe.core.planner import build_scan_plan, render_plan
 from vulnpipe.notify import NotifyError, post_webhook
+from vulnpipe.plugins import REPORTER_GROUP, SCANNER_GROUP, load_plugins, loaded_plugins
 from vulnpipe.processing import FalsePositiveConfig, load_false_positive_config
 from vulnpipe.reporting import (
     SEVERITY_DISPLAY_ORDER,
@@ -90,6 +91,9 @@ def _root(
     ] = False,
 ) -> None:
     configure_logging(logging.DEBUG if verbose else logging.INFO)
+    # Register any scanner/reporter plugins installed packages advertise, before
+    # the command resolves scanners or report formats.
+    load_plugins()
 
 
 # --------------------------------------------------------------------------- #
@@ -324,6 +328,20 @@ def scan(
 
     if not no_gate and verdict.exit_code != 0:
         raise typer.Exit(code=verdict.exit_code)
+
+
+@app.command()
+def plugins() -> None:
+    """List third-party scanner and reporter plugins discovered via entry points."""
+    registered = loaded_plugins()
+    if not registered:
+        _emit(
+            "no third-party plugins discovered\n"
+            f"packages can provide them via the {SCANNER_GROUP!r} and {REPORTER_GROUP!r} "
+            "entry-point groups\n"
+        )
+        return
+    _emit("".join(f"{plugin.label}\n" for plugin in registered))
 
 
 @app.command()
