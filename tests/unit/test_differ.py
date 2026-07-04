@@ -8,7 +8,13 @@ that the serialized payload is stable.
 import random
 
 from vulnpipe.ci.baseline import build_baseline
-from vulnpipe.ci.differ import Diff, diff_findings, diff_to_payload, render_diff_markdown
+from vulnpipe.ci.differ import (
+    Diff,
+    diff_findings,
+    diff_to_payload,
+    render_diff_html,
+    render_diff_markdown,
+)
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.processing.normalizer import make_finding
 
@@ -134,3 +140,56 @@ def test_markdown_is_deterministic() -> None:
     diff = diff_findings(findings, build_baseline([]))
     assert render_diff_markdown(diff) == render_diff_markdown(diff)
     assert render_diff_markdown(diff, title="Delta").startswith("## Delta")
+
+
+# --------------------------------------------------------------------------- #
+# HTML rendering (shareable page)
+# --------------------------------------------------------------------------- #
+def test_html_has_sections_verdict_and_chips() -> None:
+    keep = _f("kept")
+    gone = _f("removed", severity=Severity.LOW)
+    fresh = make_finding(
+        source="nmap",
+        host="10.0.0.5",
+        title="CVE-2021-42013",
+        severity=Severity.CRITICAL,
+        port=80,
+        plugin_id="vulners",
+        cve_ids=["CVE-2021-42013"],
+        cvss_score=9.8,
+        kev=True,
+    )
+    html = render_diff_html(diff_findings([keep, fresh], build_baseline([keep, gone])))
+    assert html.startswith("<!DOCTYPE html>")
+    assert "<title>vulnpipe scan delta</title>" in html
+    assert "1 new · 1 persisting · 1 resolved" in html
+    assert 'class="verdict dirty"' in html
+    assert "<h2>New findings</h2>" in html
+    assert '<span class="chip sev-critical">critical</span>' in html
+    assert "&#9888;" in html  # KEV warning glyph on the new critical
+    assert "CVE-2021-42013" in html
+    assert "<h2>Resolved findings</h2>" in html
+    assert "<details><summary>Show already-known findings</summary>" in html
+
+
+def test_html_clean_diff_is_positive_and_tableless() -> None:
+    keep = _f("kept")
+    html = render_diff_html(diff_findings([keep], build_baseline([keep])))
+    assert 'class="verdict clean"' in html
+    assert "No new findings." in html
+    assert "<h2>New findings</h2>" not in html
+    assert "<h2>Resolved findings</h2>" not in html
+
+
+def test_html_escapes_scanner_evidence() -> None:
+    fresh = _f("<script>alert(1)</script>", severity=Severity.HIGH)
+    html = render_diff_html(diff_findings([fresh], build_baseline([])))
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+
+
+def test_html_is_deterministic_and_titleable() -> None:
+    findings = [_f("a", severity=Severity.HIGH), _f("b", severity=Severity.LOW)]
+    diff = diff_findings(findings, build_baseline([]))
+    assert render_diff_html(diff) == render_diff_html(diff)
+    assert "<title>Nightly delta</title>" in render_diff_html(diff, title="Nightly delta")

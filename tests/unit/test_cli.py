@@ -326,6 +326,21 @@ def test_diff_markdown_format(tmp_path: Path) -> None:
     assert "new-high" in result.stdout
 
 
+def test_diff_html_format(tmp_path: Path) -> None:
+    baseline_path = tmp_path / "baseline.json"
+    save_baseline(build_baseline([_f("kept")]), baseline_path)
+    current = _findings_file(
+        tmp_path, "current.json", [_f("kept"), _f("new-high", severity=Severity.HIGH)]
+    )
+    result = runner.invoke(
+        app, ["diff", "--baseline", str(baseline_path), "--current", str(current), "-f", "html"]
+    )
+    assert result.exit_code == 0
+    assert result.stdout.startswith("<!DOCTYPE html>")
+    assert "<h2>New findings</h2>" in result.stdout
+    assert "new-high" in result.stdout
+
+
 def test_diff_unknown_format_exits_two(tmp_path: Path) -> None:
     baseline_path = tmp_path / "baseline.json"
     save_baseline(build_baseline([]), baseline_path)

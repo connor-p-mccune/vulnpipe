@@ -37,7 +37,13 @@ from vulnpipe.ci.baseline import (
     merge_baseline,
     save_baseline,
 )
-from vulnpipe.ci.differ import Diff, diff_findings, diff_to_payload, render_diff_markdown
+from vulnpipe.ci.differ import (
+    Diff,
+    diff_findings,
+    diff_to_payload,
+    render_diff_html,
+    render_diff_markdown,
+)
 from vulnpipe.ci.gate import DEFAULT_GATE_SEVERITY
 from vulnpipe.ci.junit import GateVerdict, build_junit_xml
 from vulnpipe.ci.policy import (
@@ -628,12 +634,13 @@ def diff(
         Path, typer.Option("--current", exists=True, dir_okay=False, help="Current findings JSON.")
     ],
     fmt: Annotated[
-        str, typer.Option("--format", "-f", help="Output format: text, json, or markdown.")
+        str,
+        typer.Option("--format", "-f", help="Output format: text, json, markdown, or html."),
     ] = "text",
 ) -> None:
     """Diff current findings against a baseline (new / persisting / resolved)."""
-    if fmt not in {"text", "json", "markdown"}:
-        log.error("Unknown diff format %r; choose text, json, or markdown", fmt)
+    if fmt not in {"text", "json", "markdown", "html"}:
+        log.error("Unknown diff format %r; choose text, json, markdown, or html", fmt)
         raise typer.Exit(code=2)
     try:
         base = _load_baseline_or_findings(baseline)
@@ -646,6 +653,8 @@ def diff(
         typer.echo(json.dumps(diff_to_payload(result), indent=2, ensure_ascii=False))
     elif fmt == "markdown":
         _emit(render_diff_markdown(result))
+    elif fmt == "html":
+        _emit(render_diff_html(result))
     else:
         _print_diff_text(result)
 
