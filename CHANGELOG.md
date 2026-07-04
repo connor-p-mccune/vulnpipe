@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`trend --format html`** — render the multi-scan trend as a self-contained,
+  shareable HTML page: an inline SVG stacked bar chart of the severity mix across
+  the scan series (pure, unit-tested geometry), a direction verdict, a legend, and
+  a per-scan metrics table. Deterministic and fully HTML-escaped like the other
+  HTML outputs.
+
 ## [0.5.0] - 2026-07-04
 
 Remediation intelligence, a modern template-based scanner, and CI-platform reach.

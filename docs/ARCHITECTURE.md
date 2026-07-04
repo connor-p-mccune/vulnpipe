@@ -365,7 +365,8 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
   PR comment, or a self-contained HTML page).
 - `trend` — analyze a chronological series of findings JSONs: per-scan totals and
   severity mix, findings introduced/resolved between scans (matched by fingerprint),
-  and whether the critical+high backlog is trending up or down (`ci/trends.py`, pure).
+  and whether the critical+high backlog is trending up or down (`ci/trends.py`, pure);
+  renders as text, JSON, or a self-contained HTML page with an inline SVG chart.
 - `notify` — post a findings summary to a Slack-compatible webhook (`notify/`); the
   webhook URL is a secret resolved from the environment and never logged.
 - `baseline` — create or update a baseline from a findings JSON.

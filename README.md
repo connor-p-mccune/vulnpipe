@@ -608,7 +608,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `stats` | Print a terminal summary of a findings JSON — severity breakdown, OWASP Top 10, top risks, and worst-affected hosts (`--input`). |
 | `badge` | Render a findings JSON into a shields-style SVG status badge (`--input`, `--output`, `--label`). |
 | `notify` | Post a findings summary to a Slack-compatible webhook (URL resolved from the environment via `--webhook-url-env`). |
-| `trend` | Analyze how findings evolve across a chronological series of scan JSONs — totals, severity mix, and introduced/resolved deltas (text or JSON). |
+| `trend` | Analyze how findings evolve across a chronological series of scan JSONs — totals, severity mix, and introduced/resolved deltas (text, JSON, or a self-contained HTML page with an inline SVG chart). |
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json\|markdown\|html`). |
 | `baseline` | Create or update a baseline from a findings JSON (`--input`, `--output`, `--update`). |
 | `schema` | Print the JSON Schema for the targets/scope config, the report envelope, a gate policy, or the false-positive allowlist — for editor validation and autocomplete (`config` / `report` / `policy` / `false-positives`). |
