@@ -230,6 +230,42 @@ class ZapConfig(BaseModel):
         return _validate_url(value)
 
 
+#: The severity vocabulary nuclei emits and accepts as a ``-severity`` filter.
+_NUCLEI_SEVERITIES = frozenset({"info", "low", "medium", "high", "critical", "unknown"})
+
+
+class NucleiConfig(BaseModel):
+    """Settings for the optional nuclei (template-based detection) layer.
+
+    Off by default: enabling it adds a third scanner over the in-scope web targets.
+    ``templates`` and ``severities`` narrow what nuclei runs (empty = its defaults /
+    all severities); credentials/secrets are never part of this config.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    binary: str = "nuclei"
+    templates: list[str] = Field(default_factory=list)
+    severities: list[str] = Field(default_factory=list)
+    rate_limit: int | None = Field(default=None, ge=1)
+    timeout_seconds: int = Field(default=1800, ge=1)
+    extra_args: list[str] = Field(default_factory=list)
+
+    @field_validator("severities")
+    @classmethod
+    def _check_severities(cls, value: list[str]) -> list[str]:
+        normalized: list[str] = []
+        for entry in value:
+            low = entry.strip().lower()
+            if low not in _NUCLEI_SEVERITIES:
+                raise ValueError(
+                    f"Invalid nuclei severity {entry!r}; choose from {sorted(_NUCLEI_SEVERITIES)}"
+                )
+            normalized.append(low)
+        return normalized
+
+
 class EnrichmentConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -293,6 +329,7 @@ class Config(BaseModel):
     targets: list[Target] = Field(min_length=1)
     nmap: NmapConfig = Field(default_factory=NmapConfig)
     zap: ZapConfig = Field(default_factory=ZapConfig)
+    nuclei: NucleiConfig = Field(default_factory=NucleiConfig)
     enrichment: EnrichmentConfig = Field(default_factory=EnrichmentConfig)
     run: RunConfig = Field(default_factory=RunConfig)
     prioritization: PrioritizationConfig = Field(default_factory=PrioritizationConfig)
@@ -459,6 +496,7 @@ __all__ = [
     "FormAuth",
     "HeaderAuth",
     "NmapConfig",
+    "NucleiConfig",
     "OutOfScopeError",
     "PrioritizationConfig",
     "RunConfig",

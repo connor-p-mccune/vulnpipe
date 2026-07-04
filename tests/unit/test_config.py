@@ -12,6 +12,7 @@ from vulnpipe.core.config import (
     ConfigError,
     FormAuth,
     HeaderAuth,
+    NucleiConfig,
     PrioritizationConfig,
     ScriptAuth,
     Target,
@@ -161,6 +162,22 @@ def test_example_config_loads_and_is_internally_consistent() -> None:
     ensure_authorized(authorized=True, scope=cfg.scope)
     with pytest.raises(AuthorizationError):
         ensure_authorized(authorized=False, scope=cfg.scope)
+
+
+def test_nuclei_defaults_to_disabled() -> None:
+    cfg = Config(scope={"hosts": ["10.0.0.0/24"]}, targets=[Target(host="10.0.0.5")])
+    assert cfg.nuclei.enabled is False  # opt-in third scanner
+    assert cfg.nuclei.binary == "nuclei"
+
+
+def test_nuclei_severities_are_normalized() -> None:
+    cfg = NucleiConfig(enabled=True, severities=["High", "CRITICAL"])
+    assert cfg.severities == ["high", "critical"]
+
+
+def test_nuclei_rejects_unknown_severity() -> None:
+    with pytest.raises(ValidationError):
+        NucleiConfig(severities=["bogus"])
 
 
 def test_prioritization_defaults_to_medium() -> None:

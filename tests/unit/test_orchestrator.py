@@ -17,6 +17,7 @@ from vulnpipe.core import orchestrator
 from vulnpipe.core.config import (
     AuthorizationError,
     Config,
+    NucleiConfig,
     OutOfScopeError,
     RunConfig,
     Scope,
@@ -252,6 +253,60 @@ def test_run_pipeline_includes_injected_sbom_layer() -> None:
     # Supply-chain findings flow through the same dedup/prioritize path as scanners.
     assert "GHSA-x84v-xcm2-53pg: requests 2.19.0" in titles
     assert any(f.source == "sbom" for f in result.findings)
+
+
+def _nuclei_findings(host: str = "app.lab.example.com") -> list[Finding]:
+    return [
+        make_finding(
+            source="nuclei",
+            host=host,
+            title="Git Configuration Exposure",
+            severity=Severity.MEDIUM,
+            port=443,
+            plugin_id="git-config",
+        )
+    ]
+
+
+def test_run_pipeline_includes_injected_nuclei_layer() -> None:
+    captured: dict[str, Sequence[str]] = {}
+
+    def run_nuclei(config: Config, discovered: Sequence[str]) -> list[Finding]:
+        captured["discovered"] = list(discovered)
+        return _nuclei_findings()
+
+    result = orchestrator.run_pipeline(
+        _config(),
+        authorized=True,
+        enrichment=orchestrator.EnrichmentClients(),
+        run_network=lambda _c: _nmap_findings(),
+        run_web=lambda _c, _u: _zap_findings(),
+        run_nuclei=run_nuclei,
+    )
+    # The nuclei layer is fed the same discovered URL set as the web layer.
+    assert captured["discovered"] == ["https://10.0.0.10:443"]
+    titles = [f.title for f in result.findings]
+    assert "Git Configuration Exposure" in titles
+    assert any(f.source == "nuclei" for f in result.findings)
+
+
+def test_default_nuclei_scan_disabled_returns_empty() -> None:
+    # Nuclei is opt-in; with nuclei.enabled False the default layer does no work.
+    assert orchestrator._default_nuclei_scan(_config(), []) == []
+
+
+def test_default_nuclei_scan_uses_registered_scanner(monkeypatch: pytest.MonkeyPatch) -> None:
+    canned = _nuclei_findings()
+
+    class _FakeNuclei(BaseScanner):
+        name = "nuclei"
+
+        def scan(self) -> list[Finding]:
+            return canned
+
+    monkeypatch.setattr(orchestrator, "get_scanner", lambda _name: _FakeNuclei)
+    cfg = _config().model_copy(update={"nuclei": NucleiConfig(enabled=True)})
+    assert orchestrator._default_nuclei_scan(cfg, ["https://10.0.0.10:443"]) == canned
 
 
 def test_default_sbom_scan_empty_when_unconfigured() -> None:
