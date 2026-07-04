@@ -74,6 +74,17 @@ zap:
   active_scan_timeout_seconds: 3600
   max_concurrency: 1          # ZAP active scans are heavy; keep this low
 
+# Template-based CVE / misconfiguration checks (ProjectDiscovery nuclei) over the
+# same in-scope web URLs as ZAP. Detection only -- vulnpipe runs nuclei's detection
+# templates, never its fuzzing/exploitation flags. Off by default; needs the
+# `nuclei` binary on PATH when enabled.
+nuclei:
+  enabled: false
+  templates: []               # e.g. ["http/cves", "http/exposures"]; empty = defaults
+  severities: []              # e.g. ["medium", "high", "critical"]; empty = all
+  # rate_limit: 150           # cap requests/second in a shared lab
+  timeout_seconds: 1800
+
 enrichment:
   nvd_enabled: true
   nvd_api_key_env: "NVD_API_KEY"

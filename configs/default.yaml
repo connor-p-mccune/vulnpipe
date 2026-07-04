@@ -21,6 +21,15 @@ zap:
   active_scan_timeout_seconds: 3600
   max_concurrency: 1
 
+nuclei:
+  enabled: false               # opt-in: template-based CVE / misconfiguration checks (nuclei)
+  binary: "nuclei"
+  templates: []                # -t values (dirs / template ids); empty = nuclei's defaults
+  severities: []               # e.g. ["medium", "high", "critical"]; empty = all
+  rate_limit: null             # requests/second cap (nuclei -rate-limit); null = nuclei default
+  timeout_seconds: 1800
+  extra_args: []
+
 enrichment:
   nvd_enabled: true
   nvd_api_key_env: "NVD_API_KEY"
