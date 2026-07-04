@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Plugin discovery via entry points** — installed packages can advertise extra
+  scanners and report formats under the `vulnpipe.scanners` / `vulnpipe.reporters`
+  entry-point groups; they are discovered and registered at CLI startup and listed
+  by the new `plugins` command. Discovery is defensive and deterministic: sorted
+  processing order, a broken plugin degrades to a logged warning, and a plugin can
+  never shadow a built-in name.
 - **Time-boxed risk acceptances** — false-positive allowlist entries accept an
   optional `reason` (the audit trail lives with the rule) and an inclusive
   `expires` date. A lapsed entry stops suppressing — the finding resurfaces in

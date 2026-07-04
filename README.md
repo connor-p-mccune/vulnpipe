@@ -577,9 +577,30 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json`). |
 | `baseline` | Create or update a baseline from a findings JSON (`--input`, `--output`, `--update`). |
 | `schema` | Print the JSON Schema for the targets/scope config, for editor validation and autocomplete. |
+| `plugins` | List third-party scanner/reporter plugins discovered via entry points. |
 | `version` | Print the vulnpipe version. |
 
 Run `vulnpipe <command> --help` for the full option list.
+
+## Extending with plugins
+
+The scanner and reporter registries are open: an installed package can advertise
+integrations under the `vulnpipe.scanners` and `vulnpipe.reporters` entry-point
+groups and they are discovered at CLI startup — no fork, no changes to vulnpipe.
+
+```toml
+# pyproject.toml of your plugin package
+[project.entry-points."vulnpipe.scanners"]
+nikto = "vulnpipe_nikto.scanner:NiktoScanner"     # a BaseScanner subclass
+
+[project.entry-points."vulnpipe.reporters"]
+xlsx = "vulnpipe_xlsx.reporter:XlsxReporter"      # a BaseReporter subclass
+```
+
+Discovery is defensive: a broken plugin degrades to a logged warning (it can never
+take down a scan), registration order is deterministic, and a plugin cannot shadow
+a built-in name — built-ins always win, and the collision is warned about.
+`vulnpipe plugins` shows what was loaded.
 
 ## Development
 

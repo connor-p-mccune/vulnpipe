@@ -368,7 +368,15 @@ name and never committed.
   and register it via `scanners/registry.py`. Do not special-case scanners in the
   orchestrator.
 - **New reporter:** subclass `BaseReporter`, implement `render()`, and register it in
-  `reporting/__init__.py` so `get_reporter` can resolve it.
+  `reporting/__init__.py` (`register_reporter`) so `get_reporter` can resolve it.
+- **Third-party plugins (no fork required):** an installed package can advertise
+  scanners and reporters under the `vulnpipe.scanners` / `vulnpipe.reporters`
+  entry-point groups; `vulnpipe.plugins.load_plugins()` discovers and registers
+  them at CLI startup, and `vulnpipe plugins` lists what was loaded. Discovery is
+  defensive and deterministic: entry points are processed in sorted order, a
+  broken plugin degrades to a logged warning (it can never take down the
+  pipeline), and a plugin may not shadow an already-registered name — built-ins
+  register first and always win, with the collision warned about.
 
 ## Hard rules (non-negotiable)
 
