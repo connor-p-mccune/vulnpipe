@@ -58,6 +58,17 @@ def available_formats() -> list[str]:
     return sorted(_REPORTERS)
 
 
+def register_reporter(reporter_cls: type[BaseReporter]) -> type[BaseReporter]:
+    """Register a reporter class under its ``name``. Usable as a class decorator.
+
+    This is how third-party report formats join the registry (see
+    :mod:`vulnpipe.plugins`); the built-ins above register the same way, just
+    statically.
+    """
+    _REPORTERS[reporter_cls.name] = reporter_cls
+    return reporter_cls
+
+
 def get_reporter(fmt: str) -> BaseReporter:
     """Return a reporter instance for ``fmt`` (``json`` / ``html`` / ``sarif``).
 
@@ -95,6 +106,7 @@ __all__ = [
     "get_reporter",
     "group_by_host",
     "load_findings",
+    "register_reporter",
     "render_badge",
     "render_csv",
     "render_html",
