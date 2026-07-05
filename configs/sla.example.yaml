@@ -1,0 +1,21 @@
+# Example remediation-SLA policy for vulnpipe.
+#
+# SLAs answer the vulnerability-management question the gate does not: has an
+# ALREADY-ACCEPTED (baselined) finding stayed open past its remediation deadline?
+# Age is measured from the finding's first-seen date, which the baseline records
+# when it is built with `--track-age`:
+#
+#   vulnpipe baseline --input results/latest.json --output baseline.json --track-age
+#   vulnpipe sla --current results/latest.json --baseline baseline.json --policy configs/sla.yaml
+#
+# `sla` exits non-zero when any finding is older than its severity's deadline.
+# Pass `--as-of YYYY-MM-DD` to evaluate ages as of a fixed date (reproducible CI).
+
+# Per-severity remediation deadlines, in days. A severity with no entry has no SLA
+# (it never breaches). A finding with no recorded first-seen date is untracked and
+# never breaches -- unknown age is never a violation.
+max_age_days:
+  critical: 7
+  high: 30
+  medium: 90
+  low: 180
