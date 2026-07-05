@@ -6,6 +6,7 @@ load-time error guards. No network or filesystem access beyond ``tmp_path``.
 """
 
 import random
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -119,3 +120,35 @@ def test_empty_baseline_round_trips(tmp_path: Path) -> None:
     loaded = load_baseline(path)
     assert loaded.entries == ()
     assert loaded.fingerprints == frozenset()
+
+
+# --------------------------------------------------------------------------- #
+# first_seen / age tracking
+# --------------------------------------------------------------------------- #
+def test_first_seen_defaults_none_and_stamps_when_given() -> None:
+    plain = build_baseline([_f("a")])
+    assert plain.entries[0].first_seen is None
+    stamped = build_baseline([_f("a")], first_seen=date(2026, 1, 1))
+    assert stamped.entries[0].first_seen == date(2026, 1, 1)
+    assert stamped.first_seen(_f("a").fingerprint) == date(2026, 1, 1)
+
+
+def test_first_seen_omitted_from_json_when_unset() -> None:
+    assert "first_seen" not in baseline_to_json(build_baseline([_f("a")]))
+
+
+def test_first_seen_present_in_json_and_round_trips(tmp_path: Path) -> None:
+    baseline = build_baseline([_f("a")], first_seen=date(2026, 1, 1))
+    text = baseline_to_json(baseline)
+    assert '"first_seen": "2026-01-01"' in text
+    path = tmp_path / "b.json"
+    save_baseline(baseline, path)
+    assert load_baseline(path) == baseline
+
+
+def test_merge_preserves_original_first_seen() -> None:
+    original = build_baseline([_f("a")], first_seen=date(2026, 1, 1))
+    merged = merge_baseline(original, [_f("a"), _f("b")], first_seen=date(2026, 6, 1))
+    # The pre-existing finding keeps its original date; the new one takes the later one.
+    assert merged.first_seen(_f("a").fingerprint) == date(2026, 1, 1)
+    assert merged.first_seen(_f("b").fingerprint) == date(2026, 6, 1)

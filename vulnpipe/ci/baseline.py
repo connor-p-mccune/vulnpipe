@@ -17,6 +17,7 @@ byte-for-byte identically and ``save`` -> ``load`` round-trips exactly.
 
 import json
 from collections.abc import Iterable
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,11 @@ class BaselineEntry(BaseModel):
     Carries the finding's fingerprint (its stable identity, used by the differ)
     together with the few fields needed to describe it in a report when it later
     resolves. It is intentionally a snapshot, not the whole finding.
+
+    ``first_seen`` is an optional record of the date the finding first entered the
+    baseline; it powers age / SLA reporting (:mod:`vulnpipe.ci.sla`) and is omitted
+    from the on-disk form when unset, so an age-untracked baseline is byte-identical
+    to one written before the field existed.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -48,9 +54,10 @@ class BaselineEntry(BaseModel):
     title: str
     severity: Severity = Severity.INFORMATIONAL
     port: int | None = None
+    first_seen: date | None = None
 
     @classmethod
-    def from_finding(cls, finding: Finding) -> "BaselineEntry":
+    def from_finding(cls, finding: Finding, *, first_seen: date | None = None) -> "BaselineEntry":
         """Snapshot the identity and display fields of ``finding`` into an entry."""
         return cls(
             fingerprint=finding.fingerprint,
@@ -59,6 +66,7 @@ class BaselineEntry(BaseModel):
             title=finding.title,
             severity=finding.severity,
             port=finding.port,
+            first_seen=first_seen,
         )
 
 
@@ -82,12 +90,21 @@ class Baseline(BaseModel):
                 return entry
         return None
 
+    def first_seen(self, fingerprint: str) -> date | None:
+        """Return the recorded first-seen date for ``fingerprint``, or ``None``."""
+        entry = self.entry_for(fingerprint)
+        return entry.first_seen if entry is not None else None
 
-def _entries_from_findings(findings: Iterable[Finding]) -> dict[str, BaselineEntry]:
+
+def _entries_from_findings(
+    findings: Iterable[Finding], *, first_seen: date | None = None
+) -> dict[str, BaselineEntry]:
     """Map fingerprint -> entry for ``findings``, keeping the first sighting of each."""
     entries: dict[str, BaselineEntry] = {}
     for finding in findings:
-        entries.setdefault(finding.fingerprint, BaselineEntry.from_finding(finding))
+        entries.setdefault(
+            finding.fingerprint, BaselineEntry.from_finding(finding, first_seen=first_seen)
+        )
     return entries
 
 
@@ -96,32 +113,45 @@ def _ordered(entries: dict[str, BaselineEntry]) -> tuple[BaselineEntry, ...]:
     return tuple(entries[key] for key in sorted(entries))
 
 
-def build_baseline(findings: Iterable[Finding]) -> Baseline:
+def build_baseline(findings: Iterable[Finding], *, first_seen: date | None = None) -> Baseline:
     """Build a baseline from ``findings`` (deduplicated by fingerprint).
 
     The result is order-independent: entries are stored in fingerprint order, so
     the same set of findings always produces an identical baseline regardless of
-    how they were ordered on input.
+    how they were ordered on input. When ``first_seen`` is given, every entry is
+    stamped with it (for age / SLA tracking); omitted, entries carry no date and the
+    output is byte-identical to an age-untracked baseline.
     """
-    return Baseline(entries=_ordered(_entries_from_findings(findings)))
+    return Baseline(entries=_ordered(_entries_from_findings(findings, first_seen=first_seen)))
 
 
-def merge_baseline(baseline: Baseline, findings: Iterable[Finding]) -> Baseline:
+def merge_baseline(
+    baseline: Baseline, findings: Iterable[Finding], *, first_seen: date | None = None
+) -> Baseline:
     """Return ``baseline`` extended with any new findings (union by fingerprint).
 
-    Existing entries are preserved; a finding whose fingerprint is already recorded
-    does not replace the stored snapshot. Used to accept newly introduced findings
-    into an existing baseline.
+    Existing entries are preserved unchanged -- a finding whose fingerprint is already
+    recorded keeps its stored snapshot *and* its original ``first_seen``, so an issue's
+    age is measured from when it truly first appeared. Only genuinely new entries take
+    the supplied ``first_seen``. Used to accept newly introduced findings into an
+    existing baseline.
     """
     merged = {entry.fingerprint: entry for entry in baseline.entries}
-    for fingerprint, entry in _entries_from_findings(findings).items():
+    for fingerprint, entry in _entries_from_findings(findings, first_seen=first_seen).items():
         merged.setdefault(fingerprint, entry)
     return Baseline(schema_version=baseline.schema_version, entries=_ordered(merged))
 
 
 def baseline_to_json(baseline: Baseline) -> str:
-    """Serialize ``baseline`` to deterministic JSON (no timestamp; stable order)."""
+    """Serialize ``baseline`` to deterministic JSON (no timestamp; stable order).
+
+    An entry with no ``first_seen`` omits the key entirely, so an age-untracked
+    baseline serializes exactly as it did before the field existed.
+    """
     payload: dict[str, Any] = baseline.model_dump(mode="json")
+    for entry in payload.get("entries", []):
+        if isinstance(entry, dict) and entry.get("first_seen") is None:
+            entry.pop("first_seen", None)
     return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
 
 
