@@ -546,6 +546,34 @@ A ready-to-adapt GitHub Actions workflow lives at
 runs an authorized scan, uploads the SARIF to code scanning, publishes the JUnit
 gate report, and carries the baseline forward across runs via the Actions cache.
 
+### Remediation SLAs
+
+The gate stops *new* risk from landing; a **remediation SLA** stops *accepted* risk
+from lingering. Record when each finding was first seen (`baseline --track-age`),
+then check ages against per-severity deadlines:
+
+```bash
+# Stamp first-seen dates when you accept a scan into the baseline.
+vulnpipe baseline --input results/latest.json --output baseline.json --track-age
+
+# Later, fail the build if anything has aged past its remediation deadline.
+vulnpipe sla --current results/latest.json --baseline baseline.json \
+  --critical-days 7 --high-days 30            # or --policy configs/sla.yaml
+```
+
+```console
+$ vulnpipe sla --current results/latest.json --baseline baseline.json --critical-days 7
+vulnpipe SLA report — critical <= 7d
+SLA breached: 1 finding(s) past their remediation deadline (3 tracked, 2 untracked)
+  ! [critical] CVE-2021-42013 (10.0.0.5) — 21d old, SLA 7d (14d over, first seen 2026-06-13)
+$ echo $?
+1
+```
+
+Age is measured from the baseline's first-seen date against `--as-of` (default
+today, pin it for reproducible CI). A finding with no recorded first-seen date is
+*untracked* and never breaches — unknown age is never a violation.
+
 ### Use as a GitHub Action
 
 vulnpipe also ships a reusable composite action ([`action.yml`](action.yml)), so a
@@ -601,6 +629,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `scan` | Validate authorization/scope, run the pipeline, write reports, and gate. Requires `--config` and `--authorized`. |
 | `sbom` | Analyze a CycloneDX SBOM against OSV.dev and emit standard findings — passive supply-chain analysis, no scope/authorization needed (`--input`, `--output`, `--format`, `--no-enrich`). |
 | `gate` | Re-evaluate the CI gate over an existing findings JSON without rescanning — policy file or severity/risk options (`--current`, `--baseline`, `--policy`, `--format text\|json`). |
+| `sla` | Report findings open past their per-severity remediation SLA, by age from an age-tracked baseline (`--current`, `--baseline`, `--policy` or `--critical-days`/`--high-days`/…, `--as-of`). |
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
 | `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX on stdout (`--input`, `--format`). |
 | `remediate` | Group a findings JSON into a ranked, deduplicated remediation plan — fix these first — as text / JSON / Markdown (`--input`, `--format`, `--top`). |
@@ -610,8 +639,8 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `notify` | Post a findings summary to a Slack-compatible webhook (URL resolved from the environment via `--webhook-url-env`). |
 | `trend` | Analyze how findings evolve across a chronological series of scan JSONs — totals, severity mix, and introduced/resolved deltas (text, JSON, or a self-contained HTML page with an inline SVG chart). |
 | `diff` | Classify current findings against a baseline as new / persisting / resolved (`--baseline`, `--current`, `--format text\|json\|markdown\|html`). |
-| `baseline` | Create or update a baseline from a findings JSON (`--input`, `--output`, `--update`). |
-| `schema` | Print the JSON Schema for the targets/scope config, the report envelope, a gate policy, or the false-positive allowlist — for editor validation and autocomplete (`config` / `report` / `policy` / `false-positives`). |
+| `baseline` | Create or update a baseline from a findings JSON; `--track-age` stamps each new finding's first-seen date for SLA reporting (`--input`, `--output`, `--update`). |
+| `schema` | Print the JSON Schema for the targets/scope config, the report envelope, a gate policy, an SLA policy, or the false-positive allowlist — for editor validation and autocomplete (`config` / `report` / `policy` / `sla` / `false-positives`). |
 | `plugins` | List third-party scanner/reporter plugins discovered via entry points. |
 | `version` | Print the vulnpipe version. |
 

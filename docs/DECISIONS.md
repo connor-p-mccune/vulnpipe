@@ -392,3 +392,28 @@ finding fields and the same reproducible-timestamp discipline as SARIF and OpenV
 marginal maintenance is small. The report is framed as one scan type (DAST) rather than
 splitting network/web/SBOM findings across GitLab's report types — a pragmatic choice that
 keeps every finding in one ingestible document.
+
+## ADR-0022 — Finding age lives in the baseline, and SLAs use an injected clock
+
+**Context.** The gate governs *new* risk; a mature program also governs *dwell time* —
+how long an accepted finding may stay open. That needs to know when each finding was first
+seen. Two temptations to avoid: putting a date on the `Finding` model (which would break its
+content-derived fingerprint and its determinism), and reading the wall clock inside the
+evaluation (which would make results non-reproducible).
+
+**Decision.** Record `first_seen` as an optional field on the *baseline entry*, not the
+finding — the baseline is already the stateful, per-run artifact, and the finding stays a
+pure, immutable value. Stamp it only when asked (`baseline --track-age`), preserve it across
+merges so age counts from the true first appearance, and omit it from the on-disk form when
+unset so age-untracked baselines are byte-identical to pre-feature ones. `evaluate_sla` is
+pure over (findings, baseline, policy, `today`), with `today` injected — the CLI defaults it
+to the real date but `--as-of` pins it. A finding with no recorded date is *untracked* and
+never breaches.
+
+**Consequences.** The `Finding` model and its fingerprint are untouched, so nothing
+downstream changes; SLA reporting is a clean overlay on the existing baseline/differ
+machinery. Determinism holds: the same inputs and `--as-of` always yield the same verdict,
+so SLA tests pin a date and CI is reproducible. The trade-off is that age tracking is only
+as good as the baseline discipline — a team that never stamps first-seen dates gets an
+all-untracked (and therefore always-passing) SLA report, which is the honest answer when the
+age is genuinely unknown rather than a fabricated one.

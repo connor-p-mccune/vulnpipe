@@ -253,9 +253,13 @@ After reporting, the CI stage (`ci/`) turns findings into a build verdict.
 - **Baseline** (`baseline.py`) records the accepted findings keyed by fingerprint,
   with a small metadata snapshot (source, host, port, title, severity) per entry —
   enough to recognize a finding across runs and to describe one that later resolves.
-  The on-disk form is deterministic (entries in fingerprint order, no timestamp), so
-  `save_baseline` → `load_baseline` round-trips exactly. Build one with
-  `build_baseline`; extend an existing one with `merge_baseline`.
+  An optional `first_seen` date per entry (stamped by `baseline --track-age`, and
+  preserved across merges so age is measured from a finding's true first appearance)
+  powers the SLA layer; it is omitted from the on-disk form when unset, so an
+  age-untracked baseline stays byte-identical to one written before the field
+  existed. The on-disk form is deterministic (entries in fingerprint order, no
+  timestamp), so `save_baseline` → `load_baseline` round-trips exactly. Build one
+  with `build_baseline`; extend an existing one with `merge_baseline`.
 - **Differ** (`differ.py`) classifies the current findings against a baseline by
   fingerprint: **new** (absent from the baseline), **persisting** (present), and
   **resolved** (in the baseline but gone from the scan). `new` / `persisting` keep the
@@ -275,6 +279,15 @@ After reporting, the CI stage (`ci/`) turns findings into a build verdict.
   (`GateResult` or `PolicyResult`) satisfies the structural `GateVerdict` protocol
   the JUnit renderer and the CLI consume. `scan --policy` swaps the verdict in, and
   the standalone `gate` command re-evaluates a findings JSON without rescanning.
+- **SLA** (`sla.py`) answers the complementary question the gate does not: has an
+  *accepted* (baselined) finding stayed open past its remediation deadline? An
+  `SlaPolicy` (`configs/sla.example.yaml`) declares per-severity budgets in days, and
+  `evaluate_sla` — pure over the current findings, the baseline's `first_seen` dates,
+  and an injected evaluation date — flags every finding older than its deadline,
+  worst-severity then oldest first. A finding with no recorded first-seen date is
+  *untracked* and never breaches (unknown age is never a violation). The `sla` command
+  exposes it with a process `exit_code`, so CI can fail a build on lingering risk, not
+  just newly introduced risk.
 - **JUnit** (`junit.py`) renders the verdict as JUnit XML: every current finding is a
   `<testcase>` and each gate-triggering finding a `<failure>`, with all content
   XML-escaped. Together with the SARIF report (reused from `reporting/`) this feeds CI
@@ -352,6 +365,9 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
 - `gate` — re-evaluate the CI gate over an existing findings JSON without
   rescanning, using a policy file or the severity/risk options (text or JSON
   verdict, non-zero exit on violation).
+- `sla` — report findings open past their per-severity remediation deadline, by age
+  from an age-tracked baseline (`first_seen`) evaluated as of `--as-of` (text or JSON,
+  non-zero exit on a breach).
 - `report` — render a findings JSON to any report format on stdout.
 - `remediate` — group a findings JSON into a ranked, deduplicated remediation plan
   (text / JSON / Markdown), most impactful fix first; `--top` limits the list.
