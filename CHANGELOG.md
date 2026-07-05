@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-05
+
+First stable release. The pipeline is feature-complete for its scope — detection and
+reporting only — and the finding model, report envelope, baseline, and policy /
+gate / SLA schemas are considered stable.
+
+By 1.0 vulnpipe covers, end to end: network (Nmap), web (ZAP), and template-based
+(Nuclei) scanning; passive supply-chain analysis (CycloneDX + OSV) and third-party
+report import (Trivy / Grype); enrichment with CVSS / EPSS / CISA KEV and a
+transparent composite risk score; normalization, dedup, false-positive filtering
+(time-boxed acceptances), and prioritization onto one immutable `Finding`;
+OWASP Top 10 / CWE Top 25 mapping; a ranked remediation plan; nine report formats
+(JSON, HTML, Markdown, CSV, Prometheus, SARIF, GitLab, OpenVEX, remediation) plus a
+status badge and a scriptable stats payload; and a CI stage with a baseline diff, a
+severity / risk gate, policy-as-code, remediation SLAs over finding age, a scan-delta
+and multi-scan trend (with HTML), and JUnit output — behind a hard authorization /
+scope gate, with entry-point plugins for third-party scanners and reporters.
+
+### Added
+- **`stats --format json`** — a compact, deterministic dashboard payload (totals,
+  severity breakdown, known-exploited count, OWASP / CWE Top 25 distribution, top
+  risks, worst-affected hosts, remediation-plan size) so automation can consume the
+  summary without parsing every finding.
+
+### Changed
+- Development status promoted to Production/Stable.
+
 ## [0.9.0] - 2026-07-05
 
 ### Added
@@ -300,7 +327,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.9.0...v1.0.0
 [0.9.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.6.0...v0.7.0

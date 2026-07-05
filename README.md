@@ -163,7 +163,7 @@ Verify it:
 
 ```console
 $ vulnpipe version
-vulnpipe 0.2.0
+vulnpipe 1.0.0
 ```
 
 ## Quickstart
@@ -452,7 +452,7 @@ every finding with its fingerprint and computed risk score:
 ```jsonc
 {
   "schema_version": "1.0",
-  "tool": { "name": "vulnpipe", "version": "0.2.0" },
+  "tool": { "name": "vulnpipe", "version": "1.0.0" },
   "summary": {
     "total": 15,
     "hosts": 4,
@@ -668,7 +668,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX on stdout (`--input`, `--format`). |
 | `remediate` | Group a findings JSON into a ranked, deduplicated remediation plan — fix these first — as text / JSON / Markdown (`--input`, `--format`, `--top`). |
 | `merge` | Combine findings JSONs from separate runs (e.g. a network scan + an SBOM analysis) into one deduplicated, re-prioritized report (`--input` repeated, `--output`, `--format`). |
-| `stats` | Print a terminal summary of a findings JSON — severity breakdown, OWASP Top 10, top risks, and worst-affected hosts (`--input`). |
+| `stats` | Summarize a findings JSON — severity breakdown, OWASP Top 10, top risks, and worst-affected hosts — as a terminal view or a JSON dashboard payload (`--input`, `--format text\|json`). |
 | `badge` | Render a findings JSON into a shields-style SVG status badge (`--input`, `--output`, `--label`). |
 | `notify` | Post a findings summary to a Slack-compatible webhook (URL resolved from the environment via `--webhook-url-env`). |
 | `trend` | Analyze how findings evolve across a chronological series of scan JSONs — totals, severity mix, and introduced/resolved deltas (text, JSON, or a self-contained HTML page with an inline SVG chart). |
