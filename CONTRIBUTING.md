@@ -43,9 +43,10 @@ is covered end to end with a synthetic baseline-vs-current pair.
   and carry `@pytest.mark.integration` (skipped unless you run `pytest -m
   integration`).
 - **Unit tests never touch the network or run real scanners.** Drive them from the
-  fixtures in `tests/fixtures/` (a sample Nmap `-oX` XML file and a sample ZAP
-  `core.alerts` JSON payload). Mock outbound HTTP (NVD, EPSS) with `respx`, and mock
-  the ZAP client and the Nmap `subprocess` call.
+  captured fixtures in `tests/fixtures/` (sample Nmap `-oX` XML, a ZAP `core.alerts`
+  payload, Nuclei JSONL, Trivy / Grype reports, a CycloneDX SBOM, and NVD / EPSS / KEV
+  / OSV responses). Mock outbound HTTP (NVD, EPSS, OSV) with `respx`, and mock the ZAP
+  client and the Nmap / Nuclei `subprocess` calls.
 - `processing/` functions are pure: give them findings and assert on the transformed
   findings.
 - Fingerprints and report output must be **deterministic** for fixed fixture input.
@@ -76,6 +77,14 @@ is covered end to end with a synthetic baseline-vs-current pair.
   (normalizing through `make_finding`), and register it via `scanners/registry.py`.
 - **New reporter:** subclass `BaseReporter`, implement `render()`, and register it in
   `reporting/__init__.py` so `get_reporter` can resolve it.
+- **New third-party importer:** add a pure `dict -> list[Finding]` parser under
+  `ingest/` (like `trivy.py` / `grype.py`) and route it in `ingest/__init__.py`.
+- **Without forking:** an installed package can advertise scanners and reporters under
+  the `vulnpipe.scanners` / `vulnpipe.reporters` entry-point groups; they are
+  discovered at CLI startup (see `vulnpipe.plugins`).
+
+Whatever you add, keep it honest (no fabricated CVEs / scores / severities — a missing
+value is `None`, not a guess) and deterministic (fixed input → identical output).
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design.
 

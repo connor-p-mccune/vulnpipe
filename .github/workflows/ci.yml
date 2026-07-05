@@ -78,15 +78,31 @@ jobs:
       - name: Exercise the CLI end to end
         run: |
           set -euxo pipefail
+          sample=examples/sample-report.json
           vulnpipe version
-          vulnpipe schema > /dev/null
-          vulnpipe validate -c configs/targets.lab.yaml
-          for fmt in json html markdown csv prometheus sarif; do
-            vulnpipe report -i examples/sample-report.json -f "$fmt" > /dev/null
+          for kind in config report policy sla false-positives; do
+            vulnpipe schema "$kind" > /dev/null
           done
-          vulnpipe stats -i examples/sample-report.json > /dev/null
-          vulnpipe diff --baseline examples/sample-report.json --current examples/sample-report.json
-          vulnpipe trend examples/sample-report.json > /dev/null
+          vulnpipe validate -c configs/targets.lab.yaml
+          # Every registered report format renders from the committed sample.
+          for fmt in json html markdown csv prometheus sarif gitlab remediation vex; do
+            vulnpipe report -i "$sample" -f "$fmt" > /dev/null
+          done
+          vulnpipe stats -i "$sample" > /dev/null
+          vulnpipe stats -i "$sample" -f json > /dev/null
+          vulnpipe remediate -i "$sample" > /dev/null
+          vulnpipe badge -i "$sample" > /dev/null
+          # Import third-party reports and merge them with the sample.
+          vulnpipe convert -i tests/fixtures/trivy_report.json --from trivy -o /tmp/trivy.json > /dev/null
+          vulnpipe convert -i tests/fixtures/grype_report.json --from grype > /dev/null
+          vulnpipe merge -i "$sample" -i /tmp/trivy.json > /dev/null
+          # Baseline / diff / gate / SLA / trend.
+          vulnpipe baseline -i "$sample" -o /tmp/baseline.json --track-age
+          vulnpipe sla --current "$sample" --baseline /tmp/baseline.json --critical-days 7 --high-days 30
+          vulnpipe diff --baseline "$sample" --current "$sample"
+          vulnpipe gate --current "$sample" --baseline /tmp/baseline.json --gate-severity critical
+          vulnpipe trend "$sample" > /dev/null
+          vulnpipe trend "$sample" -f html > /dev/null
 
   integration:
     name: integration
