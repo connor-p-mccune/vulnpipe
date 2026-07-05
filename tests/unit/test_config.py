@@ -66,6 +66,36 @@ def test_sbom_paths_default_empty_and_parse(tmp_path: Path) -> None:
     assert with_sbom.sbom == ["sbom/app.cdx.json", "sbom/api.cdx.json"]
 
 
+def test_imports_default_empty_and_parse(tmp_path: Path) -> None:
+    cfg = load_config(_write(tmp_path, MINIMAL_YAML))
+    assert cfg.imports == []  # optional, defaults to no third-party imports
+    with_imports = load_config(
+        _write(
+            tmp_path,
+            'scope:\n  hosts: ["10.0.0.0/24"]\n'
+            'targets:\n  - host: "10.0.0.5"\n'
+            'imports:\n  - path: "trivy.json"\n    format: "trivy"\n'
+            '  - path: "grype.json"\n    format: "grype"\n',
+        )
+    )
+    assert [(s.path, s.format) for s in with_imports.imports] == [
+        ("trivy.json", "trivy"),
+        ("grype.json", "grype"),
+    ]
+
+
+def test_imports_reject_unknown_format(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError):
+        load_config(
+            _write(
+                tmp_path,
+                'scope:\n  hosts: ["10.0.0.0/24"]\n'
+                'targets:\n  - host: "10.0.0.5"\n'
+                'imports:\n  - path: "x.json"\n    format: "snyk"\n',
+            )
+        )
+
+
 def test_missing_file_raises(tmp_path: Path) -> None:
     with pytest.raises(ConfigError):
         load_config(tmp_path / "nope.yaml")

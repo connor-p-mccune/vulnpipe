@@ -320,6 +320,20 @@ class PrioritizationConfig(BaseModel):
         return self.default_criticality
 
 
+class ImportSource(BaseModel):
+    """A pre-generated third-party scanner report to fold into a scan.
+
+    ``format`` selects the parser (``trivy`` / ``grype``) and ``path`` is a local
+    report file. Like SBOMs these are local artifacts, so they are not subject to the
+    host/URL scope allowlist (nothing is probed).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    format: Literal["trivy", "grype"]
+
+
 class Config(BaseModel):
     """Top-level pipeline configuration loaded from the YAML target file."""
 
@@ -339,6 +353,14 @@ class Config(BaseModel):
             "Paths to CycloneDX JSON SBOMs to analyze for known-vulnerable components "
             "(OSV.dev) alongside the network/web scan. Passive analysis: SBOM files are "
             "local artifacts, so they are not subject to the host/URL scope allowlist."
+        ),
+    )
+    imports: list[ImportSource] = Field(
+        default_factory=list,
+        description=(
+            "Pre-generated third-party scanner reports (Trivy / Grype JSON) to ingest and "
+            "fold into the scan, so one run covers native scanners plus imported results "
+            "under a single baseline and gate. Local artifacts, not subject to scope."
         ),
     )
 
@@ -495,6 +517,7 @@ __all__ = [
     "EnrichmentConfig",
     "FormAuth",
     "HeaderAuth",
+    "ImportSource",
     "NmapConfig",
     "NucleiConfig",
     "OutOfScopeError",

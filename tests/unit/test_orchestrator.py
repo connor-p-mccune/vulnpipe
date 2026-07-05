@@ -17,6 +17,7 @@ from vulnpipe.core import orchestrator
 from vulnpipe.core.config import (
     AuthorizationError,
     Config,
+    ImportSource,
     NucleiConfig,
     OutOfScopeError,
     RunConfig,
@@ -31,6 +32,7 @@ from vulnpipe.processing.normalizer import make_finding
 from vulnpipe.scanners.base import BaseScanner
 
 SCOPE = Scope(hosts=["10.0.0.0/24", "*.lab.example.com"], urls=["https://app.lab.example.com"])
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
 
 def _config(targets: list[Target] | None = None, **overrides: object) -> Config:
@@ -319,6 +321,54 @@ def test_default_sbom_scan_skips_unreadable_files(tmp_path: Path) -> None:
     cfg = _config(sbom=[str(missing)])
     # A missing/invalid SBOM degrades to a warning and an empty result, not a crash.
     assert orchestrator._default_sbom_scan(cfg) == []
+
+
+def test_default_imports_scan_empty_when_unconfigured() -> None:
+    assert orchestrator._default_imports_scan(_config()) == []
+
+
+def test_default_imports_scan_ingests_reports() -> None:
+    cfg = _config(imports=[ImportSource(path=str(FIXTURES / "trivy_report.json"), format="trivy")])
+    findings = orchestrator._default_imports_scan(cfg)
+    assert findings and all(f.source == "trivy" for f in findings)
+
+
+def test_default_imports_scan_skips_unreadable_or_wrong_shape(tmp_path: Path) -> None:
+    missing = tmp_path / "nope.json"
+    wrong = tmp_path / "wrong.json"
+    wrong.write_text('{"not": "a report"}', encoding="utf-8")
+    cfg = _config(
+        imports=[
+            ImportSource(path=str(missing), format="trivy"),  # unreadable
+            ImportSource(path=str(wrong), format="grype"),  # wrong shape
+        ]
+    )
+    # Both degrade to a warning and are skipped, not a crash.
+    assert orchestrator._default_imports_scan(cfg) == []
+
+
+def test_run_pipeline_includes_injected_imports_layer() -> None:
+    def run_imports(config: Config) -> list[Finding]:
+        return [
+            make_finding(
+                source="trivy",
+                host="myapp:1.0",
+                title="CVE-2022-1271",
+                severity=Severity.HIGH,
+                plugin_id="CVE-2022-1271",
+                cve_ids=["CVE-2022-1271"],
+            )
+        ]
+
+    result = orchestrator.run_pipeline(
+        _config(),
+        authorized=True,
+        enrichment=orchestrator.EnrichmentClients(),
+        run_network=lambda _c: [],
+        run_web=lambda _c, _u: [],
+        run_imports=run_imports,
+    )
+    assert any(f.source == "trivy" for f in result.findings)
 
 
 def test_run_pipeline_requires_authorization() -> None:

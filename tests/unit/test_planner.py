@@ -94,6 +94,21 @@ def test_plan_reports_nuclei_layer() -> None:
     assert "nuclei:       enabled" in render_plan(on)
 
 
+def test_plan_reports_passive_layers() -> None:
+    from vulnpipe.core.config import ImportSource
+
+    plan = build_scan_plan(
+        _config(
+            sbom=["app.cdx.json"],
+            imports=[ImportSource(path="trivy.json", format="trivy")],
+        )
+    )
+    assert plan.sbom_count == 1 and plan.import_count == 1
+    text = render_plan(plan)
+    assert "sbom:         1 file(s)" in text
+    assert "imports:      1 report(s)" in text
+
+
 def test_plan_enrichment_sources_reflect_flags() -> None:
     plan = build_scan_plan(
         _config(enrichment=EnrichmentConfig(nvd_enabled=True, epss_enabled=False, kev_enabled=True))

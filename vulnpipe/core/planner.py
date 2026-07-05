@@ -41,6 +41,8 @@ class ScanPlan:
     nmap_enabled: bool
     zap_enabled: bool
     nuclei_enabled: bool
+    sbom_count: int
+    import_count: int
 
     @property
     def scope_is_empty(self) -> bool:
@@ -117,6 +119,8 @@ def build_scan_plan(config: Config) -> ScanPlan:
         nmap_enabled=config.nmap.enabled,
         zap_enabled=config.zap.enabled,
         nuclei_enabled=config.nuclei.enabled,
+        sbom_count=len(config.sbom),
+        import_count=len(config.imports),
     )
 
 
@@ -130,6 +134,8 @@ def render_plan(plan: ScanPlan) -> str:
     lines.append(f"zap:          {'enabled' if plan.zap_enabled else 'disabled'}")
     lines.append(f"nuclei:       {'enabled' if plan.nuclei_enabled else 'disabled'}")
     lines.append(f"enrichment:   {', '.join(plan.enrichment_sources) or 'none'}")
+    lines.append(f"sbom:         {plan.sbom_count} file(s)")
+    lines.append(f"imports:      {plan.import_count} report(s)")
 
     lines.append("")
     lines.append(f"network targets ({len(plan.network_targets)}):")

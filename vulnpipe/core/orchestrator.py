@@ -18,8 +18,10 @@ fan-out. The heavier web layer is fanned out across a **bounded thread pool**
 intensive. The web layer scans both URLs declared in config and HTTP/HTTPS
 services discovered by the Nmap stage (in scope only). An optional Nuclei layer
 (``nuclei.enabled``) adds template-based CVE / misconfiguration checks over that
-same in-scope URL set. A further passive supply-chain layer analyzes any configured
-CycloneDX SBOMs against OSV.dev; every layer's findings join before enrichment.
+same in-scope URL set. Two further passive layers add findings from local artifacts:
+a supply-chain layer analyzes any configured CycloneDX SBOMs against OSV.dev, and an
+imports layer ingests any configured Trivy / Grype reports. Every layer's findings
+join before enrichment.
 
 Scanners are resolved through :mod:`vulnpipe.scanners.registry` by name, never
 special-cased; injectable scan callables keep the pipeline testable without real
@@ -27,12 +29,14 @@ tools. Deterministic for fixed scanner output: stages preserve order where it
 matters and prioritization imposes a stable final ordering.
 """
 
+import json
 import logging
 import threading
 from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 
 import vulnpipe.scanners  # noqa: F401  (import for scanner registration side effect)
 from vulnpipe.ci.baseline import Baseline
@@ -50,6 +54,7 @@ from vulnpipe.core.logging import get_logger, log_event
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.enrichment import EnrichmentClients, build_enrichment, enrich_findings
 from vulnpipe.enrichment._http import open_cache
+from vulnpipe.ingest import IngestError, get_ingester
 from vulnpipe.processing import (
     FalsePositiveConfig,
     deduplicate,
@@ -74,6 +79,7 @@ NetworkScan = Callable[[Config], list[Finding]]
 WebScan = Callable[[Config, Sequence[str]], list[Finding]]
 NucleiScan = Callable[[Config, Sequence[str]], list[Finding]]
 SbomScan = Callable[[Config], list[Finding]]
+ImportsScan = Callable[[Config], list[Finding]]
 
 # Service-name hints (substring match) marking an Nmap-discovered web service, and
 # the well-known web ports used as a fallback when the service is unidentified.
@@ -260,6 +266,36 @@ def _default_sbom_scan(config: Config) -> list[Finding]:
 
 
 # --------------------------------------------------------------------------- #
+# Third-party report imports (Trivy / Grype)
+# --------------------------------------------------------------------------- #
+def _default_imports_scan(config: Config) -> list[Finding]:
+    """Ingest every configured third-party scanner report into findings.
+
+    Report paths are local artifacts, so they bypass the host/URL scope allowlist
+    (nothing is probed), and a file that cannot be read, parsed, or recognized degrades
+    to a logged warning and is skipped -- consistent with a failed SBOM -- rather than
+    aborting the run.
+    """
+    if not config.imports:
+        return []
+    findings: list[Finding] = []
+    for source in config.imports:
+        try:
+            document = json.loads(Path(source.path).read_text(encoding="utf-8"))
+            findings.extend(get_ingester(source.format)(document))
+        except (OSError, ValueError, IngestError) as exc:
+            log_event(
+                _log,
+                logging.WARNING,
+                "import report load failed; skipping",
+                path=source.path,
+                format=source.format,
+                error=str(exc),
+            )
+    return findings
+
+
+# --------------------------------------------------------------------------- #
 # Enrichment
 # --------------------------------------------------------------------------- #
 def _enrich(
@@ -293,6 +329,7 @@ def run_pipeline(
     run_web: WebScan | None = None,
     run_nuclei: NucleiScan | None = None,
     run_sbom: SbomScan | None = None,
+    run_imports: ImportsScan | None = None,
 ) -> PipelineResult:
     """Run the full pipeline and return prioritized findings plus the CI verdict.
 
@@ -300,9 +337,10 @@ def run_pipeline(
     ``run_nuclei`` / ``run_sbom`` default to the registered Nmap / ZAP / Nuclei
     scanners and the OSV-backed SBOM analyzer but can be injected (e.g. in tests). The
     optional Nuclei layer (``nuclei.enabled``) scans the same in-scope web URL set as
-    ZAP with template-based checks. The SBOM layer analyzes any
-    ``config.sbom`` files and contributes findings that flow through enrichment,
-    dedup, filtering, and prioritization like scanner output. ``baseline`` drives
+    ZAP with template-based checks. The SBOM layer analyzes any ``config.sbom`` files,
+    and the imports layer ingests any ``config.imports`` third-party reports (Trivy /
+    Grype); every layer's findings flow through enrichment, dedup, filtering, and
+    prioritization like scanner output. ``baseline`` drives
     the diff/gate -- when omitted, every finding counts as new (an empty baseline).
     Raises :class:`~vulnpipe.core.config.AuthorizationError` /
     :class:`~vulnpipe.core.config.OutOfScopeError` if the run is not authorized or a
@@ -315,13 +353,21 @@ def run_pipeline(
     web_scan = run_web if run_web is not None else _default_web_scan
     nuclei_scan = run_nuclei if run_nuclei is not None else _default_nuclei_scan
     sbom_scan = run_sbom if run_sbom is not None else _default_sbom_scan
+    imports_scan = run_imports if run_imports is not None else _default_imports_scan
 
     network_findings = network_scan(config)
     discovered = derive_web_targets(network_findings, config.scope)
     web_findings = web_scan(config, discovered)
     nuclei_findings = nuclei_scan(config, discovered)
     sbom_findings = sbom_scan(config)
-    raw = [*network_findings, *web_findings, *nuclei_findings, *sbom_findings]
+    import_findings = imports_scan(config)
+    raw = [
+        *network_findings,
+        *web_findings,
+        *nuclei_findings,
+        *sbom_findings,
+        *import_findings,
+    ]
     log_event(
         _log,
         logging.INFO,
@@ -330,6 +376,7 @@ def run_pipeline(
         web=len(web_findings),
         nuclei=len(nuclei_findings),
         sbom=len(sbom_findings),
+        imports=len(import_findings),
         discovered_web=len(discovered),
     )
 
@@ -364,6 +411,7 @@ def run_pipeline(
 
 
 __all__ = [
+    "ImportsScan",
     "NetworkScan",
     "NucleiScan",
     "PipelineResult",
