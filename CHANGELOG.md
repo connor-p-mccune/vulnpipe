@@ -7,12 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-04
+
+Vulnerability management over time: finding age, remediation SLAs, and a visual trend.
+
 ### Added
+- **Remediation SLAs** (`ci/sla.py`, `sla` command) — govern *dwell time*, not just
+  new risk: an `SlaPolicy` declares per-severity remediation deadlines in days
+  (`configs/sla.example.yaml`), and `vulnpipe sla` flags every finding open past its
+  deadline, measuring age from the baseline's first-seen date against `--as-of`
+  (default today, injectable for reproducible CI). It exits non-zero on a breach, and
+  a finding with no recorded first-seen date is untracked and never breaches — unknown
+  age is never a violation. Inline `--critical-days` / `--high-days` / … options or a
+  policy file; `schema sla` prints the policy schema.
+- **Baseline age tracking** — each baseline entry gains an optional `first_seen` date,
+  stamped by `baseline --track-age` and preserved across merges so age counts from a
+  finding's true first appearance. The field is omitted from the on-disk form when
+  unset, so an age-untracked baseline stays byte-identical to one written before the
+  field existed.
 - **`trend --format html`** — render the multi-scan trend as a self-contained,
-  shareable HTML page: an inline SVG stacked bar chart of the severity mix across
-  the scan series (pure, unit-tested geometry), a direction verdict, a legend, and
-  a per-scan metrics table. Deterministic and fully HTML-escaped like the other
-  HTML outputs.
+  shareable HTML page: an inline SVG stacked bar chart of the severity mix across the
+  scan series (pure, unit-tested geometry), a direction verdict, a legend, and a
+  per-scan metrics table. Deterministic and fully HTML-escaped like the other HTML
+  outputs.
 
 ## [0.5.0] - 2026-07-04
 
@@ -237,7 +254,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.2.0...v0.3.0
