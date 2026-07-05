@@ -32,6 +32,7 @@ from vulnpipe.reporting.markdown_reporter import MarkdownReporter, render_markdo
 from vulnpipe.reporting.prometheus_reporter import PrometheusReporter, render_prometheus
 from vulnpipe.reporting.remediation import (
     RemediationAction,
+    RemediationReporter,
     plan_remediations,
     remediation_to_payload,
     render_remediation_markdown,
@@ -59,6 +60,7 @@ _REPORTERS: dict[str, type[BaseReporter]] = {
     PrometheusReporter.name: PrometheusReporter,
     SarifReporter.name: SarifReporter,
     GitlabReporter.name: GitlabReporter,
+    RemediationReporter.name: RemediationReporter,
     VexReporter.name: VexReporter,
 }
 
@@ -104,6 +106,7 @@ __all__ = [
     "MarkdownReporter",
     "PrometheusReporter",
     "RemediationAction",
+    "RemediationReporter",
     "ReportSummary",
     "SarifReporter",
     "StandardsSummary",

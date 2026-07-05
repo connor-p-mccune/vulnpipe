@@ -212,6 +212,12 @@ def test_report_sarif(tmp_path: Path) -> None:
     assert '"version": "2.1.0"' in result.stdout
 
 
+def test_report_remediation_format(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["report", "-i", str(_write_report(tmp_path)), "-f", "remediation"])
+    assert result.exit_code == 0
+    assert result.stdout.startswith("# vulnpipe remediation plan")
+
+
 def test_report_vex(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SOURCE_DATE_EPOCH", "1700000000")  # keep the stamp deterministic
     findings = _findings_file(
@@ -687,6 +693,8 @@ def test_scan_writes_reports_and_passes(tmp_path: Path, monkeypatch: pytest.Monk
             str(out / "report.md"),
             "--vex",
             str(out / "report.vex.json"),
+            "--remediation",
+            str(out / "remediation.md"),
         ],
     )
     assert result.exit_code == 0
@@ -695,6 +703,7 @@ def test_scan_writes_reports_and_passes(tmp_path: Path, monkeypatch: pytest.Monk
     assert (out / "junit.xml").is_file()
     assert (out / "report.html").is_file()
     assert (out / "report.md").is_file()
+    assert "vulnpipe remediation plan" in (out / "remediation.md").read_text(encoding="utf-8")
     vex_doc = json.loads((out / "report.vex.json").read_text(encoding="utf-8"))
     assert vex_doc["@context"] == "https://openvex.dev/ns/v0.2.0"
 

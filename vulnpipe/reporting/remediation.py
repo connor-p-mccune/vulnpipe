@@ -33,6 +33,7 @@ from rich.console import Console
 from rich.table import Table
 
 from vulnpipe.core.models import Finding, Severity, normalize_title
+from vulnpipe.reporting.base import BaseReporter
 
 #: Fixed render width so the text output is stable regardless of the real terminal.
 _WIDTH = 100
@@ -321,8 +322,24 @@ def remediation_to_payload(
     }
 
 
+class RemediationReporter(BaseReporter):
+    """Render findings into the ranked remediation plan as a Markdown worklist.
+
+    Registering the plan as a report format makes it reachable everywhere
+    :func:`~vulnpipe.reporting.get_reporter` is (``report`` / ``sbom`` / ``convert`` /
+    ``merge -f remediation``, and ``scan --remediation``); the ``remediate`` command
+    remains the richer interface (text / JSON, ``--top``).
+    """
+
+    name = "remediation"
+
+    def render(self, findings: list[Finding]) -> str:
+        return render_remediation_markdown(findings)
+
+
 __all__ = [
     "RemediationAction",
+    "RemediationReporter",
     "plan_remediations",
     "remediation_to_payload",
     "render_remediation_markdown",

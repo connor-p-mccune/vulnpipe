@@ -173,10 +173,11 @@ def _write_reports(
     html: Path | None,
     markdown: Path | None,
     vex: Path | None,
+    remediation: Path | None,
     junit: Path | None,
 ) -> None:
     """Write the canonical JSON report plus any requested SARIF / HTML / Markdown /
-    OpenVEX / JUnit artifacts."""
+    OpenVEX / remediation / JUnit artifacts."""
     findings = list(result.findings)
     json_path = output / "latest.json"
     _write(json_path, get_reporter("json").render(findings))
@@ -193,6 +194,9 @@ def _write_reports(
     if vex is not None:
         _write(vex, get_reporter("vex").render(findings))
         log.info("wrote OpenVEX document: %s", vex)
+    if remediation is not None:
+        _write(remediation, get_reporter("remediation").render(findings))
+        log.info("wrote remediation plan: %s", remediation)
     if junit is not None:
         _write(junit, build_junit_xml(result.diff, verdict))
         log.info("wrote JUnit report: %s", junit)
@@ -322,6 +326,12 @@ def scan(
         Path | None,
         typer.Option("--vex", dir_okay=False, help="Also write an OpenVEX document here."),
     ] = None,
+    remediation: Annotated[
+        Path | None,
+        typer.Option(
+            "--remediation", dir_okay=False, help="Also write a Markdown remediation plan here."
+        ),
+    ] = None,
     junit: Annotated[
         Path | None,
         typer.Option("--junit", dir_okay=False, help="Also write a JUnit gate report here."),
@@ -363,6 +373,7 @@ def scan(
         html=html,
         markdown=markdown,
         vex=vex,
+        remediation=remediation,
         junit=junit,
     )
     _log_summary(result, verdict)
@@ -483,7 +494,8 @@ def report(
         typer.Option(
             "--format",
             "-f",
-            help="Report format: json, html, markdown, csv, prometheus, sarif, gitlab, or vex.",
+            help="Report format: json, html, markdown, csv, prometheus, sarif, gitlab, "
+            "remediation, or vex.",
         ),
     ] = "html",
 ) -> None:

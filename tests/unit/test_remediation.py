@@ -7,8 +7,10 @@ template fallback), the text / Markdown / JSON renders, and determinism.
 
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.processing.normalizer import make_finding
+from vulnpipe.reporting import get_reporter
 from vulnpipe.reporting.remediation import (
     RemediationAction,
+    RemediationReporter,
     plan_remediations,
     remediation_to_payload,
     render_remediation_markdown,
@@ -267,3 +269,12 @@ def test_action_is_frozen() -> None:
     action = RemediationAction(key="k", title="t", detail="d", findings=())
     assert action.count == 0
     assert action.max_risk == 0
+
+
+def test_registered_as_a_report_format() -> None:
+    reporter = get_reporter("remediation")
+    assert isinstance(reporter, RemediationReporter)
+    assert reporter.name == "remediation"
+    rendered = reporter.render([_nmap_cve("CVE-2021-42013")])
+    assert rendered == render_remediation_markdown([_nmap_cve("CVE-2021-42013")])
+    assert "# vulnpipe remediation plan" in rendered
