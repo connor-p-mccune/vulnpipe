@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-05
+
+Close the supply-chain loop: emit a CycloneDX vulnerability report.
+
+### Added
+- **CycloneDX report format** (`report --format cyclonedx`,
+  `reporting/cyclonedx_reporter.py`) — emit a [CycloneDX](https://cyclonedx.org) 1.5
+  BOM whose `vulnerabilities` array lists the detected issues, each linked via
+  `affects` to the component it affects (a `library` keyed by purl for supply-chain
+  findings, an `application` keyed by `host[:port]` for network/web ones), for
+  Dependency-Track and the `cyclonedx` CLI. This is the other half of the SBOM loop —
+  vulnpipe already reads a CycloneDX SBOM and now writes a CycloneDX vulnerability
+  report — and the second dominant machine-readable vulnerability-exchange dialect
+  alongside OpenVEX. Honest by construction: only findings citing a real identifier
+  (CVE, else OSV id) produce an entry; no `analysis` triage state is fabricated (so
+  it is a disclosure report, VDR, not a full VEX); and a rating carries the real
+  qualitative severity always but a numeric score/method/vector only when a real CVSS
+  is known. Findings sharing an identifier collapse into one vulnerability described
+  by the worst-risk instance. Deterministic, with a content-addressed `serialNumber`
+  and a `metadata.timestamp` that honors `SOURCE_DATE_EPOCH`. Reachable everywhere
+  `get_reporter` is (`report` / `sbom` / `convert` / `merge -f cyclonedx`);
+  `examples/sample-report.cyclonedx.json` shows the shape. See ADR-0025.
+
 ## [1.1.0] - 2026-07-05
 
 Serve a report: a local dashboard, a JSON API, and metrics — no web framework.
@@ -349,7 +372,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.9.0...v1.0.0
 [0.9.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.8.0...v0.9.0

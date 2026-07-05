@@ -1,0 +1,294 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:9f7fce1a-f1d3-229f-baf5-f708346c9d5e",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-01-01T00:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "vulnpipe",
+          "version": "1.2.0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "application",
+      "bom-ref": "10.0.0.5:22",
+      "name": "10.0.0.5"
+    },
+    {
+      "type": "application",
+      "bom-ref": "10.0.0.5:80",
+      "name": "10.0.0.5"
+    },
+    {
+      "type": "application",
+      "bom-ref": "10.0.0.6:443",
+      "name": "10.0.0.6"
+    },
+    {
+      "type": "application",
+      "bom-ref": "app.lab.example.com:443",
+      "name": "app.lab.example.com"
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "bom-ref": "CVE-2021-42013",
+      "id": "CVE-2021-42013",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-42013"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "vulnpipe"
+          },
+          "severity": "critical",
+          "score": 9.8,
+          "method": "other"
+        }
+      ],
+      "description": "CVE-2021-42013 reported by the Nmap vulners script for http (Apache httpd 2.4.49).",
+      "affects": [
+        {
+          "ref": "10.0.0.5:80"
+        }
+      ],
+      "properties": [
+        {
+          "name": "vulnpipe:risk_score",
+          "value": "98"
+        },
+        {
+          "name": "vulnpipe:kev",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "bom-ref": "CVE-2021-41773",
+      "id": "CVE-2021-41773",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-41773"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "vulnpipe"
+          },
+          "severity": "high",
+          "score": 7.5,
+          "method": "other"
+        }
+      ],
+      "description": "CVE-2021-41773 reported by the Nmap vulners script for http (Apache httpd 2.4.49).",
+      "affects": [
+        {
+          "ref": "10.0.0.5:80"
+        }
+      ],
+      "properties": [
+        {
+          "name": "vulnpipe:risk_score",
+          "value": "75"
+        },
+        {
+          "name": "vulnpipe:kev",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "bom-ref": "CVE-2021-23017",
+      "id": "CVE-2021-23017",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-23017"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "vulnpipe"
+          },
+          "severity": "high",
+          "score": 7.7,
+          "method": "other"
+        }
+      ],
+      "description": "CVE-2021-23017 reported by the Nmap vulners script for https (nginx 1.18.0).",
+      "affects": [
+        {
+          "ref": "10.0.0.6:443"
+        }
+      ],
+      "properties": [
+        {
+          "name": "vulnpipe:risk_score",
+          "value": "54"
+        },
+        {
+          "name": "vulnpipe:kev",
+          "value": "false"
+        }
+      ]
+    },
+    {
+      "bom-ref": "CVE-2016-10009",
+      "id": "CVE-2016-10009",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2016-10009"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "vulnpipe"
+          },
+          "severity": "high",
+          "score": 7.5,
+          "method": "other"
+        }
+      ],
+      "description": "CVE-2016-10009 reported by the Nmap vulners script for ssh (OpenSSH 7.4).",
+      "affects": [
+        {
+          "ref": "10.0.0.5:22"
+        }
+      ],
+      "properties": [
+        {
+          "name": "vulnpipe:risk_score",
+          "value": "52"
+        },
+        {
+          "name": "vulnpipe:kev",
+          "value": "false"
+        }
+      ]
+    },
+    {
+      "bom-ref": "CVE-2018-15473",
+      "id": "CVE-2018-15473",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2018-15473"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "vulnpipe"
+          },
+          "severity": "medium",
+          "score": 5.3,
+          "method": "other"
+        }
+      ],
+      "description": "CVE-2018-15473 reported by the Nmap vulners script for ssh (OpenSSH 7.4).",
+      "affects": [
+        {
+          "ref": "10.0.0.5:22"
+        }
+      ],
+      "properties": [
+        {
+          "name": "vulnpipe:risk_score",
+          "value": "37"
+        },
+        {
+          "name": "vulnpipe:kev",
+          "value": "false"
+        }
+      ]
+    },
+    {
+      "bom-ref": "CVE-2019-11358",
+      "id": "CVE-2019-11358",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-11358"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "vulnpipe"
+          },
+          "severity": "medium"
+        }
+      ],
+      "description": "The identified library jquery, version 1.7.1, is vulnerable.",
+      "recommendation": "Upgrade to the latest version of jquery.",
+      "advisories": [
+        {
+          "url": "https://blog.jquery.com/2016/01/08/jquery-2-2-and-1-12-released/"
+        },
+        {
+          "url": "https://github.com/jquery/jquery/issues/2432"
+        }
+      ],
+      "affects": [
+        {
+          "ref": "app.lab.example.com:443"
+        }
+      ],
+      "properties": [
+        {
+          "name": "vulnpipe:risk_score",
+          "value": "35"
+        },
+        {
+          "name": "vulnpipe:kev",
+          "value": "false"
+        }
+      ]
+    },
+    {
+      "bom-ref": "CVE-2020-11022",
+      "id": "CVE-2020-11022",
+      "source": {
+        "name": "NVD",
+        "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-11022"
+      },
+      "ratings": [
+        {
+          "source": {
+            "name": "vulnpipe"
+          },
+          "severity": "medium"
+        }
+      ],
+      "description": "The identified library jquery, version 1.7.1, is vulnerable.",
+      "recommendation": "Upgrade to the latest version of jquery.",
+      "advisories": [
+        {
+          "url": "https://blog.jquery.com/2016/01/08/jquery-2-2-and-1-12-released/"
+        },
+        {
+          "url": "https://github.com/jquery/jquery/issues/2432"
+        }
+      ],
+      "affects": [
+        {
+          "ref": "app.lab.example.com:443"
+        }
+      ],
+      "properties": [
+        {
+          "name": "vulnpipe:risk_score",
+          "value": "35"
+        },
+        {
+          "name": "vulnpipe:kev",
+          "value": "false"
+        }
+      ]
+    }
+  ]
+}
