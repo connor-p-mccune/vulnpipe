@@ -64,7 +64,8 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `sbom/` | Supply-chain analysis: CycloneDX parsing, the OSV.dev advisory client, and the analyzer that normalizes advisories into findings. Passive (reads a file, queries a public API); never probes the described software. |
 | `ingest/` | Importers that normalize third-party scanner reports (Trivy, Grype) into the shared `Finding` model. Pure `dict → list[Finding]` parsers, passive (read a local report, map it), routed by name through a small registry. |
 | `auth/` | ZAP authentication-context construction (form / header-JWT / script). |
-| `cli/main.py` | The Typer CLI (`scan` / `report` / `diff` / `baseline`) and the `--authorized` + scope gate. |
+| `server/` | A dependency-free, read-only HTTP view over a findings report (`serve`): a pure `path → Response` router plus a thin `http.server` socket adapter. Renders through the existing reporters; never scans. |
+| `cli/main.py` | The Typer CLI (`scan` / `report` / `serve` / `diff` / `baseline` / …) and the `--authorized` + scope gate. |
 
 ## The `Finding` model
 
@@ -224,6 +225,32 @@ that never invents a fixed version, so the plan stays honest. The same planner b
 `vulnpipe remediate` (text / JSON / Markdown), a "Remediation plan" panel in the HTML
 report, and a "Top remediations" table in the terminal `stats` view — computed one
 way so the executive "what to fix first" reads identically everywhere.
+
+### Serving a report (dashboard & API)
+
+`server/` exposes an already-computed findings JSON as a small local web service —
+`vulnpipe serve` — so a report can be browsed and queried instead of only rendered
+to a file. It is built on the standard-library `http.server` alone (no web-framework
+dependency) and split for testability:
+
+- `server/routes.py` is a **pure** `path → Response` router: `render_route` maps a
+  request path onto a `Response` (status, content type, body) by delegating to the
+  existing reporters, so it is exhaustively unit-testable without opening a socket
+  and inherits their determinism. It serves the HTML report at `/`, a JSON REST API
+  under `/api` (`/api/findings` = the canonical envelope, `/api/summary` = the stats
+  payload, `/api/remediation` = the ranked plan, `/api` = a route index), Prometheus
+  text at `/metrics`, and a `/healthz` liveness probe; an unknown path is a 404 that
+  lists the routes.
+- `server/http_server.py` is a thin socket adapter: `build_handler` captures an
+  immutable snapshot of the findings so concurrent requests see a consistent view,
+  and the handler only translates `GET`/`HEAD` into a response and writes headers.
+
+It is **read-only** by construction — it renders an existing report and never scans,
+mutates state, or reads a request body — so, like `report` and `stats`, it runs
+outside the authorization/scope gate. Mutating verbs get a `405`, responses carry
+`X-Content-Type-Options: nosniff` and `Cache-Control: no-store`, and it binds
+loopback (`127.0.0.1`) by default; a non-loopback bind is honored but warned about,
+since it publishes the report on the network.
 
 ## Authenticated scanning
 
@@ -397,6 +424,9 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
   from an age-tracked baseline (`first_seen`) evaluated as of `--as-of` (text or JSON,
   non-zero exit on a breach).
 - `report` — render a findings JSON to any report format on stdout.
+- `serve` — serve a findings JSON as a local read-only dashboard + JSON API
+  (`/`, `/api/*`, `/metrics`, `/healthz`); passive, so it needs no scope or
+  `--authorized`.
 - `remediate` — group a findings JSON into a ranked, deduplicated remediation plan
   (text / JSON / Markdown), most impactful fix first; `--top` limits the list.
 - `merge` — combine findings JSONs from separate runs (network scan + SBOM

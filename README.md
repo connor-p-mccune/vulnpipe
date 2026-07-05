@@ -41,6 +41,7 @@ payloads.
 - [Configuration](#configuration)
 - [Run a scan](#run-a-scan)
 - [Reports](#reports)
+- [Serve the report (dashboard & API)](#serve-the-report-dashboard--api)
 - [Remediation plan](#remediation-plan)
 - [CI usage: baseline, diff, gate](#ci-usage-baseline-diff-gate)
 - [Run via Docker](#run-via-docker)
@@ -163,7 +164,7 @@ Verify it:
 
 ```console
 $ vulnpipe version
-vulnpipe 1.0.0
+vulnpipe 1.1.0
 ```
 
 ## Quickstart
@@ -452,7 +453,7 @@ every finding with its fingerprint and computed risk score:
 ```jsonc
 {
   "schema_version": "1.0",
-  "tool": { "name": "vulnpipe", "version": "1.0.0" },
+  "tool": { "name": "vulnpipe", "version": "1.1.0" },
   "summary": {
     "total": 15,
     "hosts": 4,
@@ -476,6 +477,40 @@ every finding with its fingerprint and computed risk score:
   ]
 }
 ```
+
+## Serve the report (dashboard & API)
+
+Sometimes you want to *browse* a report, not just render it to a file. `vulnpipe
+serve` exposes an existing findings JSON as a small local web service — no web
+framework, just the Python standard library:
+
+```bash
+vulnpipe serve --input results/latest.json         # http://127.0.0.1:8000
+```
+
+| Route | Serves |
+| --- | --- |
+| `GET /` | The interactive HTML dashboard (the same report the `html` format renders). |
+| `GET /api/findings` | The canonical findings JSON (the report envelope). |
+| `GET /api/summary` | The dashboard summary payload (severity, OWASP, top risks, worst hosts). |
+| `GET /api/remediation` | The ranked remediation plan — fix these first. |
+| `GET /metrics` | Prometheus text-exposition metrics, ready to scrape. |
+| `GET /healthz` | A JSON liveness / readiness probe. |
+
+```console
+$ curl -s http://127.0.0.1:8000/healthz
+{ "status": "ok", "version": "1.1.0", "findings": 15 }
+$ curl -s http://127.0.0.1:8000/api/summary | jq '.by_severity'
+{ "critical": 1, "high": 5, "medium": 2, "low": 2, "informational": 5 }
+```
+
+It is **read-only** by design — it renders an existing report and never scans,
+mutates state, or reads a request body — so, like `report` and `stats`, it needs no
+scope or `--authorized`. Mutating verbs get a `405`, and it binds loopback
+(`127.0.0.1`) by default; pass `--host 0.0.0.0` to publish it on the network (a
+non-loopback bind is warned about, since it exposes the report to anything that can
+reach the address). Point a scrape config at `/metrics` or a uptime probe at
+`/healthz` and a scan report becomes a live, queryable surface.
 
 ## Remediation plan
 
@@ -666,6 +701,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `sla` | Report findings open past their per-severity remediation SLA, by age from an age-tracked baseline (`--current`, `--baseline`, `--policy` or `--critical-days`/`--high-days`/…, `--as-of`). |
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
 | `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX on stdout (`--input`, `--format`). |
+| `serve` | Serve a findings JSON as a local read-only dashboard + JSON API (`/`, `/api/*`, `/metrics`, `/healthz`) on `http://127.0.0.1:8000` (`--input`, `--host`, `--port`). |
 | `remediate` | Group a findings JSON into a ranked, deduplicated remediation plan — fix these first — as text / JSON / Markdown (`--input`, `--format`, `--top`). |
 | `merge` | Combine findings JSONs from separate runs (e.g. a network scan + an SBOM analysis) into one deduplicated, re-prioritized report (`--input` repeated, `--output`, `--format`). |
 | `stats` | Summarize a findings JSON — severity breakdown, OWASP Top 10, top risks, and worst-affected hosts — as a terminal view or a JSON dashboard payload (`--input`, `--format text\|json`). |

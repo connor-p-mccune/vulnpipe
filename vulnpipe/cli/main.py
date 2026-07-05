@@ -656,9 +656,7 @@ def stats(
 def serve(
     input_path: Annotated[
         Path,
-        typer.Option(
-            "--input", "-i", exists=True, dir_okay=False, help="Findings JSON to serve."
-        ),
+        typer.Option("--input", "-i", exists=True, dir_okay=False, help="Findings JSON to serve."),
     ],
     host: Annotated[
         str,

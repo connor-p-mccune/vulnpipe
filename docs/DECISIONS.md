@@ -441,3 +441,28 @@ JSON shape (which can change across versions), bounded by keeping the parsers sm
 fixture-tested. The alternative — one universal "SARIF-in" importer — was rejected because
 neither Trivy nor Grype's native, richest output is SARIF, and meeting them in their own format
 loses less information.
+
+## ADR-0024 — Serve reports over the standard library, read-only, no framework
+
+**Context.** A findings JSON is useful rendered to a file, but a report people can *browse and
+query* — an HTML dashboard, a JSON API for automation, a `/metrics` endpoint for scraping — is
+materially more useful, and it is a natural way to demonstrate the pipeline. The obvious risk is
+scope creep: a web service invites statefulness, a database, authentication, write endpoints,
+and a heavyweight framework dependency, none of which belong in a detection-and-reporting tool.
+
+**Decision.** Add `vulnpipe serve` as a strictly **read-only** HTTP view over an
+already-computed report, built on the standard-library `http.server` alone — no Flask/FastAPI
+dependency. Split it into a pure `path → Response` router (`server/routes.py`) that delegates to
+the existing reporters, and a thin socket adapter (`server/http_server.py`) that owns only
+sockets and lifecycle. The server never scans, never mutates state, and reads no request body;
+mutating verbs return `405`, it binds loopback by default (a non-loopback bind is warned about),
+and responses carry `nosniff` / `no-store`. Because it is passive it lives outside the
+authorization gate, exactly like `report` and `stats`.
+
+**Consequences.** The whole surface is a new *transport* for the same deterministic data, not a
+second code path — every route renders through a reporter, so the API cannot drift from the file
+output, and the pure router is exhaustively unit-testable without a socket (the adapter is
+covered by a single loopback round-trip). Keeping it framework-free means no new dependency and
+no attack surface beyond a GET router, at the cost of not being a multi-tenant application
+server — which is the point. If persistent hosting, auth, or write operations are ever needed,
+that is a different tool; `serve` deliberately stops at "browse and query a report locally."
