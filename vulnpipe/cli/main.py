@@ -13,6 +13,7 @@ orchestrator and the CI stage. Commands:
 * ``sbom`` -- analyze a CycloneDX SBOM for known-vulnerable dependencies (OSV.dev);
 * ``convert`` -- import a third-party scanner report (Trivy / Grype) as vulnpipe findings;
 * ``report`` -- render a findings JSON into any report format on stdout;
+* ``serve`` -- serve a findings JSON as a local read-only dashboard + JSON API;
 * ``remediate`` -- group a findings JSON into a ranked, deduplicated remediation plan;
 * ``merge`` -- combine findings JSONs from separate runs into one deduplicated report;
 * ``diff`` -- classify a findings JSON against a baseline (new / persisting /
@@ -113,6 +114,7 @@ from vulnpipe.reporting import (
     stats_to_payload,
 )
 from vulnpipe.sbom import SbomError, run_sbom_pipeline
+from vulnpipe.server import serve_findings
 
 app = typer.Typer(
     add_completion=False,
@@ -648,6 +650,42 @@ def stats(
         typer.echo(json.dumps(stats_to_payload(findings), indent=2, ensure_ascii=False))
     else:
         _emit(render_stats(findings))
+
+
+@app.command()
+def serve(
+    input_path: Annotated[
+        Path,
+        typer.Option(
+            "--input", "-i", exists=True, dir_okay=False, help="Findings JSON to serve."
+        ),
+    ],
+    host: Annotated[
+        str,
+        typer.Option("--host", help="Interface to bind (loopback by default; keeps it private)."),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option("--port", "-p", min=0, max=65535, help="Port to listen on."),
+    ] = 8000,
+) -> None:
+    """Serve a findings JSON as a local dashboard + JSON API (read-only, no scanning).
+
+    Renders an existing report over HTTP: the HTML dashboard at ``/``, a JSON API
+    under ``/api`` (``/api/findings`` / ``/api/summary`` / ``/api/remediation``),
+    Prometheus metrics at ``/metrics``, and a ``/healthz`` probe. It never scans and
+    accepts no input beyond the request path, so it needs no scope or authorization.
+    """
+    try:
+        findings = load_findings(input_path)
+    except (OSError, ValueError) as exc:
+        log.error("Failed to read findings from %s: %s", input_path, exc)
+        raise typer.Exit(code=2) from exc
+    try:
+        serve_findings(findings, host=host, port=port)
+    except OSError as exc:  # e.g. the port is already in use
+        log.error("Failed to start server on %s:%d: %s", host, port, exc)
+        raise typer.Exit(code=1) from exc
 
 
 @app.command()
