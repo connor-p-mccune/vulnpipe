@@ -11,13 +11,19 @@ and GitLab scan timestamps are the documented, spec-mandated exceptions -- see t
 respective reporter modules).
 
 :func:`get_reporter` resolves a format name (``"json"`` / ``"html"`` / ``"markdown"``
-/ ``"csv"`` / ``"prometheus"`` / ``"sarif"`` / ``"gitlab"`` / ``"vex"``) to a reporter
-instance so callers -- e.g. the ``report`` CLI command -- can stay format-agnostic.
+/ ``"csv"`` / ``"prometheus"`` / ``"sarif"`` / ``"gitlab"`` / ``"vex"`` /
+``"cyclonedx"``) to a reporter instance so callers -- e.g. the ``report`` CLI
+command -- can stay format-agnostic.
 """
 
 from vulnpipe.reporting.badge import badge_value, render_badge
 from vulnpipe.reporting.base import BaseReporter
 from vulnpipe.reporting.csv_reporter import CsvReporter, render_csv
+from vulnpipe.reporting.cyclonedx_reporter import (
+    CyclonedxReporter,
+    build_cyclonedx,
+    render_cyclonedx,
+)
 from vulnpipe.reporting.gitlab_reporter import GitlabReporter, build_gitlab_report, render_gitlab
 from vulnpipe.reporting.html_reporter import HtmlReporter, render_html
 from vulnpipe.reporting.json_reporter import (
@@ -62,6 +68,7 @@ _REPORTERS: dict[str, type[BaseReporter]] = {
     GitlabReporter.name: GitlabReporter,
     RemediationReporter.name: RemediationReporter,
     VexReporter.name: VexReporter,
+    CyclonedxReporter.name: CyclonedxReporter,
 }
 
 
@@ -100,6 +107,7 @@ __all__ = [
     "SEVERITY_DISPLAY_ORDER",
     "BaseReporter",
     "CsvReporter",
+    "CyclonedxReporter",
     "GitlabReporter",
     "HtmlReporter",
     "JsonReporter",
@@ -113,6 +121,7 @@ __all__ = [
     "VexReporter",
     "available_formats",
     "badge_value",
+    "build_cyclonedx",
     "build_gitlab_report",
     "build_report",
     "build_report_schema",
@@ -127,6 +136,7 @@ __all__ = [
     "remediation_to_payload",
     "render_badge",
     "render_csv",
+    "render_cyclonedx",
     "render_gitlab",
     "render_html",
     "render_markdown",

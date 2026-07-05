@@ -498,7 +498,7 @@ def report(
             "--format",
             "-f",
             help="Report format: json, html, markdown, csv, prometheus, sarif, gitlab, "
-            "remediation, or vex.",
+            "remediation, vex, or cyclonedx.",
         ),
     ] = "html",
 ) -> None:
