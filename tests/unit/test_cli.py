@@ -10,6 +10,7 @@ findings JSON written to ``tmp_path``.
 import json
 import xml.etree.ElementTree as ET
 from collections.abc import Iterable, Sequence
+from datetime import date
 from pathlib import Path
 
 import httpx
@@ -883,3 +884,83 @@ def test_baseline_invalid_input_exits_2(tmp_path: Path) -> None:
     bad.write_text("{ not json", encoding="utf-8")
     result = runner.invoke(app, ["baseline", "-i", str(bad), "-o", str(tmp_path / "b.json")])
     assert result.exit_code == 2
+
+
+def test_baseline_track_age_records_first_seen(tmp_path: Path) -> None:
+    src = _findings_file(tmp_path, "f.json", [_f("RCE", severity=Severity.HIGH)])
+    out = tmp_path / "baseline.json"
+    result = runner.invoke(app, ["baseline", "-i", str(src), "-o", str(out), "--track-age"])
+    assert result.exit_code == 0
+    assert "first_seen" in out.read_text(encoding="utf-8")
+
+
+# --------------------------------------------------------------------------- #
+# sla
+# --------------------------------------------------------------------------- #
+def _aged_baseline(tmp_path: Path, finding: Finding, first_seen: date) -> Path:
+    path = tmp_path / "aged-baseline.json"
+    save_baseline(build_baseline([finding], first_seen=first_seen), path)
+    return path
+
+
+def test_sla_flags_overdue_finding(tmp_path: Path) -> None:
+    finding = _f("CVE-2021-42013", severity=Severity.CRITICAL)
+    base = _aged_baseline(tmp_path, finding, date(2020, 1, 1))
+    current = _findings_file(tmp_path, "cur.json", [finding])
+    result = runner.invoke(
+        app,
+        [
+            "sla",
+            "--current",
+            str(current),
+            "--baseline",
+            str(base),
+            "--critical-days",
+            "7",
+            "--as-of",
+            "2020-02-01",
+        ],
+    )
+    assert result.exit_code == 1
+    assert "SLA breached" in result.stdout
+
+
+def test_sla_passes_within_deadline_json(tmp_path: Path) -> None:
+    finding = _f("CVE-2021-42013", severity=Severity.CRITICAL)
+    base = _aged_baseline(tmp_path, finding, date(2020, 1, 1))
+    current = _findings_file(tmp_path, "cur.json", [finding])
+    result = runner.invoke(
+        app,
+        [
+            "sla",
+            "--current",
+            str(current),
+            "--baseline",
+            str(base),
+            "--critical-days",
+            "365",
+            "--as-of",
+            "2020-02-01",
+            "-f",
+            "json",
+        ],
+    )
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["passed"] is True
+
+
+def test_sla_invalid_as_of_exits_two(tmp_path: Path) -> None:
+    finding = _f("CVE", severity=Severity.CRITICAL)
+    base = _aged_baseline(tmp_path, finding, date(2020, 1, 1))
+    current = _findings_file(tmp_path, "cur.json", [finding])
+    result = runner.invoke(
+        app,
+        ["sla", "--current", str(current), "--baseline", str(base), "--as-of", "not-a-date"],
+    )
+    assert result.exit_code == 2
+
+
+def test_schema_sla_kind_describes_the_policy() -> None:
+    result = runner.invoke(app, ["schema", "sla"])
+    assert result.exit_code == 0
+    assert "max_age_days" in result.stdout

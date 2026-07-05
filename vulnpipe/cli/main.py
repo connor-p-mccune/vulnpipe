@@ -8,6 +8,8 @@ orchestrator and the CI stage. Commands:
   OpenVEX / JUnit), and exit non-zero when the gate trips on a new severe finding;
 * ``gate`` -- re-evaluate the CI gate (severity threshold or a policy file) over an
   existing findings JSON without rescanning;
+* ``sla`` -- report findings open past their per-severity remediation SLA, by age
+  from an age-tracked baseline;
 * ``sbom`` -- analyze a CycloneDX SBOM for known-vulnerable dependencies (OSV.dev);
 * ``report`` -- render a findings JSON into any report format on stdout;
 * ``remediate`` -- group a findings JSON into a ranked, deduplicated remediation plan;
@@ -25,6 +27,7 @@ reporter registry, so ``report`` / ``sbom`` / ``merge`` stay format-agnostic.
 import json
 import logging
 import os
+from datetime import date
 from pathlib import Path
 from typing import Annotated
 
@@ -58,6 +61,15 @@ from vulnpipe.ci.policy import (
     load_policy,
     policy_from_threshold,
     policy_result_to_payload,
+)
+from vulnpipe.ci.sla import (
+    SlaError,
+    SlaPolicy,
+    evaluate_sla,
+    load_sla_policy,
+    render_sla_text,
+    sla_policy_from_days,
+    sla_result_to_payload,
 )
 from vulnpipe.ci.trends import (
     build_trend,
@@ -214,7 +226,9 @@ def version() -> None:
 def schema(
     kind: Annotated[
         str,
-        typer.Argument(help="Which schema to print: config, report, policy, or false-positives."),
+        typer.Argument(
+            help="Which schema to print: config, report, policy, sla, or false-positives."
+        ),
     ] = "config",
 ) -> None:
     """Print a JSON Schema: the targets/scope config, the findings report, or a gate policy."""
@@ -222,6 +236,7 @@ def schema(
         "config": Config.model_json_schema,
         "report": build_report_schema,
         "policy": GatePolicy.model_json_schema,
+        "sla": SlaPolicy.model_json_schema,
         "false-positives": FalsePositiveConfig.model_json_schema,
     }
     builder = builders.get(kind)
@@ -778,6 +793,89 @@ def gate(
 
 
 @app.command()
+def sla(
+    current: Annotated[
+        Path,
+        typer.Option("--current", exists=True, dir_okay=False, help="Current findings JSON."),
+    ],
+    baseline: Annotated[
+        Path,
+        typer.Option(
+            "--baseline",
+            exists=True,
+            dir_okay=False,
+            help="Age-tracked baseline (built with `baseline --track-age`).",
+        ),
+    ],
+    policy: Annotated[
+        Path | None,
+        typer.Option(
+            "--policy",
+            dir_okay=False,
+            help="SLA-policy YAML (max_age_days per severity); overrides the inline day options.",
+        ),
+    ] = None,
+    critical_days: Annotated[
+        int | None,
+        typer.Option("--critical-days", min=0, help="Remediation SLA for criticals (days)."),
+    ] = None,
+    high_days: Annotated[
+        int | None,
+        typer.Option("--high-days", min=0, help="Remediation SLA for high findings (days)."),
+    ] = None,
+    medium_days: Annotated[
+        int | None,
+        typer.Option("--medium-days", min=0, help="Remediation SLA for medium findings (days)."),
+    ] = None,
+    low_days: Annotated[
+        int | None,
+        typer.Option("--low-days", min=0, help="Remediation SLA for low findings (days)."),
+    ] = None,
+    as_of: Annotated[
+        str | None,
+        typer.Option("--as-of", help="Evaluate ages as of this ISO date (default: today)."),
+    ] = None,
+    fmt: Annotated[
+        str, typer.Option("--format", "-f", help="Output format: text or json.")
+    ] = "text",
+) -> None:
+    """Report findings open past their remediation SLA, by age from the baseline."""
+    if fmt not in {"text", "json"}:
+        log.error("Unknown sla format %r; choose text or json", fmt)
+        raise typer.Exit(code=2)
+    try:
+        as_of_date = date.fromisoformat(as_of) if as_of else date.today()
+    except ValueError as exc:
+        log.error("Invalid --as-of date %r (use YYYY-MM-DD): %s", as_of, exc)
+        raise typer.Exit(code=2) from exc
+    try:
+        findings = load_findings(current)
+        base = load_baseline(baseline)
+        rules = (
+            load_sla_policy(policy)
+            if policy is not None
+            else sla_policy_from_days(
+                {
+                    Severity.CRITICAL: critical_days,
+                    Severity.HIGH: high_days,
+                    Severity.MEDIUM: medium_days,
+                    Severity.LOW: low_days,
+                }
+            )
+        )
+    except (SlaError, BaselineError, OSError, ValueError) as exc:
+        log.error("Failed to load SLA inputs: %s", exc)
+        raise typer.Exit(code=2) from exc
+    result = evaluate_sla(findings, base, rules, today=as_of_date)
+    if fmt == "json":
+        typer.echo(json.dumps(sla_result_to_payload(result), indent=2, ensure_ascii=False))
+    else:
+        _emit(render_sla_text(result))
+    if result.exit_code != 0:
+        raise typer.Exit(code=result.exit_code)
+
+
+@app.command()
 def trend(
     inputs: Annotated[
         list[Path],
@@ -821,14 +919,22 @@ def baseline(
         bool,
         typer.Option("--update", help="Merge into an existing baseline instead of replacing it."),
     ] = False,
+    track_age: Annotated[
+        bool,
+        typer.Option(
+            "--track-age",
+            help="Record today's date as each new finding's first-seen, for SLA/age reporting.",
+        ),
+    ] = False,
 ) -> None:
     """Create or update a baseline from a findings JSON file."""
+    stamp = date.today() if track_age else None
     try:
         findings = load_findings(input_path)
         if update and output.is_file():
-            result = merge_baseline(load_baseline(output), findings)
+            result = merge_baseline(load_baseline(output), findings, first_seen=stamp)
         else:
-            result = build_baseline(findings)
+            result = build_baseline(findings, first_seen=stamp)
     except (BaselineError, OSError, ValueError) as exc:
         log.error("Failed to build baseline: %s", exc)
         raise typer.Exit(code=2) from exc
