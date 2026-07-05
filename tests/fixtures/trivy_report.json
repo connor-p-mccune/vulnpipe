@@ -1,0 +1,58 @@
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "myapp:1.0",
+  "ArtifactType": "container_image",
+  "Results": [
+    {
+      "Target": "myapp:1.0 (debian 11.6)",
+      "Class": "os-pkgs",
+      "Type": "debian",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2022-1271",
+          "PkgName": "gzip",
+          "InstalledVersion": "1.10-4",
+          "FixedVersion": "1.10-4+deb11u1",
+          "Severity": "HIGH",
+          "Title": "gzip: arbitrary-file-write via zgrep",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2022-1271",
+          "References": ["https://www.openwall.com/lists/oss-security/2022/04/07/8"],
+          "CweIDs": ["CWE-427"],
+          "CVSS": {
+            "nvd": {
+              "V3Score": 8.8,
+              "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H"
+            },
+            "redhat": { "V3Score": 7.1 }
+          }
+        },
+        {
+          "VulnerabilityID": "CVE-2021-3999",
+          "PkgName": "glibc",
+          "InstalledVersion": "2.31-13",
+          "FixedVersion": "2.31-13+deb11u3",
+          "Severity": "CRITICAL",
+          "Title": "glibc: off-by-one buffer overflow in getcwd",
+          "CVSS": { "nvd": { "V3Score": 7.8 } }
+        }
+      ]
+    },
+    {
+      "Target": "requirements.txt",
+      "Class": "lang-pkgs",
+      "Type": "pip",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "GHSA-xxxx-yyyy-zzzz",
+          "PkgName": "flask",
+          "InstalledVersion": "0.12",
+          "Severity": "MEDIUM"
+        }
+      ]
+    },
+    {
+      "Target": "no-vulns",
+      "Class": "os-pkgs"
+    }
+  ]
+}

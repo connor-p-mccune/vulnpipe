@@ -1,0 +1,47 @@
+{
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2022-1271",
+        "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2022-1271",
+        "namespace": "debian:distro:debian:11",
+        "severity": "High",
+        "urls": ["https://security-tracker.debian.org/tracker/CVE-2022-1271"],
+        "description": "arbitrary file write via zgrep",
+        "cvss": [
+          {
+            "version": "3.1",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+            "metrics": { "baseScore": 8.8 }
+          }
+        ],
+        "fix": { "versions": ["1.10-4+deb11u1"], "state": "fixed" }
+      },
+      "artifact": {
+        "name": "gzip",
+        "version": "1.10-4",
+        "type": "deb",
+        "purl": "pkg:deb/debian/gzip@1.10-4"
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-aaaa-bbbb-cccc",
+        "severity": "Medium",
+        "cvss": [],
+        "fix": { "versions": [], "state": "not-fixed" }
+      },
+      "artifact": {
+        "name": "flask",
+        "version": "0.12",
+        "type": "python",
+        "purl": "pkg:pypi/flask@0.12"
+      }
+    }
+  ],
+  "source": {
+    "type": "image",
+    "target": { "userInput": "myapp:1.0", "imageID": "sha256:abc123" }
+  },
+  "descriptor": { "name": "grype", "version": "0.74.0" }
+}
