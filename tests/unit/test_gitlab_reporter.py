@@ -164,6 +164,23 @@ def test_reporter_rejects_bad_source_date_epoch(monkeypatch: pytest.MonkeyPatch)
         GitlabReporter().render(_findings())
 
 
+def test_reporter_stamps_wall_clock_when_no_epoch(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SOURCE_DATE_EPOCH", raising=False)
+    document = json.loads(GitlabReporter().render(_findings()))
+    start = document["scan"]["start_time"]
+    assert len(start) == 19 and start[10] == "T"  # a real YYYY-MM-DDTHH:MM:SS stamp
+
+
+def test_rule_identifier_falls_back_to_title_without_plugin_id() -> None:
+    finding = make_finding(source="nmap", host="10.0.0.5", title="Open port 22/tcp")
+    identifiers = build_gitlab_report([finding])["vulnerabilities"][0]["identifiers"]
+    assert identifiers[0] == {
+        "type": "vulnpipe_rule",
+        "name": "nmap/Open port 22/tcp",
+        "value": "nmap/Open port 22/tcp",
+    }
+
+
 def test_registered_under_gitlab_format() -> None:
     assert isinstance(get_reporter("gitlab"), GitlabReporter)
 

@@ -126,3 +126,23 @@ def test_load_policy(tmp_path: Path) -> None:
 def test_load_missing_policy_raises(tmp_path: Path) -> None:
     with pytest.raises(SlaError, match="not found"):
         load_sla_policy(tmp_path / "nope.yaml")
+
+
+def test_load_empty_policy_is_permissive(tmp_path: Path) -> None:
+    path = tmp_path / "empty.yaml"
+    path.write_text("", encoding="utf-8")
+    assert load_sla_policy(path).max_age_days == {}
+
+
+def test_load_non_mapping_policy_raises(tmp_path: Path) -> None:
+    path = tmp_path / "list.yaml"
+    path.write_text("- 1\n- 2\n", encoding="utf-8")
+    with pytest.raises(SlaError, match="mapping"):
+        load_sla_policy(path)
+
+
+def test_load_invalid_schema_raises(tmp_path: Path) -> None:
+    path = tmp_path / "bad.yaml"
+    path.write_text("max_age_days:\n  critical: -3\n", encoding="utf-8")  # negative days
+    with pytest.raises(SlaError, match="Invalid SLA policy"):
+        load_sla_policy(path)

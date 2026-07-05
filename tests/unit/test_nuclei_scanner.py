@@ -102,6 +102,11 @@ def test_host_port_from_url_and_hostport() -> None:
     assert _host_port("app.lab.example.com:8443") == ("app.lab.example.com", 8443)
     assert _host_port("10.0.0.5") == ("10.0.0.5", None)
     assert _host_port("") == (None, None)
+    assert _host_port("host:notaport") == ("host:notaport", None)  # non-numeric port
+
+
+def test_result_to_finding_non_dict_is_skipped() -> None:
+    assert result_to_finding("not a dict") is None
 
 
 # --------------------------------------------------------------------------- #

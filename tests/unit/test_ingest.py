@@ -89,6 +89,32 @@ def test_trivy_rejects_non_report() -> None:
         parse_trivy([1, 2, 3])
 
 
+def test_trivy_reads_purl_and_skips_malformed_entries() -> None:
+    document = {
+        "ArtifactName": "img:1",
+        "Results": [
+            "not-a-result",  # skipped
+            {"Target": "t", "Vulnerabilities": "not-a-list"},  # skipped
+            {
+                "Target": "t",
+                "Vulnerabilities": [
+                    "not-a-dict",  # skipped
+                    {"PkgName": "x"},  # no VulnerabilityID -> skipped
+                    {
+                        "VulnerabilityID": "CVE-2024-0001",
+                        "PkgName": "openssl",
+                        "Severity": "LOW",
+                        "PkgIdentifier": {"PURL": "pkg:deb/debian/openssl@1.1"},
+                    },
+                ],
+            },
+        ],
+    }
+    findings = parse_trivy(document)
+    assert len(findings) == 1
+    assert findings[0].metadata["purl"] == "pkg:deb/debian/openssl@1.1"
+
+
 # --------------------------------------------------------------------------- #
 # Grype
 # --------------------------------------------------------------------------- #
