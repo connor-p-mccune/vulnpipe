@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-05
+
+### Added
+- **Remediation as a report format** — the ranked remediation plan is now a
+  registered report format (`report --format remediation`), so it is reachable
+  everywhere `get_reporter` is: `report` / `sbom` / `convert` / `merge -f remediation`,
+  and `scan --remediation` writes the Markdown worklist alongside the other report
+  artifacts. The composite GitHub Action gains a matching `remediation` input (e.g. to
+  post the plan as a pull-request comment). The `remediate` command remains the richer
+  interface (text / JSON, `--top`).
+
 ## [0.8.0] - 2026-07-05
 
 Aggregation: fold every source into one scan.
@@ -289,7 +300,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.5.0...v0.6.0

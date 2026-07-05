@@ -60,6 +60,10 @@ inputs:
     description: Path to also write an OpenVEX document (empty to skip).
     required: false
     default: ""
+  remediation:
+    description: Path to also write a Markdown remediation plan, e.g. for a PR comment (empty to skip).
+    required: false
+    default: ""
   junit:
     description: Path to also write a JUnit gate report for CI test reporting (empty to skip).
     required: false
@@ -106,6 +110,7 @@ runs:
         VP_MARKDOWN: ${{ inputs.markdown }}
         VP_HTML: ${{ inputs.html }}
         VP_VEX: ${{ inputs.vex }}
+        VP_REMEDIATION: ${{ inputs.remediation }}
         VP_JUNIT: ${{ inputs.junit }}
       run: |
         set -euo pipefail
@@ -119,5 +124,6 @@ runs:
         if [ -n "$VP_MARKDOWN" ]; then args+=(--markdown "$VP_MARKDOWN"); fi
         if [ -n "$VP_HTML" ]; then args+=(--html "$VP_HTML"); fi
         if [ -n "$VP_VEX" ]; then args+=(--vex "$VP_VEX"); fi
+        if [ -n "$VP_REMEDIATION" ]; then args+=(--remediation "$VP_REMEDIATION"); fi
         if [ -n "$VP_JUNIT" ]; then args+=(--junit "$VP_JUNIT"); fi
         vulnpipe "${args[@]}"
