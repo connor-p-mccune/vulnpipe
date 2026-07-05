@@ -152,6 +152,46 @@ def test_merge_unreadable_input_exits_two(tmp_path: Path) -> None:
     assert result.exit_code == 2
 
 
+# --------------------------------------------------------------------------- #
+# convert (third-party scanner ingestion)
+# --------------------------------------------------------------------------- #
+_FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
+
+
+def test_convert_trivy_to_findings_json(tmp_path: Path) -> None:
+    out = tmp_path / "converted.json"
+    result = runner.invoke(
+        app,
+        ["convert", "-i", str(_FIXTURES / "trivy_report.json"), "--from", "trivy", "-o", str(out)],
+    )
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["summary"]["total"] == 3
+    assert any(f["source"] == "trivy" for f in payload["findings"])
+    assert json.loads(out.read_text(encoding="utf-8")) == payload
+
+
+def test_convert_grype_renders_markdown() -> None:
+    grype = str(_FIXTURES / "grype_report.json")
+    result = runner.invoke(app, ["convert", "-i", grype, "--from", "grype", "-f", "markdown"])
+    assert result.exit_code == 0
+    assert "CVE-2022-1271" in result.stdout
+
+
+def test_convert_unknown_source_exits_two() -> None:
+    result = runner.invoke(
+        app, ["convert", "-i", str(_FIXTURES / "trivy_report.json"), "--from", "snyk"]
+    )
+    assert result.exit_code == 2
+
+
+def test_convert_wrong_shape_exits_two(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"not": "a report"}', encoding="utf-8")
+    result = runner.invoke(app, ["convert", "-i", str(bad), "--from", "trivy"])
+    assert result.exit_code == 2
+
+
 def test_report_json(tmp_path: Path) -> None:
     result = runner.invoke(app, ["report", "--input", str(_write_report(tmp_path)), "-f", "json"])
     assert result.exit_code == 0

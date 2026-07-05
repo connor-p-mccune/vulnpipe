@@ -11,6 +11,7 @@ orchestrator and the CI stage. Commands:
 * ``sla`` -- report findings open past their per-severity remediation SLA, by age
   from an age-tracked baseline;
 * ``sbom`` -- analyze a CycloneDX SBOM for known-vulnerable dependencies (OSV.dev);
+* ``convert`` -- import a third-party scanner report (Trivy / Grype) as vulnpipe findings;
 * ``report`` -- render a findings JSON into any report format on stdout;
 * ``remediate`` -- group a findings JSON into a ranked, deduplicated remediation plan;
 * ``merge`` -- combine findings JSONs from separate runs into one deduplicated report;
@@ -88,6 +89,7 @@ from vulnpipe.core.logging import configure_logging, get_logger
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.core.orchestrator import PipelineResult, run_pipeline
 from vulnpipe.core.planner import build_scan_plan, render_plan
+from vulnpipe.ingest import IngestError, available_ingesters, get_ingester
 from vulnpipe.notify import NotifyError, post_webhook
 from vulnpipe.plugins import REPORTER_GROUP, SCANNER_GROUP, load_plugins, loaded_plugins
 from vulnpipe.processing import (
@@ -554,6 +556,58 @@ def merge(
         _write(output, get_reporter("json").render(merged))
         log.info("wrote merged findings JSON: %s", output)
     _emit(reporter.render(merged))
+
+
+@app.command()
+def convert(
+    input_path: Annotated[
+        Path,
+        typer.Option(
+            "--input", "-i", exists=True, dir_okay=False, help="Third-party scanner JSON report."
+        ),
+    ],
+    from_format: Annotated[
+        str,
+        typer.Option("--from", help="Source scanner format: trivy or grype."),
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output", "-o", dir_okay=False, help="Also write the converted canonical JSON here."
+        ),
+    ] = None,
+    fmt: Annotated[
+        str,
+        typer.Option("--format", "-f", help="Render format for stdout: any report format."),
+    ] = "json",
+) -> None:
+    """Convert a third-party scanner report (Trivy / Grype) into vulnpipe findings.
+
+    Passive: it reads the report file and normalizes it into the shared model, so the
+    output is ordinary findings JSON the whole toolchain (report / remediate / gate /
+    sla / diff / merge) consumes. No scope or authorization needed.
+    """
+    try:
+        reporter = get_reporter(fmt)
+    except KeyError as exc:
+        log.error("Unknown format %r; choose one of: %s", fmt, ", ".join(available_formats()))
+        raise typer.Exit(code=2) from exc
+    try:
+        ingester = get_ingester(from_format)
+    except IngestError as exc:
+        log.error("%s (supported: %s)", exc, ", ".join(available_ingesters()))
+        raise typer.Exit(code=2) from exc
+    try:
+        document = json.loads(input_path.read_text(encoding="utf-8"))
+        findings = prioritize(deduplicate(ingester(document)))
+    except (OSError, ValueError, IngestError) as exc:
+        log.error("Failed to convert %s: %s", input_path, exc)
+        raise typer.Exit(code=2) from exc
+    log.info("converted %d finding(s) from %s (%s)", len(findings), input_path, from_format)
+    if output is not None:
+        _write(output, get_reporter("json").render(findings))
+        log.info("wrote converted findings JSON: %s", output)
+    _emit(reporter.render(findings))
 
 
 @app.command()
