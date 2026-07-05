@@ -110,6 +110,7 @@ from vulnpipe.reporting import (
     render_remediation_text,
     render_stats,
     severity_counts,
+    stats_to_payload,
 )
 from vulnpipe.sbom import SbomError, run_sbom_pipeline
 
@@ -630,14 +631,23 @@ def stats(
             "--input", "-i", exists=True, dir_okay=False, help="Findings JSON to summarize."
         ),
     ],
+    fmt: Annotated[
+        str, typer.Option("--format", "-f", help="Output format: text or json.")
+    ] = "text",
 ) -> None:
-    """Print a terminal summary of a findings JSON: severity, top risks, worst hosts."""
+    """Print a summary of a findings JSON: severity, top risks, worst hosts (text or JSON)."""
+    if fmt not in {"text", "json"}:
+        log.error("Unknown stats format %r; choose text or json", fmt)
+        raise typer.Exit(code=2)
     try:
         findings = load_findings(input_path)
     except (OSError, ValueError) as exc:
         log.error("Failed to read findings from %s: %s", input_path, exc)
         raise typer.Exit(code=2) from exc
-    _emit(render_stats(findings))
+    if fmt == "json":
+        typer.echo(json.dumps(stats_to_payload(findings), indent=2, ensure_ascii=False))
+    else:
+        _emit(render_stats(findings))
 
 
 @app.command()

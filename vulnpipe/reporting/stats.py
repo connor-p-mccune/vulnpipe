@@ -13,6 +13,7 @@ fixed input and unit-testable without a real terminal.
 
 import io
 from collections.abc import Iterable
+from typing import Any
 
 from rich.console import Console
 from rich.table import Table
@@ -153,4 +154,49 @@ def render_stats(findings: Iterable[Finding]) -> str:
     return buffer.getvalue()
 
 
-__all__ = ["render_stats"]
+def stats_to_payload(findings: Iterable[Finding]) -> dict[str, Any]:
+    """Build a compact, deterministic dashboard summary of ``findings``.
+
+    The machine-readable counterpart to :func:`render_stats`: totals, the severity
+    breakdown, known-exploited count, the OWASP / CWE Top 25 distribution, the top
+    findings by risk, the worst-affected hosts, and the remediation-plan size -- the
+    numbers a dashboard needs without parsing every finding.
+    """
+    items = list(findings)
+    summary = summarize(items)
+    standards = summarize_standards(items)
+    ranked = sorted(items, key=lambda finding: (-finding.risk_score, finding.fingerprint))
+    groups = group_by_host(items)
+    actions = plan_remediations(items)
+    return {
+        "total": summary.total,
+        "hosts": summary.host_count,
+        "kev": sum(1 for finding in items if finding.kev),
+        "by_severity": {
+            severity.value: summary.by_severity[severity] for severity in SEVERITY_DISPLAY_ORDER
+        },
+        "owasp": {category.short: count for category, count in standards.owasp.items() if count},
+        "cwe_top_25": standards.cwe_top_25,
+        "top_risks": [
+            {
+                "risk_score": finding.risk_score,
+                "severity": finding.severity.value,
+                "kev": finding.kev,
+                "host": finding.host,
+                "title": finding.title,
+                "fingerprint": finding.fingerprint,
+            }
+            for finding in ranked[:_TOP_N]
+        ],
+        "worst_hosts": [
+            {"host": group.host, "findings": len(group.findings), "highest": group.highest.value}
+            for group in groups[:_TOP_N]
+        ],
+        "remediation": {
+            "actions": len(actions),
+            "findings": sum(action.count for action in actions),
+        },
+    }
+
+
+__all__ = ["render_stats", "stats_to_payload"]

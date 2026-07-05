@@ -276,6 +276,20 @@ def test_stats(tmp_path: Path) -> None:
     assert "Top 10 by risk" in result.stdout
 
 
+def test_stats_json(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["stats", "-i", str(_write_report(tmp_path)), "-f", "json"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["total"] == 1
+    assert payload["by_severity"]["high"] == 1
+    assert "remediation" in payload
+
+
+def test_stats_unknown_format_exits_two(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["stats", "-i", str(_write_report(tmp_path)), "-f", "xml"])
+    assert result.exit_code == 2
+
+
 def test_stats_invalid_input_exits_nonzero(tmp_path: Path) -> None:
     bad = tmp_path / "bad.json"
     bad.write_text("{ not json", encoding="utf-8")

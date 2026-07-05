@@ -7,7 +7,7 @@ content.
 
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.processing.normalizer import make_finding
-from vulnpipe.reporting.stats import render_stats
+from vulnpipe.reporting.stats import render_stats, stats_to_payload
 
 
 def _findings() -> list[Finding]:
@@ -97,3 +97,41 @@ def test_empty_findings() -> None:
 
 def test_is_deterministic() -> None:
     assert render_stats(_findings()) == render_stats(_findings())
+
+
+# --------------------------------------------------------------------------- #
+# JSON payload
+# --------------------------------------------------------------------------- #
+def test_payload_headline_and_breakdown() -> None:
+    payload = stats_to_payload(_findings())
+    assert payload["total"] == 3
+    assert payload["hosts"] == 2
+    assert payload["kev"] == 1
+    assert payload["by_severity"]["critical"] == 1
+    assert payload["remediation"]["actions"] >= 1
+
+
+def test_payload_top_risks_and_worst_hosts_ordered() -> None:
+    payload = stats_to_payload(_findings())
+    # The critical KEV finding leads the top-risks list.
+    assert payload["top_risks"][0]["title"] == "CVE-2021-42013"
+    assert payload["top_risks"][0]["kev"] is True
+    # 10.0.0.5 carries the critical, so it is the worst-affected host.
+    assert payload["worst_hosts"][0]["host"] == "10.0.0.5"
+    assert payload["worst_hosts"][0]["highest"] == "critical"
+
+
+def test_payload_owasp_only_lists_mapped() -> None:
+    finding = make_finding(
+        source="zap", host="h", title="XSS", severity=Severity.HIGH, cwe_ids=["CWE-79"]
+    )
+    payload = stats_to_payload([finding])
+    assert payload["owasp"] == {"A03": 1}
+    assert payload["cwe_top_25"] == 1
+
+
+def test_payload_empty() -> None:
+    payload = stats_to_payload([])
+    assert payload["total"] == 0
+    assert payload["top_risks"] == []
+    assert payload["worst_hosts"] == []
