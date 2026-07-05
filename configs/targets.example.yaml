@@ -105,6 +105,18 @@ run:
 #   - "sbom/app.cdx.json"
 #   - "sbom/api.cdx.json"
 
+# --- Import third-party scanner reports (optional) ----------------------------
+# Fold pre-generated Trivy / Grype JSON reports into the scan, so one run covers
+# native scanners plus imported container/SBOM results under a single baseline and
+# gate. Local artifacts, so NOT subject to the scope allowlist; an unreadable or
+# wrong-shaped report is skipped with a warning. For a standalone import, use
+# `vulnpipe convert` instead.
+# imports:
+#   - path: "reports/trivy.json"
+#     format: trivy
+#   - path: "reports/grype.json"
+#     format: grype
+
 # --- Prioritization (optional) ------------------------------------------------
 # Rank findings on more business-critical assets higher. The first matching rule
 # wins, so list more specific entries first; a host matching no rule uses

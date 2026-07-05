@@ -347,6 +347,12 @@ SBOM layer it is passive — a local file, nothing probed — so it needs no sco
 `--authorized`, and its output composes with `merge` (fold an imported container scan
 into a network/web scan under one baseline and gate), `remediate`, `sla`, and the rest.
 
+The same importers are also available *inside* a scan: a config can list reports under
+`imports:` (each a `path` + `format`), and the orchestrator ingests them as an extra
+passive layer (`_default_imports_scan`) alongside the SBOM layer — so a single `scan`
+covers native scanners plus imported results under one enrich → dedup → prioritize →
+diff → gate path, without a separate `convert` + `merge` step.
+
 ## Orchestration & CLI
 
 The orchestrator (`core/orchestrator.py`) runs the whole pipeline and returns the

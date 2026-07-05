@@ -372,6 +372,17 @@ It is passive (it reads a report file and maps it), so like SBOM analysis it nee
 no scope or `--authorized`. Severity, CVSS, CVE/CWE ids, and the fix version come
 straight from the source report; nothing is invented.
 
+To fold imports directly into a `scan` (so a single run and one baseline cover native
+scanners *and* imported reports), list them under `imports:` in the targets file:
+
+```yaml
+imports:
+  - path: "reports/trivy.json"
+    format: trivy
+  - path: "reports/grype.json"
+    format: grype
+```
+
 ## Reports
 
 vulnpipe renders every format from the same findings; all are **deterministic** for
