@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-04
+
+Interoperability: ingest the output of the scanners you already run.
+
+### Added
+- **Third-party scanner import** (`ingest/`, `convert` command) — normalize a
+  [Trivy](https://trivy.dev/) (`trivy image -f json`) or
+  [Grype](https://github.com/anchore/grype) (`grype -o json`) JSON report into the
+  shared `Finding` model, so a container or SBOM scan you already run flows through
+  vulnpipe's prioritization, remediation planning, gating, SLAs, and reports.
+  `vulnpipe convert -i trivy.json --from trivy` emits deduplicated, prioritized
+  findings JSON (or any report format); package identity is carried in metadata so
+  imports feed the remediation planner, and they `merge` with native scans under one
+  baseline and gate. Each parser is a pure `dict → list[Finding]` function that maps
+  the source report's own severity, CVSS, CVE/CWE ids, and fix version — inventing
+  nothing — and raises `IngestError` on a wrong-shaped document. Passive, so it needs
+  no scope or `--authorized`.
+
 ## [0.6.0] - 2026-07-04
 
 Vulnerability management over time: finding age, remediation SLAs, and a visual trend.
@@ -254,7 +272,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.3.0...v0.4.0
