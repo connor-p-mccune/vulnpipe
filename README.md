@@ -121,6 +121,7 @@ vulnpipe/
 ├── reporting/    json/html/markdown/csv/prometheus/sarif/gitlab/vex reporters, remediation.py, badge.py, templates/
 ├── ci/           baseline.py, differ.py, gate.py, policy.py, junit.py, trends.py
 ├── sbom/         cyclonedx.py, osv_client.py, analyzer.py, pipeline.py
+├── ingest/       trivy.py, grype.py   (import third-party scanner reports)
 ├── auth/         auth_contexts.py
 └── cli/          main.py
 ```
@@ -350,6 +351,26 @@ vulnpipe gate     --current results/sbom.json --baseline sbom-baseline.json --po
 
 Because SBOM analysis is passive — a local file plus a public advisory API — it
 requires no scope file and no `--authorized` flag. Nothing is probed.
+
+## Import third-party scanners
+
+Already running [Trivy](https://trivy.dev/) or
+[Grype](https://github.com/anchore/grype)? `vulnpipe convert` normalizes their JSON
+into the same `Finding` model, so a container or SBOM scan you already have flows
+through vulnpipe's prioritization, remediation planning, gating, SLAs, and reports:
+
+```bash
+trivy image -f json myapp:1.0 > trivy.json
+vulnpipe convert --input trivy.json --from trivy --output results/trivy.json
+
+# Then the whole toolchain applies to the imported findings:
+vulnpipe remediate --input results/trivy.json
+vulnpipe merge -i results/latest.json -i results/trivy.json -o results/all.json
+```
+
+It is passive (it reads a report file and maps it), so like SBOM analysis it needs
+no scope or `--authorized`. Severity, CVSS, CVE/CWE ids, and the fix version come
+straight from the source report; nothing is invented.
 
 ## Reports
 
@@ -628,6 +649,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | --- | --- |
 | `scan` | Validate authorization/scope, run the pipeline, write reports, and gate. Requires `--config` and `--authorized`. |
 | `sbom` | Analyze a CycloneDX SBOM against OSV.dev and emit standard findings — passive supply-chain analysis, no scope/authorization needed (`--input`, `--output`, `--format`, `--no-enrich`). |
+| `convert` | Import a third-party scanner report (Trivy or Grype JSON) into vulnpipe findings, so the whole toolchain applies to it (`--input`, `--from trivy\|grype`, `--output`, `--format`). |
 | `gate` | Re-evaluate the CI gate over an existing findings JSON without rescanning — policy file or severity/risk options (`--current`, `--baseline`, `--policy`, `--format text\|json`). |
 | `sla` | Report findings open past their per-severity remediation SLA, by age from an age-tracked baseline (`--current`, `--baseline`, `--policy` or `--critical-days`/`--high-days`/…, `--as-of`). |
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |

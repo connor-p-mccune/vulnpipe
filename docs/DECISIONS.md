@@ -417,3 +417,27 @@ so SLA tests pin a date and CI is reproducible. The trade-off is that age tracki
 as good as the baseline discipline — a team that never stamps first-seen dates gets an
 all-untracked (and therefore always-passing) SLA report, which is the honest answer when the
 age is genuinely unknown rather than a fabricated one.
+
+## ADR-0023 — Ingest other scanners' output, don't reinvent their engines
+
+**Context.** vulnpipe drives Nmap, ZAP, and Nuclei, but a lot of real risk data already
+exists in reports teams generate elsewhere — most commonly Trivy and Grype for container and
+SBOM scanning. Re-implementing those engines would be wasteful and dishonest (they are
+mature, specialized tools); ignoring their output would waste vulnpipe's real value, which is
+everything that happens *after* detection: normalization, prioritization, remediation
+planning, gating, SLAs, and reporting.
+
+**Decision.** Add an `ingest/` layer of pure `dict → list[Finding]` parsers (Trivy, Grype)
+and a `convert` command. Each parser maps the source report's own severity, CVSS, identifiers,
+and fix version onto the shared model — inventing nothing, leaving a missing field `None` — and
+carries package identity in metadata so imports feed the remediation planner like native
+findings. Parsers are passive (read a file, map it) and lazily dispatched through a registry;
+a wrong-shaped document raises `IngestError`.
+
+**Consequences.** vulnpipe becomes a normalization and decisioning hub, not just a scanner
+wrapper: a Trivy container scan and a native network/web scan can `merge` into one baseline,
+gate, and remediation plan. The cost is per-scanner mapping code and coupling to each report's
+JSON shape (which can change across versions), bounded by keeping the parsers small, pure, and
+fixture-tested. The alternative — one universal "SARIF-in" importer — was rejected because
+neither Trivy nor Grype's native, richest output is SARIF, and meeting them in their own format
+loses less information.

@@ -62,6 +62,7 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX renderers, the remediation planner, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
 | `ci/` | The baseline store, the differ, the severity gate, the policy-as-code gate (`policy.py`), JUnit XML output, and multi-scan trend analysis. |
 | `sbom/` | Supply-chain analysis: CycloneDX parsing, the OSV.dev advisory client, and the analyzer that normalizes advisories into findings. Passive (reads a file, queries a public API); never probes the described software. |
+| `ingest/` | Importers that normalize third-party scanner reports (Trivy, Grype) into the shared `Finding` model. Pure `dict → list[Finding]` parsers, passive (read a local report, map it), routed by name through a small registry. |
 | `auth/` | ZAP authentication-context construction (form / header-JWT / script). |
 | `cli/main.py` | The Typer CLI (`scan` / `report` / `diff` / `baseline`) and the `--authorized` + scope gate. |
 
@@ -328,6 +329,24 @@ database which known vulnerabilities affect each declared component.
 Because this layer only reads a local file and queries public advisory data, it
 sits outside the authorization-scope gate that governs active scanning.
 
+## Importing third-party scanner output
+
+`ingest/` extends the "one model for everything" thesis to scanners vulnpipe does
+not drive itself. Given a JSON report from **Trivy** (`trivy.py`) or **Grype**
+(`grype.py`) — the two dominant open-source container / SBOM scanners — a pure
+`dict → list[Finding]` parser maps the scanner's severity, its highest-scoring CVSS
+entry, the CVE/CWE identifiers, and the declared fix version onto a standard finding,
+carrying package identity (name / version / purl) in metadata so imports flow into
+the remediation planner and everything else unchanged. Parsers are lazily dispatched
+by name through a small registry (no import cycle), and a document that is not the
+expected shape raises `IngestError` rather than emitting partial garbage.
+
+The `convert` CLI command wires it up: it reads a report, normalizes it, dedups and
+re-prioritizes, and emits ordinary findings JSON (or any report format). Like the
+SBOM layer it is passive — a local file, nothing probed — so it needs no scope or
+`--authorized`, and its output composes with `merge` (fold an imported container scan
+into a network/web scan under one baseline and gate), `remediate`, `sla`, and the rest.
+
 ## Orchestration & CLI
 
 The orchestrator (`core/orchestrator.py`) runs the whole pipeline and returns the
@@ -362,6 +381,9 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
 - `sbom` — analyze a CycloneDX SBOM against OSV.dev and emit standard findings
   (any report format on stdout, plus an optional `sbom.json`); passive, so it
   needs no scope or `--authorized`.
+- `convert` — import a third-party scanner report (Trivy / Grype JSON) into
+  normalized findings via the `ingest/` parsers, so the whole toolchain applies to
+  it; passive, no scope or `--authorized`.
 - `gate` — re-evaluate the CI gate over an existing findings JSON without
   rescanning, using a policy file or the severity/risk options (text or JSON
   verdict, non-zero exit on violation).
