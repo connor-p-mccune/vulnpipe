@@ -19,6 +19,7 @@ against a real system.
 | [`sample-remediation.md`](sample-remediation.md) | The remediation plan — findings collapsed into a ranked, deduplicated worklist (`vulnpipe remediate`), most impactful fix first. |
 | [`sample-badge.svg`](sample-badge.svg) | The SVG status badge — the worst outstanding severities at a glance, for a README or dashboard. |
 | [`sample-vex.json`](sample-vex.json) | The OpenVEX 0.2.0 document — machine-readable `affected` statements for every finding that cites a real CVE / OSV id, for exploitability-exchange tooling. Its publication `timestamp` is pinned so the committed sample stays deterministic. |
+| [`sample-report.cyclonedx.json`](sample-report.cyclonedx.json) | The CycloneDX 1.5 vulnerability report (VDR) — a BOM whose `vulnerabilities` link each detected issue to the component it affects, for Dependency-Track and the `cyclonedx` CLI. Its `metadata.timestamp` is pinned so the committed sample stays deterministic. |
 
 The sample contains 15 findings across 4 hosts (1 critical, 5 high, 2 medium,
 2 low, 5 informational), shown in vulnpipe's prioritized order. Two of them are

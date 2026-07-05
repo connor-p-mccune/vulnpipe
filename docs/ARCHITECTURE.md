@@ -59,7 +59,7 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `scanners/` | `BaseScanner` + the registry, and the Nmap (network), ZAP (web), and Nuclei (template-based) integrations. Each `scan()` returns `list[Finding]`. |
 | `enrichment/` | CVSS parsing/scoring, cached NVD / EPSS lookups, and CISA KEV cross-referencing that fill — never fabricate — the `cvss_*` / `epss_*` / `kev` fields. |
 | `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize. |
-| `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX renderers, the remediation planner, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
+| `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX / CycloneDX renderers, the remediation planner, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
 | `ci/` | The baseline store, the differ, the severity gate, the policy-as-code gate (`policy.py`), JUnit XML output, and multi-scan trend analysis. |
 | `sbom/` | Supply-chain analysis: CycloneDX parsing, the OSV.dev advisory client, and the analyzer that normalizes advisories into findings. Passive (reads a file, queries a public API); never probes the described software. |
 | `ingest/` | Importers that normalize third-party scanner reports (Trivy, Grype) into the shared `Finding` model. Pure `dict → list[Finding]` parsers, passive (read a local report, map it), routed by name through a small registry. |
@@ -186,6 +186,19 @@ cannot drift.
   `build_vex`/`render_vex` functions omit it unless given one, while the registered
   reporter stamps real UTC time, honoring `SOURCE_DATE_EPOCH` (the
   reproducible-builds convention) so CI can emit byte-identical documents.
+- **CycloneDX** (`cyclonedx_reporter.py`) emits a
+  [CycloneDX](https://cyclonedx.org) 1.5 vulnerability report (VDR) — the other
+  half of the SBOM loop: vulnpipe reads a CycloneDX SBOM and now writes a CycloneDX
+  BOM whose `vulnerabilities` link each detected issue to the component it affects
+  (a `library` keyed by purl for supply-chain findings, an `application` keyed by
+  `host[:port]` for network/web ones). Like the OpenVEX reporter it is honest by
+  construction: only findings that cite a real identifier produce an entry, no
+  `analysis` triage state is fabricated (making it a disclosure report, not a full
+  VEX), and a rating carries the real qualitative severity always but a numeric
+  score only when a real CVSS is known. Findings sharing an identifier collapse into
+  one vulnerability with several `affects`. The `serialNumber` is content-addressed
+  and the `metadata.timestamp` is the one non-derivable field (the pure builder omits
+  it; the reporter stamps it, honoring `SOURCE_DATE_EPOCH`).
 
 `get_reporter(fmt)` resolves a format name to a reporter; the `report` CLI command
 loads a findings JSON and renders it to any format on stdout.

@@ -466,3 +466,32 @@ covered by a single loopback round-trip). Keeping it framework-free means no new
 no attack surface beyond a GET router, at the cost of not being a multi-tenant application
 server — which is the point. If persistent hosting, auth, or write operations are ever needed,
 that is a different tool; `serve` deliberately stops at "browse and query a report locally."
+
+## ADR-0025 — Emit CycloneDX as a disclosure report (VDR), never a fabricated VEX
+
+**Context.** vulnpipe already consumes a CycloneDX SBOM and already emits OpenVEX, but the
+CycloneDX ecosystem (Dependency-Track, the `cyclonedx` CLI, most SCA tooling) ingests
+*CycloneDX's own* vulnerability format, not OpenVEX. Emitting it closes the supply-chain loop —
+read a CycloneDX SBOM, write a CycloneDX vulnerability document — but CycloneDX's `vulnerability`
+object also has an `analysis` block whose `state` (`exploitable` / `not_affected` / `in_triage`
+/ `resolved`) is a *human exploitability judgement*. A scanner filling that in would be
+fabricating an assessment, the exact failure mode the OpenVEX reporter was designed to avoid.
+
+**Decision.** Add a `cyclonedx` report format that emits a CycloneDX 1.5 BOM with a
+`vulnerabilities` array and the `components` those vulnerabilities `affects`, but **no
+`analysis` block** — making it a Vulnerability Disclosure Report (VDR: "here is what we detected
+and where"), not a full VEX ("here is our triage verdict"). Apply the same honesty rules as the
+OpenVEX reporter: only findings citing a real identifier (CVE, else OSV id) produce an entry;
+ratings carry the real qualitative severity always but a numeric score/method/vector only when a
+real CVSS is known; findings sharing an identifier collapse into one vulnerability described by
+the worst-risk instance. Determinism and the `SOURCE_DATE_EPOCH` timestamp handling match the
+other machine-readable reporters.
+
+**Consequences.** vulnpipe now speaks both dominant vulnerability-exchange dialects (OpenVEX and
+CycloneDX), so a run feeds whichever a downstream tool consumes, and the SBOM story is
+end-to-end in one format family. The deliberate limitation is that consumers expecting a full
+VEX `analysis` verdict get a disclosure document instead — which is the honest output for a
+detector that has not triaged exploitability. Representing a network/web asset as a CycloneDX
+`application` component (so `affects` links resolve) is a mild stretch of a format built for
+software components, accepted because it keeps the document self-contained and valid; the
+natural fit remains the SBOM layer's purl-keyed `library` components.

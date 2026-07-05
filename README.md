@@ -402,6 +402,7 @@ timestamp — pin it with `SOURCE_DATE_EPOCH` for byte-identical CI output.
 | **SARIF** | SARIF 2.1.0 for the GitHub code-scanning / Security tab. |
 | **GitLab** | A GitLab-compatible security report (`report --format gitlab`) for the GitLab Vulnerability Report and the merge-request security widget — a DAST-style export with stable ids, CVE/CWE identifiers, and the report-schema scan block. |
 | **OpenVEX** | [OpenVEX](https://openvex.dev) 0.2.0 `affected` statements for every finding that cites a real CVE / OSV id, for exploitability-exchange tooling (`vexctl`, scanner VEX inputs, policy engines). |
+| **CycloneDX** | A [CycloneDX](https://cyclonedx.org) 1.5 vulnerability report (VDR): a BOM whose `vulnerabilities` link each detected issue to the component it affects (a `library` by purl, or the affected host as an `application`), for Dependency-Track and the `cyclonedx` CLI. The other half of the SBOM loop — vulnpipe reads a CycloneDX SBOM and writes a CycloneDX VDR. |
 
 Render any format from a findings JSON to stdout:
 
@@ -410,6 +411,7 @@ vulnpipe report --input results/latest.json --format html     > report.html
 vulnpipe report --input results/latest.json --format markdown > report.md
 vulnpipe report --input results/latest.json --format sarif    > vulnpipe.sarif
 vulnpipe report --input results/latest.json --format vex      > vulnpipe.vex.json
+vulnpipe report --input results/latest.json --format cyclonedx > vulnpipe.cdx.json
 ```
 
 The OpenVEX output stays honest by construction: only findings citing a real
@@ -700,7 +702,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `gate` | Re-evaluate the CI gate over an existing findings JSON without rescanning — policy file or severity/risk options (`--current`, `--baseline`, `--policy`, `--format text\|json`). |
 | `sla` | Report findings open past their per-severity remediation SLA, by age from an age-tracked baseline (`--current`, `--baseline`, `--policy` or `--critical-days`/`--high-days`/…, `--as-of`). |
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
-| `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX on stdout (`--input`, `--format`). |
+| `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX / CycloneDX on stdout (`--input`, `--format`). |
 | `serve` | Serve a findings JSON as a local read-only dashboard + JSON API (`/`, `/api/*`, `/metrics`, `/healthz`) on `http://127.0.0.1:8000` (`--input`, `--host`, `--port`). |
 | `remediate` | Group a findings JSON into a ranked, deduplicated remediation plan — fix these first — as text / JSON / Markdown (`--input`, `--format`, `--top`). |
 | `merge` | Combine findings JSONs from separate runs (e.g. a network scan + an SBOM analysis) into one deduplicated, re-prioritized report (`--input` repeated, `--output`, `--format`). |
