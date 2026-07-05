@@ -92,6 +92,20 @@ jobs:
           vulnpipe stats -i "$sample" -f json > /dev/null
           vulnpipe remediate -i "$sample" > /dev/null
           vulnpipe badge -i "$sample" > /dev/null
+          # Serve the report and hit every route, then shut the server down.
+          vulnpipe serve -i "$sample" --port 8137 &
+          serve_pid=$!
+          for _ in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:8137/healthz > /dev/null; then break; fi
+            sleep 0.25
+          done
+          curl -sf http://127.0.0.1:8137/ > /dev/null
+          curl -sf http://127.0.0.1:8137/api/findings > /dev/null
+          curl -sf http://127.0.0.1:8137/api/summary > /dev/null
+          curl -sf http://127.0.0.1:8137/api/remediation > /dev/null
+          curl -sf http://127.0.0.1:8137/metrics > /dev/null
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8137/nope)" = 404 ]
+          kill "$serve_pid" || true
           # Import third-party reports and merge them with the sample.
           vulnpipe convert -i tests/fixtures/trivy_report.json --from trivy -o /tmp/trivy.json > /dev/null
           vulnpipe convert -i tests/fixtures/grype_report.json --from grype > /dev/null
