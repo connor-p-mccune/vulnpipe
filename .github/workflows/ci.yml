@@ -85,7 +85,7 @@ jobs:
           done
           vulnpipe validate -c configs/targets.lab.yaml
           # Every registered report format renders from the committed sample.
-          for fmt in json html markdown csv prometheus sarif gitlab remediation vex; do
+          for fmt in json html markdown csv prometheus sarif gitlab remediation vex cyclonedx; do
             vulnpipe report -i "$sample" -f "$fmt" > /dev/null
           done
           vulnpipe stats -i "$sample" > /dev/null
