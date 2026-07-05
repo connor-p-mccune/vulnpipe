@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-05
+
+Serve a report: a local dashboard, a JSON API, and metrics — no web framework.
+
+### Added
+- **`serve` command** (`vulnpipe/server/`) — expose an already-computed findings
+  JSON as a small, read-only local web service built on the standard-library
+  `http.server` alone (no Flask/FastAPI dependency): the interactive HTML dashboard
+  at `/`, a JSON REST API under `/api` (`/api/findings` = the canonical report
+  envelope, `/api/summary` = the dashboard payload, `/api/remediation` = the ranked
+  plan, `/api` = a route index), Prometheus text-exposition metrics at `/metrics`,
+  and a `/healthz` liveness probe. It splits into a pure `path → Response` router
+  (`server/routes.py`, exhaustively unit-testable without a socket) and a thin
+  `http.server` adapter (`server/http_server.py`); every route renders through the
+  existing deterministic reporters, so the API is a new transport for the same data,
+  not a second code path. Read-only by construction — it never scans, mutates state,
+  or reads a request body, so like `report` / `stats` it runs outside the
+  authorization/scope gate. Mutating verbs get a `405`, responses carry
+  `X-Content-Type-Options: nosniff` and `Cache-Control: no-store`, and it binds
+  loopback (`127.0.0.1`) by default (a non-loopback bind is honored but warned
+  about). See ADR-0024.
+
 ## [1.0.0] - 2026-07-05
 
 First stable release. The pipeline is feature-complete for its scope — detection and
@@ -327,7 +349,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.9.0...v1.0.0
 [0.9.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.7.0...v0.8.0
