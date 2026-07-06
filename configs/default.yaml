@@ -42,4 +42,5 @@ run:
 
 prioritization:
   default_criticality: medium     # one of: low, medium, high, critical
-  assets: []                      # e.g. [{ host: "10.0.0.10", criticality: critical }]
+  # Each asset rule may add an optional `owner` (team/queue) and `tags` for routing.
+  assets: []                      # e.g. [{ host: "10.0.0.10", criticality: critical, owner: "team-web" }]

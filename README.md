@@ -292,7 +292,8 @@ does. Provide them via the environment or a gitignored `.env` (see
 
 The targets file also accepts optional `nmap`, `zap`, `enrichment`, `run`, and
 `prioritization` blocks (all with sane defaults — see the example). For example,
-`prioritization` ranks findings on more business-critical assets higher:
+`prioritization` ranks findings on more business-critical assets higher and routes
+them to the team that owns the asset:
 
 ```yaml
 prioritization:
@@ -300,7 +301,15 @@ prioritization:
   assets:
     - host: "10.0.0.10"           # the web-app host is business-critical
       criticality: critical
+      owner: "team-web"           # who triages findings on this asset
+      tags: ["pci", "external"]   # free-form labels carried onto its findings
 ```
+
+The optional `owner` and `tags` are operator-declared triage context: they are
+stamped onto each finding's metadata (never affecting the fingerprint or the
+diff/baseline) and surface as an "by owner" breakdown in `stats`, the HTML and
+Markdown reports, and dedicated `owner` / `tags` columns in the CSV — so a report is
+actionable *by team* ("here are your team's 12") instead of one shared pile.
 
 ## Run a scan
 

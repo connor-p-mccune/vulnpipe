@@ -495,3 +495,31 @@ detector that has not triaged exploitability. Representing a network/web asset a
 `application` component (so `affects` links resolve) is a mild stretch of a format built for
 software components, accepted because it keeps the document self-contained and valid; the
 natural fit remains the SBOM layer's purl-keyed `library` components.
+
+## ADR-0026 — Ownership is operator context in metadata, not a model field
+
+**Context.** A findings report is only actionable if it reaches the team that can fix each
+issue; a flat list of 500 findings is nobody's job in particular. So findings need an *owner*
+(and useful *tags*) for routing. The question is where ownership lives: a first-class field on
+the `Finding` model, or annotated context. Ownership is not detection data — it is the
+operator's own org chart mapped onto assets — and the project's hard rules say the model carries
+only what a scanner or enrichment lookup produced, with a fingerprint that must stay stable for
+the same underlying issue across runs and configs.
+
+**Decision.** Model ownership as operator-declared config (`owner` / `tags` on an asset rule,
+resolved first-match like criticality) that a pure `processing/ownership.annotate_ownership`
+stamps into `Finding.metadata` after prioritization — **not** as a new model field and **not**
+in the fingerprint. Reporters read it back from metadata (`finding_owner` / `finding_tags`) and
+surface a `group_by_owner` view; ownership shows only when it is configured, so default reports
+are unchanged. The annotator takes resolver callables, keeping `processing/` decoupled from
+config exactly as the prioritizer is.
+
+**Consequences.** Because ownership rides in metadata (which the fingerprint ignores), changing
+who owns an asset — or adding ownership to an existing deployment — never re-keys a finding, so
+the baseline, diff, gate, and SLA history all stay intact; ownership is purely additive routing
+context. It also means ownership is not a queryable typed field (a consumer reads
+`metadata.owner`), and it only rides along findings that a `scan` produced — the passive `sbom`
+/ `convert` paths have no prioritization config, so they carry ownership only once merged into a
+configured scan. Both are acceptable: the alternative (a model field feeding the fingerprint)
+would have made an org-chart change look like a wave of new-and-resolved findings, which is
+exactly the churn the stable-fingerprint rule exists to prevent.

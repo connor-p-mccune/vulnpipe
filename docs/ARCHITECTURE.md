@@ -58,7 +58,7 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `core/logging.py` | The rich-backed structured logger used throughout (the project never uses `print`). |
 | `scanners/` | `BaseScanner` + the registry, and the Nmap (network), ZAP (web), and Nuclei (template-based) integrations. Each `scan()` returns `list[Finding]`. |
 | `enrichment/` | CVSS parsing/scoring, cached NVD / EPSS lookups, and CISA KEV cross-referencing that fill — never fabricate — the `cvss_*` / `epss_*` / `kev` fields. |
-| `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize. |
+| `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize, and ownership annotation (stamp operator-declared owner/tags for triage routing). |
 | `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX / CycloneDX renderers, the remediation planner, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
 | `ci/` | The baseline store, the differ, the severity gate, the policy-as-code gate (`policy.py`), JUnit XML output, and multi-scan trend analysis. |
 | `sbom/` | Supply-chain analysis: CycloneDX parsing, the OSV.dev advisory client, and the analyzer that normalizes advisories into findings. Passive (reads a file, queries a public API); never probes the described software. |
@@ -524,3 +524,15 @@ rule maps a host / CIDR / `*.domain` pattern to a criticality, resolved per find
 with `PrioritizationConfig.criticality_for` (first matching rule wins, else the
 configured default). The prioritizer takes that resolver as an argument, keeping
 `processing/` decoupled from config loading.
+
+Each asset rule may also declare an optional **`owner`** (the team/queue that owns
+the asset) and free-form **`tags`**, resolved the same first-match way
+(`owner_for` / `tags_for`). After prioritization the orchestrator applies
+`processing/ownership.annotate_ownership`, which stamps the resolved owner/tags onto
+each finding's `metadata`. Ownership is operator-supplied *triage context, not
+detection data*: it lives in metadata (which the fingerprint ignores), so it never
+changes a finding's identity or its baseline/diff classification, and it is echoed
+from config, never fabricated. It then surfaces as an "by owner" view in the `stats`,
+Markdown, and HTML reports and as `owner` / `tags` columns in the CSV — so a report is
+actionable per team. Like the prioritizer, `annotate_ownership` takes resolver
+callables rather than a config object, keeping `processing/` pure and decoupled.
