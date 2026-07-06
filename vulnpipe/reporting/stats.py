@@ -22,8 +22,11 @@ from vulnpipe.core.models import Finding, Severity
 from vulnpipe.reporting.remediation import plan_remediations
 from vulnpipe.reporting.summary import (
     SEVERITY_DISPLAY_ORDER,
+    OwnerGroup,
     StandardsSummary,
     group_by_host,
+    group_by_owner,
+    owners_present,
     summarize,
     summarize_standards,
 )
@@ -108,6 +111,24 @@ def _top_hosts_table(findings: list[Finding]) -> Table:
     return table
 
 
+def _owner_group_label(group: OwnerGroup) -> str:
+    return group.owner if group.assigned else "[dim]unassigned[/]"
+
+
+def _owner_table(groups: list[OwnerGroup]) -> Table:
+    table = Table(title="By owner", title_justify="left", expand=False)
+    table.add_column("Owner")
+    table.add_column("Findings", justify="right")
+    table.add_column("Worst")
+    for group in groups:
+        table.add_row(
+            _owner_group_label(group),
+            str(len(group.findings)),
+            _severity_cell(group.highest.value),
+        )
+    return table
+
+
 def _remediation_table(findings: list[Finding]) -> Table:
     actions = plan_remediations(findings)
     table = Table(title=f"Top {_TOP_N} remediations", title_justify="left", expand=False)
@@ -148,6 +169,8 @@ def render_stats(findings: Iterable[Finding]) -> str:
     if items:
         console.print(_top_risks_table(items))
         console.print(_top_hosts_table(items))
+        if owners_present(items):
+            console.print(_owner_table(group_by_owner(items)))
         console.print(_remediation_table(items))
     else:
         console.print("No findings.")
@@ -192,6 +215,19 @@ def stats_to_payload(findings: Iterable[Finding]) -> dict[str, Any]:
             {"host": group.host, "findings": len(group.findings), "highest": group.highest.value}
             for group in groups[:_TOP_N]
         ],
+        "by_owner": (
+            [
+                {
+                    "owner": group.owner,
+                    "assigned": group.assigned,
+                    "findings": len(group.findings),
+                    "highest": group.highest.value,
+                }
+                for group in group_by_owner(items)
+            ]
+            if owners_present(items)
+            else []
+        ),
         "remediation": {
             "actions": len(actions),
             "findings": sum(action.count for action in actions),

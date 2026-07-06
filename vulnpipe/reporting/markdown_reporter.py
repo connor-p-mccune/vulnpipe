@@ -19,8 +19,11 @@ from vulnpipe.core.models import Finding, Severity
 from vulnpipe.reporting.base import BaseReporter
 from vulnpipe.reporting.summary import (
     SEVERITY_DISPLAY_ORDER,
+    OwnerGroup,
     ReportSummary,
     StandardsSummary,
+    group_by_owner,
+    owners_present,
     summarize,
     summarize_standards,
 )
@@ -84,6 +87,15 @@ def _owasp_table(standards: StandardsSummary) -> list[str]:
     return rows
 
 
+def _owner_table(groups: list[OwnerGroup]) -> list[str]:
+    """The ownership routing table: findings per owning team/queue, worst first."""
+    rows = ["| Owner | Findings | Worst |", "| --- | ---: | --- |"]
+    for group in groups:
+        label = _escape_cell(group.owner) if group.assigned else "_Unassigned_"
+        rows.append(f"| {label} | {len(group.findings)} | {_SEVERITY_LABEL[group.highest]} |")
+    return rows
+
+
 def _findings_table(findings: list[Finding]) -> list[str]:
     rows = [
         "| # | Severity | Risk | Source | Host | Finding | CVSS | EPSS | Exploited |",
@@ -117,6 +129,9 @@ def render_markdown(findings: Iterable[Finding]) -> str:
     if standards.any_mapped:
         lines.extend(["", "## OWASP Top 10", ""])
         lines.extend(_owasp_table(standards))
+    if owners_present(items):
+        lines.extend(["", "## Ownership", ""])
+        lines.extend(_owner_table(group_by_owner(items)))
     lines.extend(["", "## Findings", ""])
     if items:
         lines.extend(_findings_table(items))

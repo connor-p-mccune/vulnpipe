@@ -106,6 +106,9 @@
     table.findings tbody tr.kev:hover { background: var(--kev-row-hover); }
     td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .risk-badge { min-width: 2.2rem; text-align: center; }
+    table.owners { border-collapse: collapse; background: var(--card-bg); font-size: .9rem; margin-bottom: 1rem; }
+    table.owners th, table.owners td { text-align: left; padding: .4rem .9rem; border-bottom: 1px solid var(--border-soft); }
+    table.owners thead th { background: var(--thead-bg); }
     .empty { padding: 2rem; text-align: center; color: var(--muted); }
   </style>
 </head>
@@ -175,6 +178,22 @@
   {% endif %}
   {% else %}
   <p class="empty">No findings map to an OWASP Top 10 category.</p>
+  {% endif %}
+
+  {% if show_owners %}
+  <h2>Ownership</h2>
+  <table class="owners">
+    <thead><tr><th>Owner</th><th>Findings</th><th>Worst</th></tr></thead>
+    <tbody>
+      {% for group in owner_groups %}
+      <tr>
+        <td>{% if group.assigned %}{{ group.owner }}{% else %}<span class="muted">unassigned</span>{% endif %}</td>
+        <td class="num">{{ group.findings | length }}</td>
+        <td><span class="badge {{ styles[group.highest].css_class }}">{{ styles[group.highest].label }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
   {% endif %}
 
   <h2>Per-host breakdown</h2>
@@ -249,6 +268,7 @@
         <th data-type="number">KEV</th>
         <th data-type="text">Confidence</th>
         <th data-type="text">Source</th>
+        {% if show_owners %}<th data-type="text">Owner</th>{% endif %}
       </tr>
     </thead>
     <tbody>
@@ -266,6 +286,7 @@
         <td class="num" data-sort="{{ 1 if finding.kev else 0 }}">{% if finding.kev %}<span class="badge badge-kev" title="Actively exploited in the wild (CISA KEV)">&#9888;</span>{% endif %}</td>
         <td>{{ finding.confidence.value if finding.confidence is not none else "" }}</td>
         <td>{{ finding.source }}</td>
+        {% if show_owners %}<td>{{ finding_owner(finding) or "" }}</td>{% endif %}
       </tr>
       {% endfor %}
     </tbody>

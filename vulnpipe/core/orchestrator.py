@@ -57,6 +57,7 @@ from vulnpipe.enrichment._http import open_cache
 from vulnpipe.ingest import IngestError, get_ingester
 from vulnpipe.processing import (
     FalsePositiveConfig,
+    annotate_ownership,
     deduplicate,
     expired_entries,
     filter_false_positives,
@@ -393,21 +394,28 @@ def run_pipeline(
         )
     filtered = filter_false_positives(deduped, active_allowlist, today=run_date)
     prioritized = prioritize(filtered, criticality=config.prioritization.criticality_for)
+    # Stamp operator-declared owner/tags onto findings for triage routing (metadata
+    # only -- never touches the fingerprint, so the diff/baseline is unaffected).
+    owned = annotate_ownership(
+        prioritized,
+        owner_for=config.prioritization.owner_for,
+        tags_for=config.prioritization.tags_for,
+    )
 
     effective_baseline = baseline if baseline is not None else Baseline()
-    diff = diff_findings(prioritized, effective_baseline)
+    diff = diff_findings(owned, effective_baseline)
     gate = evaluate_gate(diff, threshold=gate_threshold, min_risk_score=gate_min_risk_score)
     log_event(
         _log,
         logging.INFO,
         "pipeline complete",
-        findings=len(prioritized),
+        findings=len(owned),
         new=len(diff.new),
         persisting=len(diff.persisting),
         resolved=len(diff.resolved),
         gate="pass" if gate.passed else "fail",
     )
-    return PipelineResult(findings=tuple(prioritized), diff=diff, gate=gate)
+    return PipelineResult(findings=tuple(owned), diff=diff, gate=gate)
 
 
 __all__ = [

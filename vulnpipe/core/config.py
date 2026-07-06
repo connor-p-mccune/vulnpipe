@@ -283,12 +283,26 @@ class RunConfig(BaseModel):
 
 
 class AssetRule(BaseModel):
-    """A criticality assigned to every host matching a host / CIDR / wildcard pattern."""
+    """Per-asset metadata for every host matching a host / CIDR / wildcard pattern.
+
+    ``criticality`` feeds prioritization; the optional ``owner`` and ``tags`` are
+    operator-declared triage context (a team/queue that owns the asset and free-form
+    labels), stamped onto findings for routing. Ownership is never detection data --
+    it is echoed from this config, and never enters a finding's fingerprint.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     host: str
     criticality: AssetCriticality
+    owner: str | None = Field(
+        default=None,
+        description="Team / queue that owns this asset; stamped onto its findings for routing.",
+    )
+    tags: list[str] = Field(
+        default_factory=list,
+        description="Free-form labels for this asset, stamped onto its findings.",
+    )
 
     @field_validator("host")
     @classmethod
@@ -300,11 +314,11 @@ class AssetRule(BaseModel):
 
 
 class PrioritizationConfig(BaseModel):
-    """Asset-criticality inputs to finding prioritization.
+    """Asset-criticality and ownership inputs to finding prioritization/routing.
 
-    ``assets`` maps host patterns to a criticality; the first matching rule wins, so
-    list more specific entries first. A host matching no rule falls back to
-    ``default_criticality``.
+    ``assets`` maps host patterns to per-asset metadata; the first matching rule wins,
+    so list more specific entries first. A host matching no rule falls back to
+    ``default_criticality`` and has no owner or tags.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -312,12 +326,27 @@ class PrioritizationConfig(BaseModel):
     default_criticality: AssetCriticality = AssetCriticality.MEDIUM
     assets: list[AssetRule] = Field(default_factory=list)
 
-    def criticality_for(self, host: str) -> AssetCriticality:
-        """Resolve the criticality for ``host`` using the first matching asset rule."""
+    def _match(self, host: str) -> AssetRule | None:
+        """The first asset rule whose pattern covers ``host``, or ``None``."""
         for rule in self.assets:
             if host_in_scope(host, [rule.host]):
-                return rule.criticality
-        return self.default_criticality
+                return rule
+        return None
+
+    def criticality_for(self, host: str) -> AssetCriticality:
+        """Resolve the criticality for ``host`` using the first matching asset rule."""
+        rule = self._match(host)
+        return rule.criticality if rule is not None else self.default_criticality
+
+    def owner_for(self, host: str) -> str | None:
+        """Resolve the owning team/queue for ``host``, or ``None`` if unassigned."""
+        rule = self._match(host)
+        return rule.owner if rule is not None else None
+
+    def tags_for(self, host: str) -> tuple[str, ...]:
+        """Resolve the tags declared for ``host`` (empty when none)."""
+        rule = self._match(host)
+        return tuple(rule.tags) if rule is not None else ()
 
 
 class ImportSource(BaseModel):

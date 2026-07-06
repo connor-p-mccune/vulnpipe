@@ -19,10 +19,11 @@ from collections.abc import Iterable
 
 from vulnpipe.core.models import Finding
 from vulnpipe.reporting.base import BaseReporter
-from vulnpipe.reporting.summary import finding_owasp
+from vulnpipe.reporting.summary import finding_owasp, finding_owner, finding_tags
 
 #: Fixed column order. Mirrors the finding model (plus the computed fingerprint and
-#: risk score) so a CSV export lines up with the canonical JSON report.
+#: risk score, and the operator-declared owner/tags) so a CSV export lines up with the
+#: canonical JSON report and can be pivoted by owner for team-level triage.
 _COLUMNS: tuple[str, ...] = (
     "fingerprint",
     "severity",
@@ -37,6 +38,8 @@ _COLUMNS: tuple[str, ...] = (
     "cve_ids",
     "cwe_ids",
     "owasp",
+    "owner",
+    "tags",
     "plugin_id",
     "confidence",
     "url",
@@ -69,6 +72,8 @@ def _row(finding: Finding) -> list[str]:
         "cve_ids": finding.cve_ids,
         "cwe_ids": finding.cwe_ids,
         "owasp": tuple(category.short for category in finding_owasp(finding)),
+        "owner": finding_owner(finding),
+        "tags": finding_tags(finding),
         "plugin_id": finding.plugin_id,
         "confidence": finding.confidence.value if finding.confidence is not None else None,
         "url": finding.metadata.get("url"),

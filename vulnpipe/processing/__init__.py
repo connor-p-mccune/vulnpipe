@@ -20,6 +20,7 @@ from vulnpipe.processing.false_positive import (
     load_false_positive_config,
 )
 from vulnpipe.processing.normalizer import make_finding
+from vulnpipe.processing.ownership import annotate_ownership
 from vulnpipe.processing.prioritizer import CriticalityResolver, prioritize
 
 __all__ = [
@@ -28,6 +29,7 @@ __all__ = [
     "FingerprintRule",
     "HostRule",
     "PluginRule",
+    "annotate_ownership",
     "deduplicate",
     "expired_entries",
     "filter_false_positives",

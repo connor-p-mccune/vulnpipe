@@ -115,6 +115,33 @@ def summarize_standards(findings: Iterable[Finding]) -> StandardsSummary:
     return StandardsSummary(owasp=counts, uncategorized=uncategorized, cwe_top_25=top_25)
 
 
+#: The bucket findings with no declared owner fall into (see :func:`group_by_owner`).
+UNASSIGNED_OWNER = "unassigned"
+
+
+def finding_owner(finding: Finding) -> str | None:
+    """The team/queue that owns a finding's asset, or ``None`` if unassigned.
+
+    Read from the operator-declared ``owner`` metadata the ownership annotation
+    stamps on (never a scanner-derived field); a blank value counts as unassigned.
+    """
+    value = finding.metadata.get("owner")
+    return value if isinstance(value, str) and value.strip() else None
+
+
+def finding_tags(finding: Finding) -> tuple[str, ...]:
+    """The operator-declared tags on a finding's asset, in declared order."""
+    value = finding.metadata.get("tags")
+    if isinstance(value, (list, tuple)):
+        return tuple(item for item in value if isinstance(item, str) and item.strip())
+    return ()
+
+
+def owners_present(findings: Iterable[Finding]) -> bool:
+    """Whether any finding carries an owner (so an ownership view is worth showing)."""
+    return any(finding_owner(finding) is not None for finding in findings)
+
+
 @dataclass(frozen=True)
 class HostGroup:
     """The findings for one host, with its per-severity counts and worst severity."""
@@ -150,14 +177,63 @@ def group_by_host(findings: Iterable[Finding]) -> list[HostGroup]:
     return groups
 
 
+@dataclass(frozen=True)
+class OwnerGroup:
+    """The findings owned by one team/queue, with per-severity counts and worst severity.
+
+    ``assigned`` is ``False`` for the single :data:`UNASSIGNED_OWNER` bucket -- the
+    findings on assets no ownership rule matched -- so a report can style or sort the
+    "nobody owns this yet" gap distinctly.
+    """
+
+    owner: str
+    findings: tuple[Finding, ...]
+    counts: dict[Severity, int]
+    highest: Severity
+    assigned: bool
+
+
+def group_by_owner(findings: Iterable[Finding]) -> list[OwnerGroup]:
+    """Group findings by owning team/queue, assigned owners first then the gap.
+
+    Findings keep their incoming (prioritized) order within each group. Assigned
+    owners sort ahead of the unassigned bucket, and within each side by worst
+    severity then owner name, so the routing view is deterministic and the
+    "unassigned" coverage gap always sorts last.
+    """
+    buckets: dict[str, list[Finding]] = {}
+    for finding in findings:
+        owner = finding_owner(finding) or UNASSIGNED_OWNER
+        buckets.setdefault(owner, []).append(finding)
+
+    groups = [
+        OwnerGroup(
+            owner=owner,
+            findings=tuple(items),
+            counts=severity_counts(items),
+            highest=max((finding.severity for finding in items), key=lambda s: s.rank),
+            assigned=owner != UNASSIGNED_OWNER,
+        )
+        for owner, items in buckets.items()
+    ]
+    groups.sort(key=lambda group: (not group.assigned, -group.highest.rank, group.owner))
+    return groups
+
+
 __all__ = [
     "SEVERITY_DISPLAY_ORDER",
+    "UNASSIGNED_OWNER",
     "HostGroup",
+    "OwnerGroup",
     "ReportSummary",
     "StandardsSummary",
     "count_hosts",
     "finding_owasp",
+    "finding_owner",
+    "finding_tags",
     "group_by_host",
+    "group_by_owner",
+    "owners_present",
     "severity_counts",
     "summarize",
     "summarize_standards",
