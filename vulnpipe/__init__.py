@@ -7,6 +7,6 @@ filters false positives, and emits prioritized reports (with a ranked remediatio
 plan) and a CI gate. It contains no exploit code.
 """
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 __all__ = ["__version__"]

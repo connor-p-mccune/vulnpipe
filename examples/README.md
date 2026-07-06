@@ -27,6 +27,11 @@ flagged **known-exploited** (in the CISA KEV catalog) and carry a composite
 `risk_score` — so the two Apache path-traversal CVEs surface at the top of their
 severity band even when another finding scores higher on CVSS alone.
 
+The sample also demonstrates **ownership routing**: a synthetic ownership map assigns
+the web app to an `appsec-team` and the internal network range to a `platform-team`,
+so the reports show the "by owner" breakdown (an Ownership section in the HTML and
+Markdown reports, `owner` / `tags` columns in the CSV).
+
 ## Regenerating
 
 From a checkout with the package installed (`pip install -e .`), run the committed

@@ -17,9 +17,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from vulnpipe.core.config import AssetRule, PrioritizationConfig
+from vulnpipe.core.models import AssetCriticality
 from vulnpipe.enrichment.enricher import enrich_findings
 from vulnpipe.enrichment.kev_client import KevEntry, parse_kev_catalog
-from vulnpipe.processing import deduplicate, prioritize
+from vulnpipe.processing import annotate_ownership, deduplicate, prioritize
 from vulnpipe.reporting import (
     get_reporter,
     render_badge,
@@ -47,6 +49,27 @@ _GITLAB_TIMESTAMP = "2026-01-01T00:00:00"
 # The CycloneDX VDR carries a BOM metadata timestamp; pin it for the committed sample
 # (a real run honors SOURCE_DATE_EPOCH or stamps the current time).
 _CYCLONEDX_TIMESTAMP = "2026-01-01T00:00:00Z"
+
+# A synthetic ownership map for the sample's lab hosts, so the samples demonstrate
+# triage routing (the "by owner" views). The web app is owned by an appsec team; the
+# internal network range by a platform team.
+_OWNERSHIP = PrioritizationConfig(
+    assets=[
+        AssetRule(
+            host="*.lab.example.com",
+            criticality=AssetCriticality.HIGH,
+            owner="appsec-team",
+            tags=["web", "external"],
+        ),
+        AssetRule(
+            host="10.0.0.0/24",
+            criticality=AssetCriticality.MEDIUM,
+            owner="platform-team",
+            tags=["infrastructure"],
+        ),
+    ]
+)
+
 
 # A real slice of the CISA KEV catalog covering the two Apache HTTP Server path
 # traversal CVEs present in the fixture scan (CVE-2021-41773 / CVE-2021-42013). Both
@@ -90,7 +113,11 @@ def main() -> None:
 
     kev = _OfflineKev(parse_kev_catalog(_KEV_CATALOG_JSON))
     enriched = enrich_findings([*nmap_findings, *zap_findings], kev=kev)  # type: ignore[arg-type]
-    findings = prioritize(deduplicate(enriched))
+    findings = annotate_ownership(
+        prioritize(deduplicate(enriched)),
+        owner_for=_OWNERSHIP.owner_for,
+        tags_for=_OWNERSHIP.tags_for,
+    )
 
     for fmt, filename in (
         ("json", "sample-report.json"),

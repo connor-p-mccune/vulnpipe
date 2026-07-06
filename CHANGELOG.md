@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-06
+
+Make reports actionable by team: asset ownership and triage routing.
+
+### Added
+- **Asset ownership & tags** — an asset rule under `prioritization.assets` now accepts
+  an optional `owner` (the team/queue that owns the asset) and free-form `tags`,
+  resolved per host (first-match-wins) by `PrioritizationConfig.owner_for` /
+  `tags_for`. A new pure `processing/ownership.annotate_ownership` stamps the resolved
+  owner/tags onto each finding's `metadata`, and the orchestrator applies it after
+  prioritization, so a scan's findings carry their owner. Ownership is
+  operator-supplied triage *context, not detection data*: it lives in metadata (which
+  the fingerprint ignores), so it never changes a finding's identity or its
+  baseline/diff/SLA classification, and it is echoed from config, never fabricated.
+- **"By owner" views** — ownership surfaces everywhere findings do, shown only when it
+  is configured (so existing reports are unchanged): a `group_by_owner` breakdown
+  (assigned owners first by worst severity, the unassigned coverage-gap bucket last)
+  as a "By owner" table and a `by_owner` payload in `stats`, `owner` / `tags` columns
+  in the CSV, an "Ownership" table in the Markdown report, and an Ownership section
+  plus a conditional Owner column in the HTML report. The committed sample reports now
+  demonstrate routing across an `appsec-team` and a `platform-team`. See ADR-0026.
+
 ## [1.2.0] - 2026-07-05
 
 Close the supply-chain loop: emit a CycloneDX vulnerability report.
@@ -372,7 +394,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v0.9.0...v1.0.0

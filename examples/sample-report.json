@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "tool": {
     "name": "vulnpipe",
-    "version": "1.2.0"
+    "version": "1.3.0"
   },
   "summary": {
     "total": 15,
@@ -52,7 +52,11 @@
         "is_exploit": true,
         "kev_date_added": "2021-11-03",
         "kev_known_ransomware": false,
-        "kev_name": "Apache HTTP Server Path Traversal Vulnerability"
+        "kev_name": "Apache HTTP Server Path Traversal Vulnerability",
+        "owner": "platform-team",
+        "tags": [
+          "infrastructure"
+        ]
       },
       "fingerprint": "741786901e8421eee27c8d50d3a4bae704b85aa3962fb01a9fcc16bb4ccdb3fc",
       "risk_score": 98
@@ -93,7 +97,11 @@
         "is_exploit": true,
         "kev_date_added": "2021-11-03",
         "kev_known_ransomware": false,
-        "kev_name": "Apache HTTP Server Path Traversal Vulnerability"
+        "kev_name": "Apache HTTP Server Path Traversal Vulnerability",
+        "owner": "platform-team",
+        "tags": [
+          "infrastructure"
+        ]
       },
       "fingerprint": "f37cb98d3b2212fa16226f86a9019754ab4215c1475c877e04d2956e53f7cf13",
       "risk_score": 75
@@ -130,7 +138,11 @@
           "cpe:/a:nginx:nginx:1.18.0"
         ],
         "nmap_script": "vulners",
-        "is_exploit": false
+        "is_exploit": false,
+        "owner": "platform-team",
+        "tags": [
+          "infrastructure"
+        ]
       },
       "fingerprint": "6ef44ce5d33d4cec342a312a5b3c84c8ec0e0cd344430a969f7772ffd66d8272",
       "risk_score": 54
@@ -168,7 +180,11 @@
           "cpe:/a:openbsd:openssh:7.4"
         ],
         "nmap_script": "vulners",
-        "is_exploit": true
+        "is_exploit": true,
+        "owner": "platform-team",
+        "tags": [
+          "infrastructure"
+        ]
       },
       "fingerprint": "28117601fe8900a3a3c8e231099e3f35451701a4cd79b42e048bda07fd4c829a",
       "risk_score": 52
@@ -204,7 +220,12 @@
         "param": "id",
         "alert_ref": "40018",
         "wasc_id": "19",
-        "input_vector": "GET_QUERY_STRING"
+        "input_vector": "GET_QUERY_STRING",
+        "owner": "appsec-team",
+        "tags": [
+          "web",
+          "external"
+        ]
       },
       "fingerprint": "0e096605545602affffbf5f4c5081b3e631a8ccac3eef245bfcf78aafa368eff",
       "risk_score": 56
@@ -239,7 +260,12 @@
         "param": "q",
         "alert_ref": "40012-1",
         "wasc_id": "8",
-        "input_vector": "GET_QUERY_STRING"
+        "input_vector": "GET_QUERY_STRING",
+        "owner": "appsec-team",
+        "tags": [
+          "web",
+          "external"
+        ]
       },
       "fingerprint": "fd10993a87c649472e1adeec1e96ca4e7c5d081628383a8cfdf52e5453a37167",
       "risk_score": 56
@@ -277,7 +303,11 @@
           "cpe:/a:openbsd:openssh:7.4"
         ],
         "nmap_script": "vulners",
-        "is_exploit": false
+        "is_exploit": false,
+        "owner": "platform-team",
+        "tags": [
+          "infrastructure"
+        ]
       },
       "fingerprint": "bd4a889c2d91caed3a4bb547717850deb1266263069a5c8290abf3b420d616dd",
       "risk_score": 37
@@ -312,7 +342,12 @@
         "url": "https://app.lab.example.com/static/jquery-1.7.1.min.js",
         "method": "GET",
         "alert_ref": "10003",
-        "wasc_id": "-1"
+        "wasc_id": "-1",
+        "owner": "appsec-team",
+        "tags": [
+          "web",
+          "external"
+        ]
       },
       "fingerprint": "7f9050ff0a493d68a20078794b9cfc062f391ea93162bab46fdc835ba571fa05",
       "risk_score": 35
@@ -379,7 +414,12 @@
         "url": "http://app.lab.example.com/old/report",
         "method": "GET",
         "alert_ref": "90022",
-        "wasc_id": "13"
+        "wasc_id": "13",
+        "owner": "appsec-team",
+        "tags": [
+          "web",
+          "external"
+        ]
       },
       "fingerprint": "f307e1d545187788b7f169f6ef5a34efe4d588c6dbc6058f433c7947b3d3607a",
       "risk_score": 14
@@ -413,7 +453,11 @@
         "cpe": [
           "cpe:/a:mysql:mysql:8.0.27"
         ],
-        "detection_method": "probed"
+        "detection_method": "probed",
+        "owner": "platform-team",
+        "tags": [
+          "infrastructure"
+        ]
       },
       "fingerprint": "08537141eb8c834aa41779825e5dcd047d92ea55396ccd7fc0ea7cfd1f4ab5b1",
       "risk_score": 0
@@ -448,7 +492,11 @@
         "cpe": [
           "cpe:/a:openbsd:openssh:7.4"
         ],
-        "detection_method": "probed"
+        "detection_method": "probed",
+        "owner": "platform-team",
+        "tags": [
+          "infrastructure"
+        ]
       },
       "fingerprint": "4cb8433b7b6432e9194541bf1c13f61f26ec8744ff1a437e74944baceb1a821c",
       "risk_score": 0
@@ -479,7 +527,12 @@
         "url": "https://app.lab.example.com/",
         "method": "GET",
         "alert_ref": "10096",
-        "wasc_id": "13"
+        "wasc_id": "13",
+        "owner": "appsec-team",
+        "tags": [
+          "web",
+          "external"
+        ]
       },
       "fingerprint": "97b8367c9b79aaf7c604fd0cbb742ad46a7705d814df79f61e8f21a2e313abc8",
       "risk_score": 0
@@ -514,7 +567,11 @@
         "cpe": [
           "cpe:/a:apache:http_server:2.4.49"
         ],
-        "detection_method": "probed"
+        "detection_method": "probed",
+        "owner": "platform-team",
+        "tags": [
+          "infrastructure"
+        ]
       },
       "fingerprint": "aff65577ab386610faee85cb221b47b224e8decd613ebcc383daf29937432443",
       "risk_score": 0
@@ -548,7 +605,11 @@
         "cpe": [
           "cpe:/a:nginx:nginx:1.18.0"
         ],
-        "detection_method": "probed"
+        "detection_method": "probed",
+        "owner": "platform-team",
+        "tags": [
+          "infrastructure"
+        ]
       },
       "fingerprint": "ec68726b1dd17d377b77a3962d5e126f97da3c30d1d86a7916f2c9864419dad7",
       "risk_score": 0
