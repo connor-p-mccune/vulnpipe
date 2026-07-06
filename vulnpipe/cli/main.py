@@ -13,6 +13,7 @@ orchestrator and the CI stage. Commands:
 * ``sbom`` -- analyze a CycloneDX SBOM for known-vulnerable dependencies (OSV.dev);
 * ``convert`` -- import a third-party scanner report (Trivy / Grype) as vulnpipe findings;
 * ``report`` -- render a findings JSON into any report format on stdout;
+* ``explain`` -- explain one finding: its risk-score math, enrichment, and owner;
 * ``serve`` -- serve a findings JSON as a local read-only dashboard + JSON API;
 * ``remediate`` -- group a findings JSON into a ranked, deduplicated remediation plan;
 * ``merge`` -- combine findings JSONs from separate runs into one deduplicated report;
@@ -101,15 +102,19 @@ from vulnpipe.processing import (
 )
 from vulnpipe.reporting import (
     SEVERITY_DISPLAY_ORDER,
+    ExplainError,
     available_formats,
     build_report_schema,
+    explain_payload,
     get_reporter,
     load_findings,
     remediation_to_payload,
     render_badge,
+    render_explain,
     render_remediation_markdown,
     render_remediation_text,
     render_stats,
+    select_finding,
     severity_counts,
     stats_to_payload,
 )
@@ -650,6 +655,55 @@ def stats(
         typer.echo(json.dumps(stats_to_payload(findings), indent=2, ensure_ascii=False))
     else:
         _emit(render_stats(findings))
+
+
+@app.command()
+def explain(
+    input_path: Annotated[
+        Path,
+        typer.Option("--input", "-i", exists=True, dir_okay=False, help="Findings JSON to read."),
+    ],
+    fingerprint: Annotated[
+        str | None,
+        typer.Option(
+            "--fingerprint", help="Select by fingerprint (full digest or a unique prefix)."
+        ),
+    ] = None,
+    index: Annotated[
+        int | None,
+        typer.Option("--index", min=1, help="Select by 1-based position in the report."),
+    ] = None,
+    title: Annotated[
+        str | None,
+        typer.Option("--title", help="Select by a case-insensitive title substring."),
+    ] = None,
+    fmt: Annotated[
+        str, typer.Option("--format", "-f", help="Output format: text or json.")
+    ] = "text",
+) -> None:
+    """Explain one finding: its risk-score math, enrichment, standards, and owner.
+
+    Pick the finding with exactly one of ``--fingerprint`` / ``--index`` / ``--title``.
+    The risk-score breakdown comes from the same computation the score itself uses, so
+    the explanation always matches the number.
+    """
+    if fmt not in {"text", "json"}:
+        log.error("Unknown explain format %r; choose text or json", fmt)
+        raise typer.Exit(code=2)
+    try:
+        findings = load_findings(input_path)
+    except (OSError, ValueError) as exc:
+        log.error("Failed to read findings from %s: %s", input_path, exc)
+        raise typer.Exit(code=2) from exc
+    try:
+        finding = select_finding(findings, fingerprint=fingerprint, index=index, title=title)
+    except ExplainError as exc:
+        log.error("%s", exc)
+        raise typer.Exit(code=2) from exc
+    if fmt == "json":
+        typer.echo(json.dumps(explain_payload(finding), indent=2, ensure_ascii=False))
+    else:
+        _emit(render_explain(finding))
 
 
 @app.command()

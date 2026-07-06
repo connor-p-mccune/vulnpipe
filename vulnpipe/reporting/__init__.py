@@ -24,6 +24,12 @@ from vulnpipe.reporting.cyclonedx_reporter import (
     build_cyclonedx,
     render_cyclonedx,
 )
+from vulnpipe.reporting.explain import (
+    ExplainError,
+    explain_payload,
+    render_explain,
+    select_finding,
+)
 from vulnpipe.reporting.gitlab_reporter import GitlabReporter, build_gitlab_report, render_gitlab
 from vulnpipe.reporting.html_reporter import HtmlReporter, render_html
 from vulnpipe.reporting.json_reporter import (
@@ -108,6 +114,7 @@ __all__ = [
     "BaseReporter",
     "CsvReporter",
     "CyclonedxReporter",
+    "ExplainError",
     "GitlabReporter",
     "HtmlReporter",
     "JsonReporter",
@@ -127,6 +134,7 @@ __all__ = [
     "build_report_schema",
     "build_sarif",
     "build_vex",
+    "explain_payload",
     "finding_owasp",
     "get_reporter",
     "group_by_host",
@@ -137,6 +145,7 @@ __all__ = [
     "render_badge",
     "render_csv",
     "render_cyclonedx",
+    "render_explain",
     "render_gitlab",
     "render_html",
     "render_markdown",
@@ -146,6 +155,7 @@ __all__ = [
     "render_stats",
     "render_vex",
     "report_to_findings",
+    "select_finding",
     "severity_counts",
     "stats_to_payload",
     "summarize",

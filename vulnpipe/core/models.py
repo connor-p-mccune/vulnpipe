@@ -7,6 +7,7 @@ reporting, CI diffing) operates only on this model. A finding carries a stable
 """
 
 import hashlib
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
@@ -141,6 +142,58 @@ _SEVERITY_IMPACT: dict["Severity", float] = {
 _RISK_IMPACT_BASE = 0.7
 
 
+@dataclass(frozen=True)
+class RiskComponents:
+    """The transparent breakdown behind a composite :attr:`Finding.risk_score`.
+
+    Every field is an input to the documented formula, so a consumer (e.g. the
+    ``explain`` command) can show exactly *why* a finding scored what it did:
+    ``score = round(impact * (base_weight + (1 - base_weight) * likelihood) * 100)``.
+    """
+
+    impact: float
+    impact_source: str  # "cvss" | "severity"
+    likelihood: float
+    likelihood_source: str  # "kev" | "epss" | "none"
+    base_weight: float
+    score: int
+
+
+def risk_components(
+    *,
+    severity: "Severity",
+    cvss_score: float | None,
+    epss_score: float | None,
+    kev: bool,
+) -> RiskComponents:
+    """Derive the composite risk score *and* the pieces it is built from.
+
+    The single source of truth for the risk math (:func:`compute_risk_score` returns
+    just its :attr:`RiskComponents.score`), so the score and any explanation of it can
+    never drift apart. See :func:`compute_risk_score` for what each axis means.
+    """
+    if cvss_score is not None:
+        impact, impact_source = cvss_score / 10.0, "cvss"
+    else:
+        impact, impact_source = _SEVERITY_IMPACT[severity], "severity"
+    if kev:
+        likelihood, likelihood_source = 1.0, "kev"
+    elif epss_score is not None:
+        likelihood, likelihood_source = epss_score, "epss"
+    else:
+        likelihood, likelihood_source = 0.0, "none"
+    risk = impact * (_RISK_IMPACT_BASE + (1.0 - _RISK_IMPACT_BASE) * likelihood)
+    score = max(0, min(100, round(risk * 100)))
+    return RiskComponents(
+        impact=impact,
+        impact_source=impact_source,
+        likelihood=likelihood,
+        likelihood_source=likelihood_source,
+        base_weight=_RISK_IMPACT_BASE,
+        score=score,
+    )
+
+
 def compute_risk_score(
     *,
     severity: "Severity",
@@ -163,11 +216,11 @@ def compute_risk_score(
     a serious-but-unexploited issue still scores within its band while active
     exploitation pushes it toward the top. Nothing here is fabricated: it is a
     documented function of fields already on the finding, not a new data source.
+    :func:`risk_components` exposes the same computation with its intermediate parts.
     """
-    impact = cvss_score / 10.0 if cvss_score is not None else _SEVERITY_IMPACT[severity]
-    likelihood = 1.0 if kev else (epss_score if epss_score is not None else 0.0)
-    risk = impact * (_RISK_IMPACT_BASE + (1.0 - _RISK_IMPACT_BASE) * likelihood)
-    return max(0, min(100, round(risk * 100)))
+    return risk_components(
+        severity=severity, cvss_score=cvss_score, epss_score=epss_score, kev=kev
+    ).score
 
 
 def compute_fingerprint(
@@ -311,9 +364,11 @@ __all__ = [
     "Confidence",
     "Finding",
     "Host",
+    "RiskComponents",
     "Service",
     "Severity",
     "compute_fingerprint",
     "compute_risk_score",
     "normalize_title",
+    "risk_components",
 ]
