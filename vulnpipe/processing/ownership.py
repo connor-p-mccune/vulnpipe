@@ -30,6 +30,25 @@ OwnerResolver = Callable[[str], str | None]
 TagsResolver = Callable[[str], Sequence[str]]
 
 
+def finding_owner(finding: Finding) -> str | None:
+    """The team/queue that owns a finding's asset, or ``None`` if unassigned.
+
+    Read from the operator-declared ``owner`` metadata this module stamps on (never a
+    scanner-derived field); a blank value counts as unassigned. Lives here, beside the
+    annotation, so reporting and the query layer share one definition of "owner".
+    """
+    value = finding.metadata.get(OWNER_KEY)
+    return value if isinstance(value, str) and value.strip() else None
+
+
+def finding_tags(finding: Finding) -> tuple[str, ...]:
+    """The operator-declared tags on a finding's asset, in declared order."""
+    value = finding.metadata.get(TAGS_KEY)
+    if isinstance(value, list | tuple):
+        return tuple(item for item in value if isinstance(item, str) and item.strip())
+    return ()
+
+
 def _no_owner(host: str) -> None:
     return None
 
@@ -66,4 +85,10 @@ def annotate_ownership(
     return result
 
 
-__all__ = ["OWNER_KEY", "TAGS_KEY", "annotate_ownership"]
+__all__ = [
+    "OWNER_KEY",
+    "TAGS_KEY",
+    "annotate_ownership",
+    "finding_owner",
+    "finding_tags",
+]

@@ -13,6 +13,7 @@ orchestrator and the CI stage. Commands:
 * ``sbom`` -- analyze a CycloneDX SBOM for known-vulnerable dependencies (OSV.dev);
 * ``convert`` -- import a third-party scanner report (Trivy / Grype) as vulnpipe findings;
 * ``report`` -- render a findings JSON into any report format on stdout;
+* ``filter`` -- select a subset of a findings JSON by severity / risk / owner / ...;
 * ``explain`` -- explain one finding: its risk-score math, enrichment, and owner;
 * ``serve`` -- serve a findings JSON as a local read-only dashboard + JSON API;
 * ``remediate`` -- group a findings JSON into a ranked, deduplicated remediation plan;
@@ -96,6 +97,8 @@ from vulnpipe.notify import NotifyError, post_webhook
 from vulnpipe.plugins import REPORTER_GROUP, SCANNER_GROUP, load_plugins, loaded_plugins
 from vulnpipe.processing import (
     FalsePositiveConfig,
+    apply_query,
+    build_query,
     deduplicate,
     load_false_positive_config,
     prioritize,
@@ -521,6 +524,96 @@ def report(
         log.error("Failed to read findings from %s: %s", input_path, exc)
         raise typer.Exit(code=2) from exc
     _emit(reporter.render(findings))
+
+
+@app.command("filter")
+def filter_cmd(
+    input_path: Annotated[
+        Path,
+        typer.Option("--input", "-i", exists=True, dir_okay=False, help="Findings JSON to filter."),
+    ],
+    severity: Annotated[
+        Severity | None,
+        typer.Option("--severity", help="Keep findings at or above this severity."),
+    ] = None,
+    min_risk: Annotated[
+        int | None,
+        typer.Option(
+            "--min-risk", min=0, max=100, help="Keep findings with risk score at or above this."
+        ),
+    ] = None,
+    kev: Annotated[
+        bool, typer.Option("--kev", help="Keep only known-exploited (KEV) findings.")
+    ] = False,
+    owner: Annotated[
+        list[str] | None,
+        typer.Option("--owner", help="Keep findings owned by this team (repeatable)."),
+    ] = None,
+    unassigned: Annotated[
+        bool,
+        typer.Option("--unassigned", help="Keep findings with no owner (combines with --owner)."),
+    ] = False,
+    source: Annotated[
+        list[str] | None,
+        typer.Option("--source", help="Keep findings from this scanner source (repeatable)."),
+    ] = None,
+    host: Annotated[
+        list[str] | None,
+        typer.Option("--host", help="Keep findings whose host contains this text (repeatable)."),
+    ] = None,
+    tag: Annotated[
+        list[str] | None,
+        typer.Option("--tag", help="Keep findings carrying this asset tag (repeatable)."),
+    ] = None,
+    cve: Annotated[
+        list[str] | None,
+        typer.Option("--cve", help="Keep findings citing this CVE id (repeatable)."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output", "-o", dir_okay=False, help="Also write the filtered canonical JSON here."
+        ),
+    ] = None,
+    fmt: Annotated[
+        str,
+        typer.Option("--format", "-f", help="Render format for stdout: any report format."),
+    ] = "json",
+) -> None:
+    """Filter a findings JSON by severity / risk / KEV / owner / tag / source / host / CVE.
+
+    Predicates AND together, and a repeated one (several owners, sources, tags, CVEs)
+    is satisfied by any match. The output is ordinary findings JSON, so it composes:
+    ``filter --owner team-web --severity high | report``, or feed it to ``gate`` /
+    ``notify``. Passive -- it only reads and slices a report -- so it needs no scope.
+    """
+    try:
+        reporter = get_reporter(fmt)
+    except KeyError as exc:
+        log.error("Unknown format %r; choose one of: %s", fmt, ", ".join(available_formats()))
+        raise typer.Exit(code=2) from exc
+    try:
+        findings = load_findings(input_path)
+    except (OSError, ValueError) as exc:
+        log.error("Failed to read findings from %s: %s", input_path, exc)
+        raise typer.Exit(code=2) from exc
+    query = build_query(
+        min_severity=severity,
+        min_risk=min_risk,
+        kev_only=kev,
+        owners=owner,
+        unassigned=unassigned,
+        sources=source,
+        hosts=host,
+        tags=tag,
+        cves=cve,
+    )
+    selected = apply_query(findings, query)
+    log.info("filtered %d finding(s) to %d", len(findings), len(selected))
+    if output is not None:
+        _write(output, get_reporter("json").render(selected))
+        log.info("wrote filtered findings JSON: %s", output)
+    _emit(reporter.render(selected))
 
 
 @app.command()

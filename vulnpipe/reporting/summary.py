@@ -21,6 +21,7 @@ from vulnpipe.core.standards import (
     cwe_top_25,
     owasp_categories,
 )
+from vulnpipe.processing.ownership import finding_owner, finding_tags
 
 #: Severities in display order: most severe first. Reporters iterate this so the
 #: summary always lists every band (including zero counts) in a stable order.
@@ -116,25 +117,10 @@ def summarize_standards(findings: Iterable[Finding]) -> StandardsSummary:
 
 
 #: The bucket findings with no declared owner fall into (see :func:`group_by_owner`).
+#: The ``finding_owner`` / ``finding_tags`` accessors live in
+#: :mod:`vulnpipe.processing.ownership` (beside the annotation that writes them) and
+#: are re-exported here for the reporters that read them.
 UNASSIGNED_OWNER = "unassigned"
-
-
-def finding_owner(finding: Finding) -> str | None:
-    """The team/queue that owns a finding's asset, or ``None`` if unassigned.
-
-    Read from the operator-declared ``owner`` metadata the ownership annotation
-    stamps on (never a scanner-derived field); a blank value counts as unassigned.
-    """
-    value = finding.metadata.get("owner")
-    return value if isinstance(value, str) and value.strip() else None
-
-
-def finding_tags(finding: Finding) -> tuple[str, ...]:
-    """The operator-declared tags on a finding's asset, in declared order."""
-    value = finding.metadata.get("tags")
-    if isinstance(value, (list, tuple)):
-        return tuple(item for item in value if isinstance(item, str) and item.strip())
-    return ()
 
 
 def owners_present(findings: Iterable[Finding]) -> bool:
