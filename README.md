@@ -43,6 +43,7 @@ payloads.
 - [Reports](#reports)
 - [Serve the report (dashboard & API)](#serve-the-report-dashboard--api)
 - [Explain a finding](#explain-a-finding)
+- [Filter findings](#filter-findings)
 - [Remediation plan](#remediation-plan)
 - [CI usage: baseline, diff, gate](#ci-usage-baseline-diff-gate)
 - [Run via Docker](#run-via-docker)
@@ -554,6 +555,25 @@ explanation can never disagree with the number. `--format json` emits the full
 structured breakdown (risk components, CVSS/EPSS/KEV, OWASP/CWE mapping, owner and
 tags, remediation) for automation.
 
+## Filter findings
+
+A full report is often more than you want to act on at once. `vulnpipe filter` slices a
+findings JSON by any combination of severity, composite risk, known-exploited status,
+owner, asset tag, scanner source, host, or CVE — and emits ordinary findings JSON, so it
+composes with everything else:
+
+```bash
+# Your team's high-and-above findings, as a Markdown PR comment.
+vulnpipe filter -i results/latest.json --owner team-web --severity high -f markdown
+
+# Only what's actively exploited, written to its own report to gate on.
+vulnpipe filter -i results/latest.json --kev -o results/kev.json
+vulnpipe gate --current results/kev.json --gate-severity medium
+```
+
+Predicates AND together and a repeated one is an OR (`--source nmap --source zap` keeps
+either). Being a passive read-and-slice, it needs no scope or `--authorized`.
+
 ## Remediation plan
 
 A findings list says *what* is wrong; `vulnpipe remediate` says *what to fix first*.
@@ -745,6 +765,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX / CycloneDX on stdout (`--input`, `--format`). |
 | `serve` | Serve a findings JSON as a local read-only dashboard + JSON API (`/`, `/api/*`, `/metrics`, `/healthz`) on `http://127.0.0.1:8000` (`--input`, `--host`, `--port`). |
 | `explain` | Explain one finding — its risk-score math, enrichment, OWASP/CWE mapping, and owner — selected by `--fingerprint` / `--index` / `--title` (text or JSON). |
+| `filter` | Select a subset of a findings JSON by severity / risk / KEV / owner / tag / source / host / CVE; emits findings JSON (or any format), so it composes with the rest (`--input`, `--severity`, `--min-risk`, `--kev`, `--owner`, …). |
 | `remediate` | Group a findings JSON into a ranked, deduplicated remediation plan — fix these first — as text / JSON / Markdown (`--input`, `--format`, `--top`). |
 | `merge` | Combine findings JSONs from separate runs (e.g. a network scan + an SBOM analysis) into one deduplicated, re-prioritized report (`--input` repeated, `--output`, `--format`). |
 | `stats` | Summarize a findings JSON — severity breakdown, OWASP Top 10, top risks, and worst-affected hosts — as a terminal view or a JSON dashboard payload (`--input`, `--format text\|json`). |

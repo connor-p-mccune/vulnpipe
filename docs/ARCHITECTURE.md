@@ -58,7 +58,7 @@ thread pool and caps ZAP concurrency separately (active scans are heavy).
 | `core/logging.py` | The rich-backed structured logger used throughout (the project never uses `print`). |
 | `scanners/` | `BaseScanner` + the registry, and the Nmap (network), ZAP (web), and Nuclei (template-based) integrations. Each `scan()` returns `list[Finding]`. |
 | `enrichment/` | CVSS parsing/scoring, cached NVD / EPSS lookups, and CISA KEV cross-referencing that fill — never fabricate — the `cvss_*` / `epss_*` / `kev` fields. |
-| `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize, and ownership annotation (stamp operator-declared owner/tags for triage routing). |
+| `processing/` | Pure finding transforms: normalize, dedup, false-positive filter, prioritize, ownership annotation (stamp operator-declared owner/tags for triage routing), and a composable query (`filter`). |
 | `reporting/` | The JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX / CycloneDX renderers, the remediation planner, the terminal `stats` view, and the shared summary view-model. Deterministic for fixed input. |
 | `ci/` | The baseline store, the differ, the severity gate, the policy-as-code gate (`policy.py`), JUnit XML output, and multi-scan trend analysis. |
 | `sbom/` | Supply-chain analysis: CycloneDX parsing, the OSV.dev advisory client, and the analyzer that normalizes advisories into findings. Passive (reads a file, queries a public API); never probes the described software. |
@@ -450,6 +450,10 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
 - `merge` — combine findings JSONs from separate runs (network scan + SBOM
   analysis, or per-segment scans) into one deduplicated, re-prioritized report,
   so a single baseline and gate can cover everything.
+- `filter` — select a subset of a findings JSON by severity / risk / KEV / owner /
+  tag / source / host / CVE (`processing/query.py`, pure). Predicates AND together and
+  a repeated one is an OR; the output is ordinary findings JSON, so it composes with
+  `report` / `stats` / `gate` / `notify`. Passive, so no scope or `--authorized`.
 - `stats` — print a terminal summary of a findings JSON (severity breakdown, top
   risks, worst-affected hosts) via a fixed-width Rich render.
 - `badge` — render a findings JSON into a shields-style SVG status badge.

@@ -546,3 +546,26 @@ The cost is a small dataclass and one extra indirection on the hot `risk_score` 
 field evaluated per finding per render), which is negligible and buys guaranteed consistency. It
 also sets the pattern for any future derived metric: expose the components, derive the headline
 number from them, never re-implement the math at the call site.
+
+## ADR-0028 — `filter` selects and composes; it does not judge
+
+**Context.** Users need to slice a report — a team's findings, only the exploited ones, the
+high-and-above set. There are two ways to offer this: bolt selection options onto the existing
+verdict commands (a `gate --owner`, a `notify --severity`), or add one selection primitive that
+produces a smaller report. The first spreads the same filtering logic across many commands and
+couples "which findings" to "what verdict"; the second keeps each command doing one thing.
+
+**Decision.** Add a single `filter` command backed by a pure `FindingQuery` / `apply_query` in
+`processing/query.py`. It takes predicates (severity, risk, KEV, owner, tag, source, host, CVE),
+ANDs them (a repeated one is an OR), and emits **ordinary findings JSON in prioritized order** —
+not a verdict, not a summary. Because the output is the same shape as its input, it composes:
+`filter --owner team-web --severity high` pipes into `report`, `stats`, `gate`, or `notify`, and
+no other command grows a filtering flag.
+
+**Consequences.** Selection lives in exactly one place, tested once, and every downstream command
+gets "just this slice" for free without new options — the Unix pipe model applied to findings.
+The trade-off is an extra step in a pipeline (`filter … | gate` instead of `gate --owner …`), and
+that a query is expressed as flags rather than a full query language (no `OR` across *different*
+criteria, no negation) — deliberately, since a richer grammar would reintroduce the complexity the
+single-primitive design avoids. If real use demands it, the grammar can grow behind the same pure
+`FindingQuery` seam without touching the callers.
