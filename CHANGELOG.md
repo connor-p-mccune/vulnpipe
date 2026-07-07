@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-07-06
+
+Ownership reaches CI and observability.
+
+### Added
+- **Ownership in SARIF and Prometheus** — the operator-declared owner (and tags) now
+  travel through the two machine-facing exports, not just the human reports. Each SARIF
+  result gains an `owner` property (and `assetTags`), so the owning team shows up in the
+  GitHub Security tab, and the Prometheus output gains a
+  `vulnpipe_findings_by_owner_total{owner="…"}` gauge for a per-team dashboard or alert
+  (pairing with the `/metrics` endpoint `vulnpipe serve` exposes). Both are emitted only
+  when ownership is configured, so a report without owners renders exactly as before.
+
 ## [1.5.0] - 2026-07-06
 
 A composable way to slice a report.
@@ -435,7 +448,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.2.0...v1.3.0
