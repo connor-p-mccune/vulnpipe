@@ -112,6 +112,9 @@ jobs:
           vulnpipe convert -i tests/fixtures/trivy_report.json --from trivy -o /tmp/trivy.json > /dev/null
           vulnpipe convert -i tests/fixtures/grype_report.json --from grype > /dev/null
           vulnpipe merge -i "$sample" -i /tmp/trivy.json > /dev/null
+          # Slice the report with the composable filter, then gate the slice.
+          vulnpipe filter -i "$sample" --severity high --kev -o /tmp/kev.json > /dev/null
+          vulnpipe filter -i "$sample" --owner appsec-team -f markdown > /dev/null
           # Baseline / diff / gate / SLA / trend.
           vulnpipe baseline -i "$sample" -o /tmp/baseline.json --track-age
           vulnpipe sla --current "$sample" --baseline /tmp/baseline.json --critical-days 7 --high-days 30
