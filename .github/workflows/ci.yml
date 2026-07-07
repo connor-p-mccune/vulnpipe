@@ -90,6 +90,8 @@ jobs:
           done
           vulnpipe stats -i "$sample" > /dev/null
           vulnpipe stats -i "$sample" -f json > /dev/null
+          vulnpipe explain -i "$sample" --index 1 > /dev/null
+          vulnpipe explain -i "$sample" --index 1 -f json > /dev/null
           vulnpipe remediate -i "$sample" > /dev/null
           vulnpipe badge -i "$sample" > /dev/null
           # Serve the report and hit every route, then shut the server down.
