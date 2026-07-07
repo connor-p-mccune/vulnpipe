@@ -165,7 +165,7 @@ Verify it:
 
 ```console
 $ vulnpipe version
-vulnpipe 1.3.0
+vulnpipe 1.4.0
 ```
 
 ## Quickstart
@@ -465,7 +465,7 @@ every finding with its fingerprint and computed risk score:
 ```jsonc
 {
   "schema_version": "1.0",
-  "tool": { "name": "vulnpipe", "version": "1.3.0" },
+  "tool": { "name": "vulnpipe", "version": "1.4.0" },
   "summary": {
     "total": 15,
     "hosts": 4,
@@ -511,7 +511,7 @@ vulnpipe serve --input results/latest.json         # http://127.0.0.1:8000
 
 ```console
 $ curl -s http://127.0.0.1:8000/healthz
-{ "status": "ok", "version": "1.3.0", "findings": 15 }
+{ "status": "ok", "version": "1.4.0", "findings": 15 }
 $ curl -s http://127.0.0.1:8000/api/summary | jq '.by_severity'
 { "critical": 1, "high": 5, "medium": 2, "low": 2, "informational": 5 }
 ```

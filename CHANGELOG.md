@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-06
+
+Risk-score transparency: explain why any finding ranks where it does.
+
+### Added
+- **`explain` command** (`reporting/explain.py`) — open up a single finding and show
+  *why* it ranks where it does: the composite risk score broken into its exact inputs
+  and formula (impact from CVSS or the severity band; likelihood from KEV, then EPSS,
+  then a 0.0 floor; `score = round(impact × (0.7 + 0.3 × likelihood) × 100)`),
+  alongside the CVSS/EPSS/KEV enrichment, the OWASP / CWE Top 25 mapping, the asset
+  owner and tags, and the remediation. Pick the finding by `--fingerprint` (full digest
+  or a unique git-style prefix), `--index`, or a `--title` substring; render as text or
+  JSON. See ADR-0027.
+
+### Changed
+- The composite risk math is now single-sourced through
+  `core.models.risk_components`, which returns the score together with its intermediate
+  parts; `compute_risk_score` returns just its `.score`. Both `Finding.risk_score` and
+  `explain` read from it, so the number and any explanation of it can never drift. The
+  score values are unchanged.
+
 ## [1.3.0] - 2026-07-06
 
 Make reports actionable by team: asset ownership and triage routing.
@@ -394,7 +415,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.0.0...v1.1.0
