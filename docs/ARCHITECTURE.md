@@ -440,6 +440,11 @@ The CLI (`cli/main.py`, Typer) exposes four commands:
 - `serve` — serve a findings JSON as a local read-only dashboard + JSON API
   (`/`, `/api/*`, `/metrics`, `/healthz`); passive, so it needs no scope or
   `--authorized`.
+- `explain` — explain one finding (selected by fingerprint / index / title): its
+  composite risk score broken into impact and likelihood with the exact formula, plus
+  its CVSS/EPSS/KEV enrichment, OWASP/CWE mapping, owner, and remediation. The
+  breakdown comes from `core.models.risk_components`, the single source of the score,
+  so an explanation can never drift from the number it explains.
 - `remediate` — group a findings JSON into a ranked, deduplicated remediation plan
   (text / JSON / Markdown), most impactful fix first; `--top` limits the list.
 - `merge` — combine findings JSONs from separate runs (network scan + SBOM

@@ -523,3 +523,26 @@ context. It also means ownership is not a queryable typed field (a consumer read
 configured scan. Both are acceptable: the alternative (a model field feeding the fingerprint)
 would have made an org-chart change look like a wave of new-and-resolved findings, which is
 exactly the churn the stable-fingerprint rule exists to prevent.
+
+## ADR-0027 — One source for the risk score, so an explanation can't lie
+
+**Context.** The composite risk score is only trustworthy if it is transparent — a
+reviewer who cannot see *why* a finding scored 98 has no reason to act on 98 rather than the
+raw CVSS. So `explain` shows the breakdown: impact, likelihood, and the formula. But the score
+itself is computed in `compute_risk_score`, and if `explain` re-derived the same math
+independently, the two could silently diverge — a bug fix or a weight change in one and not the
+other — and an *explanation that disagrees with the number* is worse than no explanation,
+because it looks authoritative while being wrong.
+
+**Decision.** Make the risk math single-sourced. Add `core.models.risk_components`, which
+returns the score *together with* its intermediate parts (impact + its source, likelihood + its
+source, the base weight), and reduce `compute_risk_score` to returning just its `.score`. Both
+the `Finding.risk_score` field and the `explain` command read from `risk_components`, so the
+number and its explanation are computed exactly once, in one place.
+
+**Consequences.** The explanation is correct by construction: it cannot drift from the score
+because they are the same computation, and a future change to the weighting updates both at once.
+The cost is a small dataclass and one extra indirection on the hot `risk_score` path (a computed
+field evaluated per finding per render), which is negligible and buys guaranteed consistency. It
+also sets the pattern for any future derived metric: expose the components, derive the headline
+number from them, never re-implement the math at the call site.

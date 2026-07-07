@@ -42,6 +42,7 @@ payloads.
 - [Run a scan](#run-a-scan)
 - [Reports](#reports)
 - [Serve the report (dashboard & API)](#serve-the-report-dashboard--api)
+- [Explain a finding](#explain-a-finding)
 - [Remediation plan](#remediation-plan)
 - [CI usage: baseline, diff, gate](#ci-usage-baseline-diff-gate)
 - [Run via Docker](#run-via-docker)
@@ -523,6 +524,36 @@ non-loopback bind is warned about, since it exposes the report to anything that 
 reach the address). Point a scrape config at `/metrics` or a uptime probe at
 `/healthz` and a scan report becomes a live, queryable surface.
 
+## Explain a finding
+
+Prioritization gives you an order; `vulnpipe explain` tells you *why* one finding sits
+where it does — no black-box score. Point it at a finding by fingerprint (full digest
+or a unique prefix), 1-based position, or a title substring:
+
+```console
+$ vulnpipe explain --input results/latest.json --index 1
+CVE-2021-42013  on 10.0.0.5:80
+Severity      critical
+Source        nmap
+Fingerprint   741786901e8421ee…
+
+Risk score: 98/100
+  impact      = 0.98  (CVSS base score / 10)
+  likelihood  = 1.00  (known-exploited (CISA KEV) -> 1.0)
+  score       = round(impact x (0.7 + 0.3 x likelihood) x 100) = 98
+
+Enrichment
+  CVSS   9.8  CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+  EPSS   unknown
+  KEV    yes - actively exploited in the wild
+…
+```
+
+The risk breakdown is produced by the *same* function that computes the score, so the
+explanation can never disagree with the number. `--format json` emits the full
+structured breakdown (risk components, CVSS/EPSS/KEV, OWASP/CWE mapping, owner and
+tags, remediation) for automation.
+
 ## Remediation plan
 
 A findings list says *what* is wrong; `vulnpipe remediate` says *what to fix first*.
@@ -713,6 +744,7 @@ vulnpipe [--verbose/-v] COMMAND [OPTIONS]
 | `validate` | Dry-run a config: print what *would* be scanned (network/web targets, enrichment, required secrets) and flag any out-of-scope target — without scanning (`--config`). |
 | `report` | Render a findings JSON into JSON / HTML / Markdown / CSV / Prometheus / SARIF / GitLab / OpenVEX / CycloneDX on stdout (`--input`, `--format`). |
 | `serve` | Serve a findings JSON as a local read-only dashboard + JSON API (`/`, `/api/*`, `/metrics`, `/healthz`) on `http://127.0.0.1:8000` (`--input`, `--host`, `--port`). |
+| `explain` | Explain one finding — its risk-score math, enrichment, OWASP/CWE mapping, and owner — selected by `--fingerprint` / `--index` / `--title` (text or JSON). |
 | `remediate` | Group a findings JSON into a ranked, deduplicated remediation plan — fix these first — as text / JSON / Markdown (`--input`, `--format`, `--top`). |
 | `merge` | Combine findings JSONs from separate runs (e.g. a network scan + an SBOM analysis) into one deduplicated, re-prioritized report (`--input` repeated, `--output`, `--format`). |
 | `stats` | Summarize a findings JSON — severity breakdown, OWASP Top 10, top risks, and worst-affected hosts — as a terminal view or a JSON dashboard payload (`--input`, `--format text\|json`). |
