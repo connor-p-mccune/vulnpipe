@@ -251,6 +251,14 @@
       {% endfor %}
     </select>
     <label><input type="checkbox" id="kev-only"> Known-exploited only</label>
+    {% if show_owners %}
+    <select id="owner-filter" aria-label="Filter by owner">
+      <option value="">All owners</option>
+      {% for group in owner_groups %}
+      {% if group.assigned %}<option value="{{ group.owner }}">{{ group.owner }}</option>{% endif %}
+      {% endfor %}
+    </select>
+    {% endif %}
     <span id="visible-count"></span>
   </div>
   <table class="findings" id="findings-table">
@@ -273,7 +281,7 @@
     </thead>
     <tbody>
       {% for finding in findings %}
-      <tr data-severity="{{ finding.severity.value }}" data-kev="{{ 1 if finding.kev else 0 }}">
+      <tr data-severity="{{ finding.severity.value }}" data-kev="{{ 1 if finding.kev else 0 }}" data-owner="{{ finding_owner(finding) or '' }}">
         <td data-sort="{{ finding.severity.rank }}"><span class="badge {{ styles[finding.severity].css_class }}">{{ styles[finding.severity].label }}</span></td>
         <td class="num" data-sort="{{ finding.risk_score }}"><span class="badge risk-badge {{ risk_css(finding.risk_score) }}">{{ finding.risk_score }}</span></td>
         <td>{{ finding.host }}</td>
@@ -329,6 +337,7 @@
       var search = document.getElementById("search");
       var severityFilter = document.getElementById("severity-filter");
       var kevOnly = document.getElementById("kev-only");
+      var ownerFilter = document.getElementById("owner-filter");
       var counter = document.getElementById("visible-count");
       var allRows = Array.prototype.slice.call(table.tBodies[0].rows);
 
@@ -336,13 +345,15 @@
         var q = search.value.toLowerCase();
         var sev = severityFilter.value;
         var kev = kevOnly.checked;
+        var owner = ownerFilter ? ownerFilter.value : "";
         var shown = 0;
         for (var i = 0; i < allRows.length; i++) {
           var row = allRows[i];
           var matchText = q === "" || row.textContent.toLowerCase().indexOf(q) !== -1;
           var matchSev = sev === "" || row.getAttribute("data-severity") === sev;
           var matchKev = !kev || row.getAttribute("data-kev") === "1";
-          var visible = matchText && matchSev && matchKev;
+          var matchOwner = owner === "" || row.getAttribute("data-owner") === owner;
+          var visible = matchText && matchSev && matchKev && matchOwner;
           row.style.display = visible ? "" : "none";
           if (visible) { shown++; }
         }
@@ -351,6 +362,7 @@
       search.addEventListener("input", applyFilters);
       severityFilter.addEventListener("change", applyFilters);
       kevOnly.addEventListener("change", applyFilters);
+      if (ownerFilter) { ownerFilter.addEventListener("change", applyFilters); }
       applyFilters();
     })();
   </script>

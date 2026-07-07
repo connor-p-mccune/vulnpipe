@@ -220,6 +220,17 @@ def test_html_shows_ownership_section_and_column_only_when_owned() -> None:
     assert "Owner</th>" not in unowned
 
 
+def test_html_owner_filter_dropdown_only_when_owned() -> None:
+    owned = render_html(_owned())
+    assert 'id="owner-filter"' in owned
+    assert '<option value="team-web">team-web</option>' in owned
+    assert 'data-owner="team-web"' in owned
+    assert "var matchOwner" in owned  # the filter clause is wired into the client script
+    unowned = render_html([_finding("10.0.0.10")])
+    assert 'id="owner-filter"' not in unowned  # dropdown omitted without owners
+    assert 'data-owner=""' in unowned  # the row attribute is still present (empty)
+
+
 def test_sarif_result_carries_owner_and_tags() -> None:
     result = build_sarif(_owned())["runs"][0]["results"][0]
     assert result["properties"]["owner"] == "team-web"
