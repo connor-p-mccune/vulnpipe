@@ -16,6 +16,7 @@ data can never break the output.
 from collections.abc import Iterable
 
 from vulnpipe.core.models import Finding
+from vulnpipe.processing.ownership import finding_owner
 from vulnpipe.reporting.base import BaseReporter
 from vulnpipe.reporting.summary import (
     SEVERITY_DISPLAY_ORDER,
@@ -90,6 +91,19 @@ def render_prometheus(findings: Iterable[Finding]) -> str:
         "Highest composite risk score across findings (0-100).",
         [({}, max((finding.risk_score for finding in items), default=0))],
     )
+    # Per-owner counts, emitted only when ownership is configured so a report without
+    # owners stays byte-identical (no empty metric family).
+    owner_counts: dict[str, int] = {}
+    for finding in items:
+        owner = finding_owner(finding)
+        if owner is not None:
+            owner_counts[owner] = owner_counts.get(owner, 0) + 1
+    if owner_counts:
+        lines += _family(
+            "vulnpipe_findings_by_owner_total",
+            "Findings by owning team/queue (present only when ownership is configured).",
+            [({"owner": owner}, owner_counts[owner]) for owner in sorted(owner_counts)],
+        )
     return "\n".join(lines) + "\n"
 
 

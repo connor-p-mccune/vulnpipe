@@ -23,6 +23,8 @@ from vulnpipe.processing.normalizer import make_finding
 from vulnpipe.reporting.csv_reporter import render_csv
 from vulnpipe.reporting.html_reporter import render_html
 from vulnpipe.reporting.markdown_reporter import render_markdown
+from vulnpipe.reporting.prometheus_reporter import render_prometheus
+from vulnpipe.reporting.sarif_reporter import build_sarif
 from vulnpipe.reporting.stats import render_stats, stats_to_payload
 from vulnpipe.reporting.summary import (
     UNASSIGNED_OWNER,
@@ -216,6 +218,20 @@ def test_html_shows_ownership_section_and_column_only_when_owned() -> None:
     unowned = render_html([_finding("10.0.0.10")])
     assert "<h2>Ownership</h2>" not in unowned
     assert "Owner</th>" not in unowned
+
+
+def test_sarif_result_carries_owner_and_tags() -> None:
+    result = build_sarif(_owned())["runs"][0]["results"][0]
+    assert result["properties"]["owner"] == "team-web"
+    assert result["properties"]["assetTags"] == ["pci", "external"]
+    plain = build_sarif([_finding("10.0.0.10")])["runs"][0]["results"][0]
+    assert "owner" not in plain["properties"]
+
+
+def test_prometheus_emits_by_owner_only_when_configured() -> None:
+    text = render_prometheus(_owned())
+    assert 'vulnpipe_findings_by_owner_total{owner="team-web"} 1' in text
+    assert "vulnpipe_findings_by_owner_total" not in render_prometheus([_finding("10.0.0.10")])
 
 
 def test_json_round_trip_preserves_owner_metadata() -> None:

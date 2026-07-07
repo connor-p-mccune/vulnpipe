@@ -30,6 +30,7 @@ from typing import Any
 from vulnpipe import __version__
 from vulnpipe.core.models import Finding, Severity
 from vulnpipe.core.standards import owasp_categories
+from vulnpipe.processing.ownership import finding_owner, finding_tags
 from vulnpipe.reporting.base import BaseReporter
 
 SARIF_VERSION = "2.1.0"
@@ -146,6 +147,14 @@ def _build_result(finding: Finding, rule_id: str, rule_index: int) -> dict[str, 
     categories = owasp_categories(finding.cwe_ids)
     if categories:
         properties["owasp"] = [category.id for category in categories]
+    # Operator-declared triage context (only when configured), so the owning team
+    # travels to the Security tab. Named distinctly from the rule's security `tags`.
+    owner = finding_owner(finding)
+    if owner is not None:
+        properties["owner"] = owner
+    asset_tags = finding_tags(finding)
+    if asset_tags:
+        properties["assetTags"] = list(asset_tags)
     return {
         "ruleId": rule_id,
         "ruleIndex": rule_index,
