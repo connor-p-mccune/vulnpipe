@@ -162,8 +162,9 @@ cannot drift.
   rule per distinct check, severity mapped to `level`, the finding fingerprint under
   `partialFingerprints` for stable cross-run tracking, a `security-severity` ranking
   hint (the real CVSS score when known, otherwise the severity band floor — never
-  written back onto the finding), and the composite `riskScore` plus a `kev` flag in
-  each result's properties so those signals travel to SARIF consumers too.
+  written back onto the finding), and the composite `riskScore`, a `kev` flag, and the
+  operator-declared `owner` / `assetTags` (when configured) in each result's properties
+  so those signals — including which team owns the finding — travel to the Security tab.
 - **GitLab** (`gitlab_reporter.py`) emits a GitLab-compatible security report for the
   GitLab Vulnerability Report and the merge-request security widget — the other half
   of the "surfaces natively in your CI platform" story SARIF starts. vulnpipe is a

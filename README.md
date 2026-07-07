@@ -166,7 +166,7 @@ Verify it:
 
 ```console
 $ vulnpipe version
-vulnpipe 1.5.0
+vulnpipe 1.6.0
 ```
 
 ## Quickstart
@@ -409,8 +409,8 @@ timestamp — pin it with `SOURCE_DATE_EPOCH` for byte-identical CI output.
 | **Markdown** | A pull-request / Slack–friendly summary: headline totals, severity and OWASP Top 10 tables, and a prioritized findings table with risk score, CVSS, EPSS, and a KEV marker. |
 | **Remediation** | The ranked remediation plan as a Markdown worklist (`report --format remediation`, `scan --remediation`) — the same fix-these-first output the `remediate` command and the HTML panel show. |
 | **CSV** | One row per finding for a spreadsheet or data-frame — columns mirror the JSON fields (plus fingerprint, risk score, and OWASP categories). |
-| **Prometheus** | Text-exposition gauges (findings by severity/source, known-exploited count, peak risk) for the node_exporter textfile collector or a Pushgateway. |
-| **SARIF** | SARIF 2.1.0 for the GitHub code-scanning / Security tab. |
+| **Prometheus** | Text-exposition gauges (findings by severity/source/**owner**, known-exploited count, peak risk) for the node_exporter textfile collector or a Pushgateway. |
+| **SARIF** | SARIF 2.1.0 for the GitHub code-scanning / Security tab — results carry the composite risk score, KEV flag, OWASP tags, and the owning team. |
 | **GitLab** | A GitLab-compatible security report (`report --format gitlab`) for the GitLab Vulnerability Report and the merge-request security widget — a DAST-style export with stable ids, CVE/CWE identifiers, and the report-schema scan block. |
 | **OpenVEX** | [OpenVEX](https://openvex.dev) 0.2.0 `affected` statements for every finding that cites a real CVE / OSV id, for exploitability-exchange tooling (`vexctl`, scanner VEX inputs, policy engines). |
 | **CycloneDX** | A [CycloneDX](https://cyclonedx.org) 1.5 vulnerability report (VDR): a BOM whose `vulnerabilities` link each detected issue to the component it affects (a `library` by purl, or the affected host as an `application`), for Dependency-Track and the `cyclonedx` CLI. The other half of the SBOM loop — vulnpipe reads a CycloneDX SBOM and writes a CycloneDX VDR. |
@@ -466,7 +466,7 @@ every finding with its fingerprint and computed risk score:
 ```jsonc
 {
   "schema_version": "1.0",
-  "tool": { "name": "vulnpipe", "version": "1.5.0" },
+  "tool": { "name": "vulnpipe", "version": "1.6.0" },
   "summary": {
     "total": 15,
     "hosts": 4,
@@ -512,7 +512,7 @@ vulnpipe serve --input results/latest.json         # http://127.0.0.1:8000
 
 ```console
 $ curl -s http://127.0.0.1:8000/healthz
-{ "status": "ok", "version": "1.5.0", "findings": 15 }
+{ "status": "ok", "version": "1.6.0", "findings": 15 }
 $ curl -s http://127.0.0.1:8000/api/summary | jq '.by_severity'
 { "critical": 1, "high": 5, "medium": 2, "low": 2, "informational": 5 }
 ```
