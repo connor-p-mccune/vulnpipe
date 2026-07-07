@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-06
+
+A composable way to slice a report.
+
+### Added
+- **`filter` command** (`processing/query.py`) — select a subset of a findings JSON by
+  any combination of severity, composite risk, known-exploited (KEV) status, owner
+  (and `--unassigned`), asset tag, scanner source, host substring, or CVE. Predicates
+  AND together and a repeated one (several owners/sources/tags/CVEs) is an OR. The
+  output is ordinary findings JSON in prioritized order, so it composes:
+  `filter --owner team-web --severity high` pipes into `report` / `stats` / `gate` /
+  `notify`, and no other command grows a filtering flag. Passive, so it needs no scope
+  or `--authorized`. Backed by a pure `FindingQuery` + `apply_query`. See ADR-0028.
+
+### Changed
+- The ownership metadata accessors `finding_owner` / `finding_tags` moved to
+  `processing/ownership.py` (beside the annotation that writes them) and are re-exported
+  from `reporting/summary`, so the reporters and the new query layer share one
+  definition. No behavior change.
+
 ## [1.4.0] - 2026-07-06
 
 Risk-score transparency: explain why any finding ranks where it does.
@@ -415,7 +435,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.1.0...v1.2.0

@@ -4,7 +4,7 @@
     "analyzer": {
       "id": "vulnpipe",
       "name": "vulnpipe",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "vendor": {
         "name": "vulnpipe"
       }
@@ -12,7 +12,7 @@
     "scanner": {
       "id": "vulnpipe",
       "name": "vulnpipe",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "vendor": {
         "name": "vulnpipe"
       }
