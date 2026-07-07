@@ -115,7 +115,7 @@
 <body>
   <header>
     <h1>vulnpipe vulnerability report</h1>
-    <div class="muted">vulnpipe 1.6.0 &middot; detection &amp; reporting only</div>
+    <div class="muted">vulnpipe 1.7.0 &middot; detection &amp; reporting only</div>
   </header>
 
   <h2>Summary</h2>
@@ -444,6 +444,9 @@
       <option value="informational">Informational</option>
     </select>
     <label><input type="checkbox" id="kev-only"> Known-exploited only</label>
+    <select id="owner-filter" aria-label="Filter by owner">
+      <option value="">All owners</option>
+<option value="platform-team">platform-team</option><option value="appsec-team">appsec-team</option>    </select>
     <span id="visible-count"></span>
   </div>
   <table class="findings" id="findings-table">
@@ -464,7 +467,7 @@
 <th data-type="text">Owner</th>      </tr>
     </thead>
     <tbody>
-      <tr data-severity="critical" data-kev="1">
+      <tr data-severity="critical" data-kev="1" data-owner="platform-team">
         <td data-sort="4"><span class="badge sev-critical">Critical</span></td>
         <td class="num" data-sort="98"><span class="badge risk-badge sev-critical">98</span></td>
         <td>10.0.0.5</td>
@@ -478,7 +481,7 @@
         <td>medium</td>
         <td>nmap</td>
 <td>platform-team</td>      </tr>
-      <tr data-severity="high" data-kev="1">
+      <tr data-severity="high" data-kev="1" data-owner="platform-team">
         <td data-sort="3"><span class="badge sev-high">High</span></td>
         <td class="num" data-sort="75"><span class="badge risk-badge sev-high">75</span></td>
         <td>10.0.0.5</td>
@@ -492,7 +495,7 @@
         <td>medium</td>
         <td>nmap</td>
 <td>platform-team</td>      </tr>
-      <tr data-severity="high" data-kev="0">
+      <tr data-severity="high" data-kev="0" data-owner="platform-team">
         <td data-sort="3"><span class="badge sev-high">High</span></td>
         <td class="num" data-sort="54"><span class="badge risk-badge sev-medium">54</span></td>
         <td>10.0.0.6</td>
@@ -506,7 +509,7 @@
         <td>medium</td>
         <td>nmap</td>
 <td>platform-team</td>      </tr>
-      <tr data-severity="high" data-kev="0">
+      <tr data-severity="high" data-kev="0" data-owner="platform-team">
         <td data-sort="3"><span class="badge sev-high">High</span></td>
         <td class="num" data-sort="52"><span class="badge risk-badge sev-medium">52</span></td>
         <td>10.0.0.5</td>
@@ -520,7 +523,7 @@
         <td>medium</td>
         <td>nmap</td>
 <td>platform-team</td>      </tr>
-      <tr data-severity="high" data-kev="0">
+      <tr data-severity="high" data-kev="0" data-owner="appsec-team">
         <td data-sort="3"><span class="badge sev-high">High</span></td>
         <td class="num" data-sort="56"><span class="badge risk-badge sev-medium">56</span></td>
         <td>app.lab.example.com</td>
@@ -534,7 +537,7 @@
         <td>high</td>
         <td>zap</td>
 <td>appsec-team</td>      </tr>
-      <tr data-severity="high" data-kev="0">
+      <tr data-severity="high" data-kev="0" data-owner="appsec-team">
         <td data-sort="3"><span class="badge sev-high">High</span></td>
         <td class="num" data-sort="56"><span class="badge risk-badge sev-medium">56</span></td>
         <td>app.lab.example.com</td>
@@ -548,7 +551,7 @@
         <td>medium</td>
         <td>zap</td>
 <td>appsec-team</td>      </tr>
-      <tr data-severity="medium" data-kev="0">
+      <tr data-severity="medium" data-kev="0" data-owner="platform-team">
         <td data-sort="2"><span class="badge sev-medium">Medium</span></td>
         <td class="num" data-sort="37"><span class="badge risk-badge sev-low">37</span></td>
         <td>10.0.0.5</td>
@@ -562,7 +565,7 @@
         <td>medium</td>
         <td>nmap</td>
 <td>platform-team</td>      </tr>
-      <tr data-severity="medium" data-kev="0">
+      <tr data-severity="medium" data-kev="0" data-owner="appsec-team">
         <td data-sort="2"><span class="badge sev-medium">Medium</span></td>
         <td class="num" data-sort="35"><span class="badge risk-badge sev-low">35</span></td>
         <td>app.lab.example.com</td>
@@ -576,7 +579,7 @@
         <td>high</td>
         <td>zap</td>
 <td>appsec-team</td>      </tr>
-      <tr data-severity="low" data-kev="0">
+      <tr data-severity="low" data-kev="0" data-owner="">
         <td data-sort="1"><span class="badge sev-low">Low</span></td>
         <td class="num" data-sort="14"><span class="badge risk-badge sev-low">14</span></td>
         <td>vpn.corp.example.net</td>
@@ -590,7 +593,7 @@
         <td>low</td>
         <td>zap</td>
 <td></td>      </tr>
-      <tr data-severity="low" data-kev="0">
+      <tr data-severity="low" data-kev="0" data-owner="appsec-team">
         <td data-sort="1"><span class="badge sev-low">Low</span></td>
         <td class="num" data-sort="14"><span class="badge risk-badge sev-low">14</span></td>
         <td>app.lab.example.com</td>
@@ -604,7 +607,7 @@
         <td>medium</td>
         <td>zap</td>
 <td>appsec-team</td>      </tr>
-      <tr data-severity="informational" data-kev="0">
+      <tr data-severity="informational" data-kev="0" data-owner="platform-team">
         <td data-sort="0"><span class="badge sev-informational">Informational</span></td>
         <td class="num" data-sort="0"><span class="badge risk-badge sev-informational">0</span></td>
         <td>10.0.0.6</td>
@@ -618,7 +621,7 @@
         <td>confirmed</td>
         <td>nmap</td>
 <td>platform-team</td>      </tr>
-      <tr data-severity="informational" data-kev="0">
+      <tr data-severity="informational" data-kev="0" data-owner="platform-team">
         <td data-sort="0"><span class="badge sev-informational">Informational</span></td>
         <td class="num" data-sort="0"><span class="badge risk-badge sev-informational">0</span></td>
         <td>10.0.0.5</td>
@@ -632,7 +635,7 @@
         <td>confirmed</td>
         <td>nmap</td>
 <td>platform-team</td>      </tr>
-      <tr data-severity="informational" data-kev="0">
+      <tr data-severity="informational" data-kev="0" data-owner="appsec-team">
         <td data-sort="0"><span class="badge sev-informational">Informational</span></td>
         <td class="num" data-sort="0"><span class="badge risk-badge sev-informational">0</span></td>
         <td>app.lab.example.com</td>
@@ -646,7 +649,7 @@
         <td>low</td>
         <td>zap</td>
 <td>appsec-team</td>      </tr>
-      <tr data-severity="informational" data-kev="0">
+      <tr data-severity="informational" data-kev="0" data-owner="platform-team">
         <td data-sort="0"><span class="badge sev-informational">Informational</span></td>
         <td class="num" data-sort="0"><span class="badge risk-badge sev-informational">0</span></td>
         <td>10.0.0.5</td>
@@ -660,7 +663,7 @@
         <td>confirmed</td>
         <td>nmap</td>
 <td>platform-team</td>      </tr>
-      <tr data-severity="informational" data-kev="0">
+      <tr data-severity="informational" data-kev="0" data-owner="platform-team">
         <td data-sort="0"><span class="badge sev-informational">Informational</span></td>
         <td class="num" data-sort="0"><span class="badge risk-badge sev-informational">0</span></td>
         <td>10.0.0.6</td>
@@ -714,6 +717,7 @@
       var search = document.getElementById("search");
       var severityFilter = document.getElementById("severity-filter");
       var kevOnly = document.getElementById("kev-only");
+      var ownerFilter = document.getElementById("owner-filter");
       var counter = document.getElementById("visible-count");
       var allRows = Array.prototype.slice.call(table.tBodies[0].rows);
 
@@ -721,13 +725,15 @@
         var q = search.value.toLowerCase();
         var sev = severityFilter.value;
         var kev = kevOnly.checked;
+        var owner = ownerFilter ? ownerFilter.value : "";
         var shown = 0;
         for (var i = 0; i < allRows.length; i++) {
           var row = allRows[i];
           var matchText = q === "" || row.textContent.toLowerCase().indexOf(q) !== -1;
           var matchSev = sev === "" || row.getAttribute("data-severity") === sev;
           var matchKev = !kev || row.getAttribute("data-kev") === "1";
-          var visible = matchText && matchSev && matchKev;
+          var matchOwner = owner === "" || row.getAttribute("data-owner") === owner;
+          var visible = matchText && matchSev && matchKev && matchOwner;
           row.style.display = visible ? "" : "none";
           if (visible) { shown++; }
         }
@@ -736,6 +742,7 @@
       search.addEventListener("input", applyFilters);
       severityFilter.addEventListener("change", applyFilters);
       kevOnly.addEventListener("change", applyFilters);
+      if (ownerFilter) { ownerFilter.addEventListener("change", applyFilters); }
       applyFilters();
     })();
   </script>

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-07-06
+
+### Added
+- **Filter the HTML findings table by owner** — the HTML report's filter toolbar gains
+  an owner dropdown (populated from the teams present), so the table can be narrowed to
+  one team's findings — the interactive complement to the Ownership breakdown section.
+  Each row carries a `data-owner` attribute and the client-side filter gains a matching
+  clause; the dropdown renders only when ownership is configured, so an ownerless report
+  is unchanged.
+
 ## [1.6.0] - 2026-07-06
 
 Ownership reaches CI and observability.
@@ -448,7 +458,8 @@ Initial release: an end-to-end network + web vulnerability scanning pipeline
 - **Packaging** — a multi-stage Docker image and a one-command compose lab
   (scanner + ZAP daemon); Apache-2.0 licensed.
 
-[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/connor-p-mccune/vulnpipe/compare/v1.3.0...v1.4.0
