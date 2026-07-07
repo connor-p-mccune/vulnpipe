@@ -405,7 +405,7 @@ timestamp — pin it with `SOURCE_DATE_EPOCH` for byte-identical CI output.
 | Format | Use |
 | --- | --- |
 | **JSON** | The canonical, lossless artifact. `scan` writes `results/latest.json`; `report` / `diff` / `baseline` read it back. |
-| **HTML** | The human-readable report: summary cards (known-exploited and CWE Top 25 counts), inline SVG severity chart, a ranked OWASP Top 10 bar chart (most-prevalent weakness class first), a per-host breakdown with expandable per-finding details (description, remediation, CVSS vector, references), and a client-side filterable + sortable findings table with risk-score, KEV, and OWASP columns. |
+| **HTML** | The human-readable report: summary cards (known-exploited and CWE Top 25 counts), inline SVG severity chart, a ranked OWASP Top 10 bar chart (most-prevalent weakness class first), a per-host breakdown with expandable per-finding details (description, remediation, CVSS vector, references), an ownership breakdown (when configured), and a sortable findings table you can filter by text, severity, known-exploited, and owner. |
 | **Markdown** | A pull-request / Slack–friendly summary: headline totals, severity and OWASP Top 10 tables, and a prioritized findings table with risk score, CVSS, EPSS, and a KEV marker. |
 | **Remediation** | The ranked remediation plan as a Markdown worklist (`report --format remediation`, `scan --remediation`) — the same fix-these-first output the `remediate` command and the HTML panel show. |
 | **CSV** | One row per finding for a spreadsheet or data-frame — columns mirror the JSON fields (plus fingerprint, risk score, and OWASP categories). |
