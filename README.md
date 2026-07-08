@@ -97,6 +97,14 @@ database for known-vulnerable components, emitting the same findings JSON the re
 of the toolchain consumes — no scope or authorization needed, because nothing is
 probed.
 
+Once you have findings, vulnpipe helps you **act** on them: **route** each finding to
+the team that owns the asset (owner & tags per [asset rule](#scanner-pipeline-and-prioritization-settings)),
+**slice** a report by severity / risk / owner / CVE with [`filter`](#filter-findings), open up any
+finding's risk-score math with [`explain`](#explain-a-finding), and **browse** the whole
+report — or query it as JSON / Prometheus — from a local dashboard with
+[`serve`](#serve-the-report-dashboard--api). The result of every step is the same
+findings JSON, so the pieces compose.
+
 ## How it works
 
 Stages run in order; each scanner returns `list[Finding]`, and everything
